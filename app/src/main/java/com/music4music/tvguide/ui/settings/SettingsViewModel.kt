@@ -296,6 +296,9 @@ class SettingsViewModel @Inject constructor(
     fun toggleFavoriteChannel(channelId: String) {
         viewModelScope.launch {
             userPreferences.toggleFavoriteChannel(channelId)
+            val currentFavorites = userPreferences.favoriteChannels.first()
+            val isNowFavorite = currentFavorites.contains(channelId)
+            epgRepository.toggleFavoriteChannel(channelId, isNowFavorite)
         }
     }
 

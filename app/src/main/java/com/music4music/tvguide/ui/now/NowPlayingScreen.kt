@@ -190,7 +190,7 @@ fun NowPlayingScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            OfflineBanner(isOffline = !isOnline)
+            OfflineBanner(isOffline = !isOnline && programs.isEmpty())
 
             AnimatedVisibility(visible = syncProgress.state != SyncState.IDLE && syncMessage.isNotBlank()) {
                 Box(
@@ -362,8 +362,8 @@ fun NowPlayingScreen(
                         ) {
                             Text(
                                 text = when {
-                                    !isOnline -> stringResource(R.string.offline_banner_no_data)
                                     searchQuery.isNotEmpty() -> stringResource(R.string.search_empty)
+                                    programs.isEmpty() && !isOnline -> stringResource(R.string.no_programs_period)
                                     else -> uiState.errorMessage ?: stringResource(R.string.no_programs_period)
                                 },
                                 style = MaterialTheme.typography.bodyLarge,

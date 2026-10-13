@@ -21,13 +21,15 @@ class ReminderReceiver : BroadcastReceiver() {
         val channelId = intent.getStringExtra("extra_channel_id") ?: ""
         val leadTime = intent.getIntExtra("extra_lead_time", 10)
         val soundUri = intent.getStringExtra("extra_sound_uri")
+        val vibrationEnabled = intent.getBooleanExtra("extra_vibration_enabled", true)
 
         notificationHelper.showReminderNotification(
             programId = programId,
             title = title,
             channelId = channelId,
             leadTimeMinutes = leadTime,
-            customSoundUri = soundUri
+            customSoundUri = soundUri,
+            vibrationEnabled = vibrationEnabled
         )
     }
 }

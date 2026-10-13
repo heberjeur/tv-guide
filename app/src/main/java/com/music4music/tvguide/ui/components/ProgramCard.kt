@@ -87,6 +87,12 @@ fun ProgramCard(
     }
     val animatedProgress by animateFloatAsState(targetValue = currentProgress, label = "progress")
 
+    val density = com.music4music.tvguide.ui.theme.LocalDisplayDensity.current
+    val highlightAccessibility = com.music4music.tvguide.ui.theme.LocalHighlightAccessibility.current
+    val isCompact = density == "compact"
+    val thumbnailSize = if (isCompact) 56.dp else 72.dp
+    val cardPadding = if (isCompact) 8.dp else 12.dp
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -97,7 +103,7 @@ fun ProgramCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(cardPadding)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -108,11 +114,11 @@ fun ProgramCard(
                         model = program.iconUrl,
                         contentDescription = program.title,
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(thumbnailSize)
                             .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(if (isCompact) 8.dp else 12.dp))
                 }
 
                 Column(modifier = Modifier.weight(1f)) {
@@ -136,12 +142,43 @@ fun ProgramCard(
                             )
                         }
 
-                        if (program.durationMinutes > 0) {
-                            Text(
-                                text = stringResource(R.string.label_duration_minutes, program.durationMinutes),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextSecondary
-                            )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (highlightAccessibility) {
+                                if (program.isHd) {
+                                    Text(
+                                        text = stringResource(R.string.badge_hd),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = IndicatorGreen,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                if (program.hasSubtitles) {
+                                    Text(
+                                        text = stringResource(R.string.badge_subtitles),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                if (program.isUnreleased) {
+                                    Text(
+                                        text = stringResource(R.string.badge_unreleased),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = AccentRed,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            if (program.durationMinutes > 0) {
+                                Text(
+                                    text = stringResource(R.string.label_duration_minutes, program.durationMinutes),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary
+                                )
+                            }
                         }
                     }
 

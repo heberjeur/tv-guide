@@ -47,21 +47,54 @@ class GuideViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private data class ChannelPreferences(
+        val bundleId: String,
+        val hiddenChannels: Set<String>,
+        val favoriteChannels: Set<String>,
+        val channelSortOrder: String
+    )
+
+    private val channelPrefsFlow = combine(
+        userPreferences.selectedBundle,
+        userPreferences.hiddenChannels,
+        userPreferences.favoriteChannels,
+        userPreferences.channelSortOrder
+    ) { bundleId, hidden, favorites, sortOrder ->
+        ChannelPreferences(bundleId, hidden, favorites, sortOrder)
+    }
+
     val filteredChannels: StateFlow<List<Channel>> = combine(
         rawChannels,
-        userPreferences.selectedBundle,
-        _channelSearchQuery
-    ) { list, bundleId, query ->
-        val bundle = ChannelBundle.fromId(bundleId)
-        list.filter { channel ->
-            val matchesQuery = query.isBlank() || channel.displayName.contains(query, ignoreCase = true)
+        _channelSearchQuery,
+        channelPrefsFlow
+    ) { list, query, prefs ->
+        val bundle = ChannelBundle.fromId(prefs.bundleId)
+        val filtered = list.filter { channel ->
+            val notHidden = !prefs.hiddenChannels.contains(channel.id)
+            val matchesQuery = query.isBlank() ||
+                channel.displayName.contains(query, ignoreCase = true) ||
+                (channel.channelNumber > 0 && channel.channelNumber.toString() == query.trim())
             val matchesBundle = com.music4music.tvguide.data.local.ChannelCatalog.isChannelInBundle(channel.id, bundle)
-            matchesQuery && matchesBundle
-        }.sortedWith(
-            compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
-                .thenBy { it.channelNumber }
-                .thenBy { it.displayName }
-        )
+            notHidden && matchesQuery && matchesBundle
+        }.map { channel ->
+            val isFav = prefs.favoriteChannels.contains(channel.id) || channel.isFavorite
+            if (channel.isFavorite != isFav) channel.copy(isFavorite = isFav) else channel
+        }
+
+        when (prefs.channelSortOrder) {
+            "favorites" -> filtered.sortedWith(
+                compareByDescending<Channel> { it.isFavorite }
+                    .thenBy { if (it.channelNumber > 0) 0 else 1 }
+                    .thenBy { it.channelNumber }
+                    .thenBy { it.displayName }
+            )
+            "name" -> filtered.sortedWith(compareBy { it.displayName })
+            else -> filtered.sortedWith(
+                compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
+                    .thenBy { it.channelNumber }
+                    .thenBy { it.displayName }
+            )
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")
@@ -81,15 +114,19 @@ class GuideViewModel @Inject constructor(
             val endOfDay = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
             getProgramsUseCase(channelId, startOfDay, endOfDay)
         }
-    }.combine(_searchQuery) { list, query ->
-        if (query.isBlank()) {
-            list
-        } else {
-            list.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                    it.description.contains(query, ignoreCase = true) ||
-                    it.categories.any { cat -> cat.contains(query, ignoreCase = true) }
+    }.combine(
+        combine(_searchQuery, userPreferences.hideReruns) { q, hr -> q to hr }
+    ) { list, (query, hideReruns) ->
+        list.filter { program ->
+            val matchesRerun = if (hideReruns) program.isUnreleased else true
+            val matchesQuery = if (query.isBlank()) {
+                true
+            } else {
+                program.title.contains(query, ignoreCase = true) ||
+                    program.description.contains(query, ignoreCase = true) ||
+                    program.categories.any { cat -> cat.contains(query, ignoreCase = true) }
             }
+            matchesRerun && matchesQuery
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

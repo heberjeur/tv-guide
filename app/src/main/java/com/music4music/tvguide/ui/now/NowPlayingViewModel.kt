@@ -40,11 +40,19 @@ enum class EveningPart {
     PART_2
 }
 
+private data class FilterPrefs(
+    val hiddenChannels: Set<String>,
+    val favoriteChannels: Set<String>,
+    val sortOrder: String,
+    val hideReruns: Boolean
+)
+
 private data class Params(
     val period: BroadcastPeriod,
     val part: EveningPart,
     val query: String,
-    val bundleId: String
+    val bundleId: String,
+    val prefs: FilterPrefs
 )
 
 data class NowPlayingUiState(
@@ -79,15 +87,25 @@ class NowPlayingViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val filterPrefsFlow = combine(
+        userPreferences.hiddenChannels,
+        userPreferences.favoriteChannels,
+        userPreferences.channelSortOrder,
+        userPreferences.hideReruns
+    ) { hidden, favs, sort, reruns ->
+        FilterPrefs(hidden, favs, sort, reruns)
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val programs: StateFlow<List<Program>> = combine(
         _selectedPeriod,
         _selectedEveningPart,
         _searchQuery,
-        userPreferences.selectedBundle
-    ) { period: BroadcastPeriod, part: EveningPart, query: String, bundleId: String ->
-        Params(period, part, query, bundleId)
-    }.flatMapLatest { (period, part, query, bundleId) ->
+        userPreferences.selectedBundle,
+        filterPrefsFlow
+    ) { period, part, query, bundleId, prefs ->
+        Params(period, part, query, bundleId, prefs)
+    }.flatMapLatest { (period, part, query, bundleId, prefs) ->
         val bundle = ChannelBundle.fromId(bundleId)
         val zone = ZoneId.of("Europe/Paris")
         val today = LocalDate.now(zone)
@@ -123,17 +141,34 @@ class NowPlayingViewModel @Inject constructor(
 
         flow.map { list ->
             val filtered = list.filter { program ->
+                val notHidden = !prefs.hiddenChannels.contains(program.channelId)
                 val inBundle = ChannelCatalog.isChannelInBundle(program.channelId, bundle)
+                val notRerun = if (prefs.hideReruns) program.isUnreleased else true
                 val matchesQuery = query.isBlank() ||
                         program.title.contains(query, ignoreCase = true) ||
                         program.categories.any { cat -> cat.contains(query, ignoreCase = true) } ||
                         program.channelId.contains(query, ignoreCase = true)
-                inBundle && matchesQuery
+                notHidden && inBundle && notRerun && matchesQuery
             }
-            if (period == BroadcastPeriod.NOW) {
+            val distinctList = if (period == BroadcastPeriod.NOW) {
                 filtered.distinctBy { it.channelId }
             } else {
                 filtered
+            }
+            when (prefs.sortOrder) {
+                "favorites_first" -> distinctList.sortedWith(
+                    compareByDescending<Program> { prefs.favoriteChannels.contains(it.channelId) }
+                        .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                        .thenBy { it.startTimestamp }
+                )
+                "name" -> distinctList.sortedWith(
+                    compareBy<Program> { it.channelId }
+                        .thenBy { it.startTimestamp }
+                )
+                else -> distinctList.sortedWith(
+                    compareBy<Program> { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                        .thenBy { it.startTimestamp }
+                )
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

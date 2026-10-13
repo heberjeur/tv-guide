@@ -130,7 +130,7 @@ class ProgramDetailViewModel @Inject constructor(
         }
     }
 
-    private fun scheduleAlarm(
+    private suspend fun scheduleAlarm(
         program: Program,
         leadTime: Int,
         soundUri: String?,
@@ -139,6 +139,7 @@ class ProgramDetailViewModel @Inject constructor(
         val triggerTime = explicitTriggerTime ?: (program.startTimestamp - (leadTime * 60 * 1000L))
         if (triggerTime <= System.currentTimeMillis()) return
 
+        val vibrationEnabled = userPreferences.vibrationEnabled.first()
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             putExtra("extra_program_id", program.id)
@@ -146,6 +147,7 @@ class ProgramDetailViewModel @Inject constructor(
             putExtra("extra_channel_id", program.channelId)
             putExtra("extra_lead_time", leadTime)
             putExtra("extra_sound_uri", soundUri)
+            putExtra("extra_vibration_enabled", vibrationEnabled)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

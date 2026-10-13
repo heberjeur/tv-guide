@@ -82,7 +82,10 @@ class XmltvParser @Inject constructor() {
             when (parser.name) {
                 "display-name" -> displayName = readText(parser)
                 "icon" -> {
-                    iconUrl = parser.getAttributeValue(null, "src")
+                    val rawIcon = parser.getAttributeValue(null, "src")
+                    if (!rawIcon.isNullOrBlank()) {
+                        iconUrl = if (rawIcon.startsWith("//")) "https:$rawIcon" else rawIcon
+                    }
                     skipElement(parser)
                 }
                 "lcn", "channel-num" -> {
@@ -159,7 +162,14 @@ class XmltvParser @Inject constructor() {
                     lengthMinutes = text.toIntOrNull() ?: 0
                 }
                 "icon" -> {
-                    iconUrl = parser.getAttributeValue(null, "src")
+                    val rawIcon = parser.getAttributeValue(null, "src")
+                    if (!rawIcon.isNullOrBlank()) {
+                        var resolved = if (rawIcon.startsWith("//")) "https:$rawIcon" else rawIcon
+                        if (resolved.contains("/64x90/")) {
+                            resolved = resolved.replace("/64x90/quality/80/", "/640x360/quality/90/")
+                        }
+                        iconUrl = resolved
+                    }
                     skipElement(parser)
                 }
                 "episode-num" -> {

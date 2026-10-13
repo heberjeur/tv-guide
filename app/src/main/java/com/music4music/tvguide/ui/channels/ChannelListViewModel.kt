@@ -51,22 +51,54 @@ class ChannelListViewModel @Inject constructor(
         }
     }
 
+    private data class ChannelPreferences(
+        val bundleId: String,
+        val hiddenChannels: Set<String>,
+        val favoriteChannels: Set<String>,
+        val channelSortOrder: String
+    )
+
+    private val channelPrefsFlow = combine(
+        userPreferences.selectedBundle,
+        userPreferences.hiddenChannels,
+        userPreferences.favoriteChannels,
+        userPreferences.channelSortOrder
+    ) { bundleId, hidden, favorites, sortOrder ->
+        ChannelPreferences(bundleId, hidden, favorites, sortOrder)
+    }
+
     val filteredChannels: StateFlow<List<Channel>> = combine(
         allChannels,
         _searchQuery,
-        _selectedBundle
-    ) { channels, query, bundle ->
-        channels.filter { channel ->
+        channelPrefsFlow
+    ) { channels, query, prefs ->
+        val bundle = ChannelBundle.fromId(prefs.bundleId)
+        val filtered = channels.filter { channel ->
+            val notHidden = !prefs.hiddenChannels.contains(channel.id)
             val matchesQuery = query.isBlank() ||
                 channel.displayName.contains(query, ignoreCase = true) ||
                 (channel.channelNumber > 0 && channel.channelNumber.toString() == query.trim())
             val matchesBundle = com.music4music.tvguide.data.local.ChannelCatalog.isChannelInBundle(channel.id, bundle)
-            matchesQuery && matchesBundle
-        }.sortedWith(
-            compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
-                .thenBy { it.channelNumber }
-                .thenBy { it.displayName }
-        )
+            notHidden && matchesQuery && matchesBundle
+        }.map { channel ->
+            val isFav = prefs.favoriteChannels.contains(channel.id) || channel.isFavorite
+            if (channel.isFavorite != isFav) channel.copy(isFavorite = isFav) else channel
+        }
+
+        when (prefs.channelSortOrder) {
+            "favorites" -> filtered.sortedWith(
+                compareByDescending<Channel> { it.isFavorite }
+                    .thenBy { if (it.channelNumber > 0) 0 else 1 }
+                    .thenBy { it.channelNumber }
+                    .thenBy { it.displayName }
+            )
+            "name" -> filtered.sortedWith(compareBy { it.displayName })
+            else -> filtered.sortedWith(
+                compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
+                    .thenBy { it.channelNumber }
+                    .thenBy { it.displayName }
+            )
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun updateSearchQuery(query: String) {
@@ -88,6 +120,7 @@ class ChannelListViewModel @Inject constructor(
 
     fun toggleFavorite(channelId: String, currentFavorite: Boolean) {
         viewModelScope.launch {
+            userPreferences.toggleFavoriteChannel(channelId)
             epgRepository.toggleFavoriteChannel(channelId, !currentFavorite)
         }
     }

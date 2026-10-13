@@ -53,11 +53,12 @@ class CategoryExploreViewModel @Inject constructor(
 
     val channels: StateFlow<List<Channel>> = combine(
         rawChannels,
-        userPreferences.selectedBundle
-    ) { list, bundleId ->
+        userPreferences.selectedBundle,
+        userPreferences.hiddenChannels
+    ) { list, bundleId, hidden ->
         val bundle = ChannelBundle.fromId(bundleId)
         list.filter { channel ->
-            ChannelCatalog.isChannelInBundle(channel.id, bundle)
+            !hidden.contains(channel.id) && ChannelCatalog.isChannelInBundle(channel.id, bundle)
         }.sortedWith(
             compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
                 .thenBy { it.channelNumber }
@@ -65,37 +66,66 @@ class CategoryExploreViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val programs: StateFlow<List<Program>> = combine(
+    private data class FilterPreferences(
+        val bundleId: String,
+        val hiddenChannels: Set<String>,
+        val hideReruns: Boolean
+    )
+
+    private val filterPrefsFlow = combine(
+        userPreferences.selectedBundle,
+        userPreferences.hiddenChannels,
+        userPreferences.hideReruns
+    ) { bundleId, hidden, hideReruns ->
+        FilterPreferences(bundleId, hidden, hideReruns)
+    }
+
+    private data class ExploreFilter(
+        val category: TvCategory?,
+        val date: LocalDate?,
+        val channelId: String?,
+        val query: String
+    )
+
+    private val exploreFilterFlow = combine(
         _selectedCategory,
         _selectedDate,
         _selectedChannelId,
-        _searchQuery,
-        userPreferences.selectedBundle
-    ) { category, date, channelId, query, bundleId ->
-        val bundle = ChannelBundle.fromId(bundleId)
-        val keyword = category?.searchKeyword ?: ""
+        _searchQuery
+    ) { category, date, channelId, query ->
+        ExploreFilter(category, date, channelId, query)
+    }
+
+    val programs: StateFlow<List<Program>> = combine(
+        exploreFilterFlow,
+        filterPrefsFlow
+    ) { filter, prefs ->
+        val bundle = ChannelBundle.fromId(prefs.bundleId)
+        val keyword = filter.category?.searchKeyword ?: ""
         epgRepository.getProgramsByCategory(keyword).map { list ->
             val zone = ZoneId.of("Europe/Paris")
-            val (dayStart, dayEnd) = if (date != null) {
-                val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
-                val end = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            val (dayStart, dayEnd) = if (filter.date != null) {
+                val start = filter.date.atStartOfDay(zone).toInstant().toEpochMilli()
+                val end = filter.date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
                 start to end
             } else {
                 null to null
             }
 
             list.filter { program ->
+                val notHidden = !prefs.hiddenChannels.contains(program.channelId)
+                val notRerun = if (prefs.hideReruns) program.isUnreleased else true
                 val matchesBundle = ChannelCatalog.isChannelInBundle(program.channelId, bundle)
-                val matchesChannel = channelId == null || program.channelId == channelId
+                val matchesChannel = filter.channelId == null || program.channelId == filter.channelId
                 val matchesDate = if (dayStart != null && dayEnd != null) {
                     program.stopTimestamp > dayStart && program.startTimestamp < dayEnd
                 } else true
-                val matchesQuery = query.isBlank() ||
-                        program.title.contains(query, ignoreCase = true) ||
-                        program.description.contains(query, ignoreCase = true) ||
-                        program.channelId.contains(query, ignoreCase = true)
+                val matchesQuery = filter.query.isBlank() ||
+                        program.title.contains(filter.query, ignoreCase = true) ||
+                        program.description.contains(filter.query, ignoreCase = true) ||
+                        program.channelId.contains(filter.query, ignoreCase = true)
 
-                matchesBundle && matchesChannel && matchesDate && matchesQuery
+                notHidden && notRerun && matchesBundle && matchesChannel && matchesDate && matchesQuery
             }
         }
     }.flatMapLatest { it }

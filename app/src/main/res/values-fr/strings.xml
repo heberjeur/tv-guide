@@ -197,4 +197,8 @@
     <string name="filter_all_days">Tous les jours</string>
     <string name="channels_search_placeholder">Rechercher une chaîne...</string>
     <string name="channels_empty">Aucune chaîne trouvée.</string>
+    <string name="no_programs_for_date">Aucun programme disponible pour cette date.</string>
+    <string name="badge_subtitles">ST</string>
+    <string name="badge_hd">HD</string>
+    <string name="badge_unreleased">Inédit</string>
 </resources>

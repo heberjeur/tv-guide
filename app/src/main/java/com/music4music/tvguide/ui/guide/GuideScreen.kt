@@ -60,6 +60,7 @@ import com.music4music.tvguide.ui.theme.SurfaceBorder
 import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private val dayFormatter = DateTimeFormatter.ofPattern("EEE dd MMM")
@@ -79,7 +80,8 @@ fun GuideScreen(
     var isSearchActive by remember { mutableStateOf(false) }
 
     val availableDates = remember {
-        (0..13).map { LocalDate.now().plusDays(it.toLong()) }
+        val zone = ZoneId.of("Europe/Paris")
+        (0..13).map { LocalDate.now(zone).plusDays(it.toLong()) }
     }
 
     val currentChannel = channels.find { it.id == selectedChannelId }
@@ -230,7 +232,7 @@ fun GuideScreen(
                         text = if (searchQuery.isNotEmpty()) {
                             stringResource(R.string.search_empty)
                         } else {
-                            stringResource(R.string.offline_banner_no_data)
+                            stringResource(R.string.no_programs_for_date)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary

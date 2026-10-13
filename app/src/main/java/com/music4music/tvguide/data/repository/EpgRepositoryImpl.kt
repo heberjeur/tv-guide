@@ -27,6 +27,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import com.music4music.tvguide.data.local.prefs.UserPreferences
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,7 +42,8 @@ class EpgRepositoryImpl @Inject constructor(
     private val syncMetadataDao: SyncMetadataDao,
     private val downloader: XmltvDownloader,
     private val parser: XmltvParser,
-    private val connectivityObserver: ConnectivityObserver
+    private val connectivityObserver: ConnectivityObserver,
+    private val userPreferences: UserPreferences
 ) : EpgRepository {
 
     private val _syncProgress = MutableStateFlow(SyncProgress())
@@ -119,35 +124,34 @@ class EpgRepositoryImpl @Inject constructor(
     override suspend fun syncEpg(channelPackage: ChannelPackage, forceRefresh: Boolean): Result<Unit> =
         withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
-            val metadata = syncMetadataDao.getSyncMetadataDirect(channelPackage.id)
+            var cachedCount = programDao.getProgramCount()
 
+            if (cachedCount == 0) {
+                _syncProgress.value = SyncProgress(state = SyncState.PARSING)
+                preloadFromAssetsIfEmpty(channelPackage)
+                cachedCount = programDao.getProgramCount()
+            }
+
+            val metadata = syncMetadataDao.getSyncMetadataDirect(channelPackage.id)
             val fourHoursMillis = 4 * 60 * 60 * 1000L
             val isStale = metadata == null || (now - metadata.lastSyncTimestamp) > fourHoursMillis
 
-            if (!forceRefresh && !isStale) {
+            if (!forceRefresh && !isStale && cachedCount > 0) {
                 _syncProgress.value = SyncProgress(
                     state = SyncState.IDLE,
-                    programCount = metadata.programCount,
-                    lastSyncTimestamp = metadata.lastSyncTimestamp
+                    programCount = cachedCount,
+                    lastSyncTimestamp = metadata?.lastSyncTimestamp ?: now
                 )
                 return@withContext Result.success(Unit)
             }
 
             if (!connectivityObserver.isConnected()) {
-                val cachedCount = programDao.getProgramCount()
-                if (metadata != null || cachedCount > 0) {
-                    _syncProgress.value = SyncProgress(
-                        state = SyncState.IDLE,
-                        programCount = cachedCount,
-                        lastSyncTimestamp = metadata?.lastSyncTimestamp ?: now
-                    )
-                    return@withContext Result.success(Unit)
-                } else {
-                    _syncProgress.value = SyncProgress(
-                        state = SyncState.ERROR
-                    )
-                    return@withContext Result.failure(IOException("No network connection available to perform initial sync"))
-                }
+                _syncProgress.value = SyncProgress(
+                    state = SyncState.IDLE,
+                    programCount = cachedCount,
+                    lastSyncTimestamp = metadata?.lastSyncTimestamp ?: now
+                )
+                return@withContext Result.success(Unit)
             }
 
             _syncProgress.value = SyncProgress(
@@ -181,7 +185,7 @@ class EpgRepositoryImpl @Inject constructor(
                         }
                         _syncProgress.value = SyncProgress(
                             state = SyncState.SUCCESS,
-                            programCount = metadata?.programCount ?: 0,
+                            programCount = metadata?.programCount ?: cachedCount,
                             lastSyncTimestamp = now
                         )
                         return@withContext Result.success(Unit)
@@ -195,8 +199,6 @@ class EpgRepositoryImpl @Inject constructor(
                     )
 
                     var totalPrograms = 0
-                    programDao.clearAll()
-                    channelDao.deleteChannelsByPackage(channelPackage.id)
 
                     stream.use { input ->
                         parser.parse(input, channelPackage.id) { channels, programs ->
@@ -226,8 +228,9 @@ class EpgRepositoryImpl @Inject constructor(
                         )
                     )
 
-                    val yesterday = now - 24 * 60 * 60 * 1000L
-                    programDao.deleteExpiredPrograms(yesterday)
+                    val retentionDays = userPreferences.retentionDays.first()
+                    val cutoffTimestamp = now - (retentionDays.coerceAtLeast(1) * 24 * 60 * 60 * 1000L)
+                    programDao.deleteExpiredPrograms(cutoffTimestamp)
 
                     _syncProgress.value = SyncProgress(
                         state = SyncState.CACHING_IMAGES,
@@ -252,6 +255,13 @@ class EpgRepositoryImpl @Inject constructor(
 
             if (syncSucceeded) {
                 Result.success(Unit)
+            } else if (cachedCount > 0) {
+                _syncProgress.value = SyncProgress(
+                    state = SyncState.IDLE,
+                    programCount = cachedCount,
+                    lastSyncTimestamp = metadata?.lastSyncTimestamp ?: now
+                )
+                Result.success(Unit)
             } else {
                 _syncProgress.value = SyncProgress(
                     state = SyncState.ERROR
@@ -260,7 +270,51 @@ class EpgRepositoryImpl @Inject constructor(
             }
         }
 
-    private fun prefetchImages(urls: List<String>) {
+    private suspend fun preloadFromAssetsIfEmpty(channelPackage: ChannelPackage) {
+        try {
+            val assetStream = context.assets.open("epg_tnt.xml.gz")
+            var totalPrograms = 0
+            val imageList = mutableListOf<String>()
+
+            assetStream.use { input ->
+                parser.parse(input, channelPackage.id) { channels, programs ->
+                    if (channels.isNotEmpty()) {
+                        channelDao.insertChannels(channels)
+                    }
+                    if (programs.isNotEmpty()) {
+                        programDao.insertPrograms(programs)
+                        totalPrograms += programs.size
+                        programs.forEach { p ->
+                            val icon = p.iconUrl
+                            if (!icon.isNullOrBlank() && !icon.startsWith("data:")) {
+                                imageList.add(icon)
+                            }
+                        }
+                    }
+                }
+            }
+
+            val now = System.currentTimeMillis()
+            syncMetadataDao.insertSyncMetadata(
+                SyncMetadataEntity(
+                    packageId = channelPackage.id,
+                    lastSyncTimestamp = now,
+                    etag = "bundled_asset",
+                    programCount = totalPrograms,
+                    isSuccess = true
+                )
+            )
+
+            prefetchImages(imageList)
+        } catch (_: Exception) {
+        }
+    }
+
+    private suspend fun prefetchImages(urls: List<String>) {
+        val policy = userPreferences.imageDownloadPolicy.first()
+        if (policy == "never") return
+        if (policy == "wifi_only" && !isWifiConnected()) return
+
         val loader = context.imageLoader
         urls.distinct().take(400).forEach { url ->
             val request = ImageRequest.Builder(context)
@@ -270,5 +324,12 @@ class EpgRepositoryImpl @Inject constructor(
                 .build()
             loader.enqueue(request)
         }
+    }
+
+    private fun isWifiConnected(): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val activeNetwork = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
     }
 }

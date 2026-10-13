@@ -25,6 +25,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+import androidx.compose.runtime.CompositionLocalProvider
+import com.music4music.tvguide.ui.theme.LocalDisplayDensity
+import com.music4music.tvguide.ui.theme.LocalHighlightAccessibility
+import com.music4music.tvguide.ui.theme.LocalFontSizeScale
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -37,12 +42,22 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val themeMode by userPreferences.themeMode.collectAsStateWithLifecycle(initialValue = "dark")
-            TvGuideTheme(themeMode = themeMode) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+            val fontSizeScale by userPreferences.fontSizeScale.collectAsStateWithLifecycle(initialValue = "normal")
+            val displayDensity by userPreferences.displayDensity.collectAsStateWithLifecycle(initialValue = "comfort")
+            val highlightAccessibility by userPreferences.highlightAccessibility.collectAsStateWithLifecycle(initialValue = true)
+
+            TvGuideTheme(themeMode = themeMode, fontSizeScale = fontSizeScale) {
+                CompositionLocalProvider(
+                    LocalDisplayDensity provides displayDensity,
+                    LocalHighlightAccessibility provides highlightAccessibility,
+                    LocalFontSizeScale provides fontSizeScale
                 ) {
-                    TvGuideAppNavigation()
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        TvGuideAppNavigation()
+                    }
                 }
             }
         }

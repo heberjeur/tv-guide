@@ -83,11 +83,25 @@ object ChannelCatalog {
     private val tntIds = tntChannelMap.keys
 
     fun getChannelNumber(channelId: String): Int {
-        return tntChannelMap[channelId] ?: 0
+        val direct = tntChannelMap[channelId]
+        if (direct != null) return direct
+        val normalized = normalizeId(channelId)
+        return tntChannelMap.entries.firstOrNull {
+            normalizeId(it.key) == normalized
+        }?.value ?: 0
     }
 
     fun getLogoUrl(channelId: String): String? {
-        return logoMap[channelId]
+        val direct = logoMap[channelId]
+        if (direct != null) return direct
+        val normalized = normalizeId(channelId)
+        return logoMap.entries.firstOrNull {
+            normalizeId(it.key) == normalized
+        }?.value
+    }
+
+    private fun normalizeId(id: String): String {
+        return id.trim().lowercase().removeSuffix(".fr").replace("[^a-z0-9]".toRegex(), "")
     }
 
     fun isChannelInBundle(channelId: String, bundle: ChannelBundle): Boolean {

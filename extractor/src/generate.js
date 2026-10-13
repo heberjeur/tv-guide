@@ -47,26 +47,38 @@ function formatXmltvDate(date) {
 }
 
 function extractImageSrc($el) {
-  const imgEl = $el.find('img').first();
-  if (!imgEl.length) return '';
-
-  const dataSrc = imgEl.attr('data-src');
-  const dataSrcset = imgEl.attr('data-srcset') || imgEl.attr('srcset');
-  const src = imgEl.attr('src');
-
   let chosen = '';
-  if (dataSrc && !dataSrc.startsWith('data:')) {
-    chosen = dataSrc;
-  } else if (src && !src.startsWith('data:')) {
-    chosen = src;
-  } else if (dataSrcset) {
-    chosen = dataSrcset.split(',')[0].trim().split(' ')[0];
+  const pictureSource = $el.find('picture source').first().attr('srcset');
+  if (pictureSource) {
+    chosen = pictureSource.split(',')[0].trim().split(' ')[0];
+  }
+
+  if (!chosen) {
+    const imgEl = $el.find('img').first();
+    if (imgEl.length) {
+      const dataSrc = imgEl.attr('data-src');
+      const dataSrcset = imgEl.attr('data-srcset') || imgEl.attr('srcset');
+      const src = imgEl.attr('src');
+      if (dataSrc && !dataSrc.startsWith('data:')) {
+        chosen = dataSrc;
+      } else if (dataSrcset) {
+        chosen = dataSrcset.split(',')[0].trim().split(' ')[0];
+      } else if (src && !src.startsWith('data:')) {
+        chosen = src;
+      }
+    }
   }
 
   if (chosen.startsWith('//')) {
     chosen = `https:${chosen}`;
   }
-  return chosen.startsWith('data:') ? '' : chosen;
+  if (chosen.startsWith('data:')) {
+    chosen = '';
+  }
+  if (chosen && chosen.includes('/64x90/')) {
+    chosen = chosen.replace(/\/64x90\/quality\/\d+\//, '/640x360/quality/90/');
+  }
+  return chosen;
 }
 
 async function loadXmltvReference() {
@@ -300,6 +312,9 @@ function buildXml(channels, programs) {
   for (const channel of channels) {
     xml += `  <channel id="${escapeXml(channel.id)}">\n`;
     xml += `    <display-name>${escapeXml(channel.name)}</display-name>\n`;
+    if (channel.icon) {
+      xml += `    <icon src="${escapeXml(channel.icon)}" />\n`;
+    }
     xml += `  </channel>\n`;
   }
 

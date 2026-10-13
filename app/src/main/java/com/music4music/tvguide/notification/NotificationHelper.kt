@@ -36,7 +36,8 @@ class NotificationHelper @Inject constructor(
         title: String,
         channelId: String,
         leadTimeMinutes: Int,
-        customSoundUri: String? = null
+        customSoundUri: String? = null,
+        vibrationEnabled: Boolean = true
     ) {
         val channelIdToUse = if (customSoundUri != null) {
             createCustomSoundChannel(customSoundUri)
@@ -64,7 +65,7 @@ class NotificationHelper @Inject constructor(
             channelId
         )
 
-        val notification = NotificationCompat.Builder(context, channelIdToUse)
+        val builder = NotificationCompat.Builder(context, channelIdToUse)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(context.getString(R.string.reminder_title))
             .setContentText(contentText)
@@ -72,9 +73,14 @@ class NotificationHelper @Inject constructor(
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .build()
 
-        notificationManager.notify(programId.toInt(), notification)
+        if (vibrationEnabled) {
+            builder.setVibrate(longArrayOf(0, 300, 200, 300))
+        } else {
+            builder.setVibrate(longArrayOf(0))
+        }
+
+        notificationManager.notify(programId.toInt(), builder.build())
     }
 
     private fun createDefaultChannel() {
