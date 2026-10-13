@@ -43,15 +43,30 @@ class ChannelListViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    init {
+        viewModelScope.launch {
+            userPreferences.selectedBundle.collect { bundleId ->
+                _selectedBundle.value = ChannelBundle.fromId(bundleId)
+            }
+        }
+    }
+
     val filteredChannels: StateFlow<List<Channel>> = combine(
         allChannels,
         _searchQuery,
         _selectedBundle
     ) { channels, query, bundle ->
         channels.filter { channel ->
-            val matchesQuery = query.isBlank() || channel.displayName.contains(query, ignoreCase = true)
-            matchesQuery
-        }
+            val matchesQuery = query.isBlank() ||
+                channel.displayName.contains(query, ignoreCase = true) ||
+                (channel.channelNumber > 0 && channel.channelNumber.toString() == query.trim())
+            val matchesBundle = com.music4music.tvguide.data.local.ChannelCatalog.isChannelInBundle(channel.id, bundle)
+            matchesQuery && matchesBundle
+        }.sortedWith(
+            compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
+                .thenBy { it.channelNumber }
+                .thenBy { it.displayName }
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun updateSearchQuery(query: String) {
@@ -60,6 +75,9 @@ class ChannelListViewModel @Inject constructor(
 
     fun selectBundle(bundle: ChannelBundle) {
         _selectedBundle.value = bundle
+        viewModelScope.launch {
+            userPreferences.setSelectedBundle(bundle.id)
+        }
     }
 
     fun toggleGridMode() {

@@ -19,4 +19,5 @@ interface EpgRepository {
     suspend fun toggleFavoriteChannel(channelId: String, isFavorite: Boolean)
     suspend fun syncEpg(channelPackage: ChannelPackage, forceRefresh: Boolean = false): Result<Unit>
     fun getLastSyncTimestamp(channelPackage: ChannelPackage): Flow<Long?>
+    fun resetSyncProgress()
 }

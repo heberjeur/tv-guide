@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -19,6 +20,10 @@ import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +69,24 @@ fun ProgramCard(
         else -> null
     }
 
+    val currentMillis by produceState(initialValue = System.currentTimeMillis()) {
+        while (true) {
+            delay(1000L)
+            value = System.currentTimeMillis()
+        }
+    }
+
+    val isNowPlaying = currentMillis in program.startTimestamp until program.stopTimestamp
+    val currentProgress = remember(currentMillis, program.startTimestamp, program.stopTimestamp) {
+        if (currentMillis < program.startTimestamp) 0f
+        else if (currentMillis >= program.stopTimestamp) 1f
+        else {
+            val total = program.stopTimestamp - program.startTimestamp
+            if (total <= 0) 0f else (currentMillis - program.startTimestamp).toFloat() / total.toFloat()
+        }
+    }
+    val animatedProgress by animateFloatAsState(targetValue = currentProgress, label = "progress")
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -108,8 +131,8 @@ fun ProgramCard(
                             Text(
                                 text = "  •  $startTime - $stopTime",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (program.isNowPlaying) IndicatorGreen else TextSecondary,
-                                fontWeight = if (program.isNowPlaying) FontWeight.Bold else FontWeight.Normal
+                                color = if (isNowPlaying) IndicatorGreen else TextSecondary,
+                                fontWeight = if (isNowPlaying) FontWeight.Bold else FontWeight.Normal
                             )
                         }
 
@@ -149,24 +172,13 @@ fun ProgramCard(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-
-                    if (program.description.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = program.description,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary.copy(alpha = 0.8f),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
                 }
             }
 
-            if (program.isNowPlaying) {
+            if (isNowPlaying) {
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
-                    progress = { program.progressPercent },
+                    progress = { animatedProgress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp)

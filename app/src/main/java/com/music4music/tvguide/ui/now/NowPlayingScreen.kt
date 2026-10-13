@@ -18,8 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -74,7 +76,6 @@ fun NowPlayingScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
     val selectedEveningPart by viewModel.selectedEveningPart.collectAsStateWithLifecycle()
-    val selectedBundle by viewModel.selectedBundle.collectAsStateWithLifecycle()
     val syncProgress by viewModel.syncProgress.collectAsStateWithLifecycle()
 
     val syncMessage = when (syncProgress.state) {
@@ -169,12 +170,24 @@ fun NowPlayingScreen(
                                 strokeWidth = 2.dp
                             )
                         }
-                        Spacer(modifier = Modifier.padding(4.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = syncMessage,
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextPrimary
+                            color = TextPrimary,
+                            modifier = Modifier.weight(1f)
                         )
+                        IconButton(
+                            onClick = viewModel::dismissSyncBanner,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -265,30 +278,7 @@ fun NowPlayingScreen(
                 }
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                ChannelBundle.entries.forEach { bundle ->
-                    val isSelected = selectedBundle == bundle
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.selectBundle(bundle) },
-                        label = { Text(text = stringResource(bundle.nameRes)) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = DarkSurfaceVariant,
-                            selectedLabelColor = AccentRed,
-                            containerColor = DarkSurface,
-                            labelColor = TextSecondary
-                        ),
-                        border = null,
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                }
-            }
+
 
             if (programs.isEmpty()) {
                 Box(

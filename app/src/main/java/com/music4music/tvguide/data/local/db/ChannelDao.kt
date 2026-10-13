@@ -33,4 +33,7 @@ interface ChannelDao {
 
     @Query("DELETE FROM channels WHERE packageId = :packageId")
     suspend fun deleteChannelsByPackage(packageId: String)
+
+    @Query("DELETE FROM channels")
+    suspend fun clearAll()
 }

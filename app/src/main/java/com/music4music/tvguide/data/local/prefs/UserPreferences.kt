@@ -26,6 +26,11 @@ class UserPreferences @Inject constructor(
     private val keyReminderLeadTime = intPreferencesKey("reminder_lead_time")
     private val keySelectedBundle = stringPreferencesKey("selected_bundle")
     private val keyChannelGridMode = booleanPreferencesKey("channel_grid_mode")
+    private val keyAppLanguage = stringPreferencesKey("app_language")
+    private val keySyncFrequencyHours = intPreferencesKey("sync_frequency_hours")
+    private val keySyncWifiOnly = booleanPreferencesKey("sync_wifi_only")
+    private val keySyncChargingOnly = booleanPreferencesKey("sync_charging_only")
+    private val keyAutoSyncEnabled = booleanPreferencesKey("auto_sync_enabled")
 
     val selectedPackage: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[keyPackage] ?: "community_enriched"
@@ -33,6 +38,26 @@ class UserPreferences @Inject constructor(
 
     val selectedBundle: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[keySelectedBundle] ?: "all"
+    }
+
+    val appLanguage: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyAppLanguage] ?: "fr"
+    }
+
+    val syncFrequencyHours: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[keySyncFrequencyHours] ?: 6
+    }
+
+    val syncWifiOnly: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keySyncWifiOnly] ?: true
+    }
+
+    val syncChargingOnly: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keySyncChargingOnly] ?: false
+    }
+
+    val autoSyncEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keyAutoSyncEnabled] ?: true
     }
 
     val isChannelGridMode: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -88,6 +113,36 @@ class UserPreferences @Inject constructor(
     suspend fun setReminderLeadTime(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[keyReminderLeadTime] = minutes
+        }
+    }
+
+    suspend fun setAppLanguage(language: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyAppLanguage] = language
+        }
+    }
+
+    suspend fun setSyncFrequency(hours: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[keySyncFrequencyHours] = hours
+        }
+    }
+
+    suspend fun setSyncWifiOnly(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keySyncWifiOnly] = enabled
+        }
+    }
+
+    suspend fun setSyncChargingOnly(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keySyncChargingOnly] = enabled
+        }
+    }
+
+    suspend fun setAutoSyncEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keyAutoSyncEnabled] = enabled
         }
     }
 }

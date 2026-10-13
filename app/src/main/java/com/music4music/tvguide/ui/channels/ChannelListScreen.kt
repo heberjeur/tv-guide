@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -70,6 +71,7 @@ import com.music4music.tvguide.ui.theme.TextSecondary
 @Composable
 fun ChannelListScreen(
     onChannelClick: (String) -> Unit,
+    onSettingsClick: () -> Unit = {},
     viewModel: ChannelListViewModel = hiltViewModel()
 ) {
     val channels by viewModel.filteredChannels.collectAsStateWithLifecycle()
@@ -92,6 +94,13 @@ fun ChannelListScreen(
                         Icon(
                             imageVector = if (isGridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
                             contentDescription = null,
+                            tint = TextPrimary
+                        )
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.tab_settings),
                             tint = TextPrimary
                         )
                     }
@@ -239,7 +248,7 @@ private fun ChannelListCard(
                     )
                 } else {
                     Text(
-                        text = channel.channelNumber.toString(),
+                        text = if (channel.channelNumber > 0) channel.channelNumber.toString() else channel.displayName.take(2).uppercase(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = AccentRed
@@ -256,11 +265,13 @@ private fun ChannelListCard(
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
-                Text(
-                    text = stringResource(R.string.reminder_channel_name, channel.channelNumber),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
+                if (channel.channelNumber > 0) {
+                    Text(
+                        text = stringResource(R.string.channel_number_format, channel.channelNumber),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
             }
 
             IconButton(onClick = onFavoriteClick) {
@@ -312,7 +323,7 @@ private fun ChannelGridCard(
                     )
                 } else {
                     Text(
-                        text = channel.channelNumber.toString(),
+                        text = if (channel.channelNumber > 0) channel.channelNumber.toString() else channel.displayName.take(2).uppercase(),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = AccentRed
@@ -332,11 +343,13 @@ private fun ChannelGridCard(
                 textAlign = TextAlign.Center
             )
 
-            Text(
-                text = stringResource(R.string.reminder_channel_name, channel.channelNumber),
-                style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary
-            )
+            if (channel.channelNumber > 0) {
+                Text(
+                    text = stringResource(R.string.channel_number_format, channel.channelNumber),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary
+                )
+            }
         }
     }
 }

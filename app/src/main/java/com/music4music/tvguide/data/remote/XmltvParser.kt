@@ -1,6 +1,7 @@
 package com.music4music.tvguide.data.remote
 
 import android.util.Xml
+import com.music4music.tvguide.data.local.ChannelCatalog
 import com.music4music.tvguide.data.local.entity.ChannelEntity
 import com.music4music.tvguide.data.local.entity.ProgramEntity
 import org.xmlpull.v1.XmlPullParser
@@ -73,6 +74,7 @@ class XmltvParser @Inject constructor() {
         }
         var displayName = ""
         var iconUrl: String? = null
+        var lcnNumber = 0
 
         while (parser.next() != XmlPullParser.END_TAG || parser.name != XML_TAG_CHANNEL) {
             if (parser.eventType != XmlPullParser.START_TAG) continue
@@ -83,15 +85,22 @@ class XmltvParser @Inject constructor() {
                     iconUrl = parser.getAttributeValue(null, "src")
                     skipElement(parser)
                 }
+                "lcn", "channel-num" -> {
+                    lcnNumber = readText(parser).trim().toIntOrNull() ?: 0
+                }
                 else -> skipElement(parser)
             }
         }
 
+        val resolvedNumber = if (lcnNumber > 0) lcnNumber else ChannelCatalog.getChannelNumber(id)
+        val resolvedIcon = iconUrl ?: ChannelCatalog.getLogoUrl(id)
+
         return ChannelEntity(
             id = id,
             displayName = displayName.ifEmpty { id },
-            iconUrl = iconUrl,
-            packageId = packageId
+            iconUrl = resolvedIcon,
+            packageId = packageId,
+            channelNumber = resolvedNumber
         )
     }
 

@@ -1,5 +1,7 @@
 package com.music4music.tvguide.ui.detail
 
+import android.content.Intent
+import android.provider.CalendarContract
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -317,11 +319,22 @@ fun ProgramDetailScreen(
                                 try {
                                     context.startActivity(intent)
                                 } catch (_: android.content.ActivityNotFoundException) {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.no_calendar_app_installed),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    val fallbackIntent = Intent(Intent.ACTION_EDIT).apply {
+                                        setDataAndType(CalendarContract.Events.CONTENT_URI, "vnd.android.cursor.item/event")
+                                        putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, currentProgram.startTimestamp)
+                                        putExtra(CalendarContract.EXTRA_EVENT_END_TIME, currentProgram.stopTimestamp)
+                                        putExtra(CalendarContract.Events.TITLE, currentProgram.title)
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    try {
+                                        context.startActivity(fallbackIntent)
+                                    } catch (_: android.content.ActivityNotFoundException) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.no_calendar_app_installed),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
                                 }
                             },
                             modifier = Modifier.weight(1f),

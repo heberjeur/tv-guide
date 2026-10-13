@@ -67,7 +67,6 @@ fun GuideScreen(
     val programs by viewModel.programs.collectAsStateWithLifecycle()
     val selectedChannelId by viewModel.selectedChannelId.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
-    val selectedBundle by viewModel.selectedBundle.collectAsStateWithLifecycle()
 
     val availableDates = remember {
         (0..13).map { LocalDate.now().plusDays(it.toLong()) }
@@ -136,32 +135,7 @@ fun GuideScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                ChannelBundle.entries.forEach { bundle ->
-                    val isSelected = selectedBundle == bundle
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.selectBundle(bundle) },
-                        label = { Text(text = stringResource(bundle.nameRes)) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = DarkSurfaceVariant,
-                            selectedLabelColor = AccentRed,
-                            containerColor = DarkSurface,
-                            labelColor = TextSecondary
-                        ),
-                        border = null,
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                }
-            }
 
-            Spacer(modifier = Modifier.height(4.dp))
 
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),

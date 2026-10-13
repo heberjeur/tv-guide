@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "programs",
     indices = [
-        Index(value = ["channelId", "startTimestamp"]),
+        Index(value = ["channelId", "startTimestamp"], unique = true),
         Index(value = ["channelId", "stopTimestamp"]),
         Index(value = ["startTimestamp", "stopTimestamp"]),
         Index(value = ["title"])

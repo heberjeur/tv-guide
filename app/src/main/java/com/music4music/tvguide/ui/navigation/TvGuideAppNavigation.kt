@@ -133,6 +133,9 @@ fun TvGuideAppNavigation() {
                 CategoryExploreScreen(
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Screen.Settings.route)
                     }
                 )
             }
@@ -140,6 +143,9 @@ fun TvGuideAppNavigation() {
                 CalendarScreen(
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Screen.Settings.route)
                     }
                 )
             }
@@ -147,6 +153,9 @@ fun TvGuideAppNavigation() {
                 ChannelListScreen(
                     onChannelClick = { _ ->
                         navController.navigate(Screen.Guide.route)
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Screen.Settings.route)
                     }
                 )
             }

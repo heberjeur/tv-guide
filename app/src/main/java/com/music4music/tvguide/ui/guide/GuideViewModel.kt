@@ -38,9 +38,6 @@ class GuideViewModel @Inject constructor(
     private val _selectedChannelId = MutableStateFlow<String?>(null)
     val selectedChannelId: StateFlow<String?> = _selectedChannelId.asStateFlow()
 
-    private val _selectedBundle = MutableStateFlow(ChannelBundle.ALL)
-    val selectedBundle: StateFlow<ChannelBundle> = _selectedBundle.asStateFlow()
-
     private val _channelSearchQuery = MutableStateFlow("")
     val channelSearchQuery: StateFlow<String> = _channelSearchQuery.asStateFlow()
 
@@ -52,13 +49,19 @@ class GuideViewModel @Inject constructor(
 
     val filteredChannels: StateFlow<List<Channel>> = combine(
         rawChannels,
-        _selectedBundle,
+        userPreferences.selectedBundle,
         _channelSearchQuery
-    ) { list, bundle, query ->
+    ) { list, bundleId, query ->
+        val bundle = ChannelBundle.fromId(bundleId)
         list.filter { channel ->
             val matchesQuery = query.isBlank() || channel.displayName.contains(query, ignoreCase = true)
-            matchesQuery
-        }
+            val matchesBundle = com.music4music.tvguide.data.local.ChannelCatalog.isChannelInBundle(channel.id, bundle)
+            matchesQuery && matchesBundle
+        }.sortedWith(
+            compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
+                .thenBy { it.channelNumber }
+                .thenBy { it.displayName }
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val programs: StateFlow<List<Program>> = combine(
@@ -80,8 +83,8 @@ class GuideViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             filteredChannels.collect { list ->
-                if (_selectedChannelId.value == null && list.isNotEmpty()) {
-                    _selectedChannelId.value = list.first().id
+                if (_selectedChannelId.value == null || list.none { it.id == _selectedChannelId.value }) {
+                    _selectedChannelId.value = list.firstOrNull()?.id
                 }
             }
         }
@@ -93,10 +96,6 @@ class GuideViewModel @Inject constructor(
 
     fun selectDate(date: LocalDate) {
         _selectedDate.value = date
-    }
-
-    fun selectBundle(bundle: ChannelBundle) {
-        _selectedBundle.value = bundle
     }
 
     fun updateChannelSearch(query: String) {

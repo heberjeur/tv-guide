@@ -3,7 +3,7 @@
     <string name="app_name">TV Guide</string>
     <string name="tab_now">En ce moment</string>
     <string name="tab_programs">Programme</string>
-    <string name="tab_guide">Guide TV</string>
+    <string name="tab_guide">Guide</string>
     <string name="tab_channels">Chaînes</string>
     <string name="tab_settings">Paramètres</string>
     <string name="tab_categories">Catégories</string>
@@ -12,10 +12,10 @@
     <string name="period_now">En ce moment</string>
     <string name="period_tonight">Ce soir</string>
     <string name="period_yesterday">Hier</string>
-    <string name="period_tonight_part_1">Ce soir 1ère partie (21h)</string>
-    <string name="period_tonight_part_2">Ce soir 2ème partie (22h45)</string>
-    <string name="period_yesterday_part_1">Hier 1ère partie (21h)</string>
-    <string name="period_yesterday_part_2">Hier 2ème partie (22h45)</string>
+    <string name="period_tonight_part_1">1ère partie (21h)</string>
+    <string name="period_tonight_part_2">2ème partie (22h45)</string>
+    <string name="period_yesterday_part_1">1ère partie (21h)</string>
+    <string name="period_yesterday_part_2">2ème partie (22h45)</string>
 
     <string name="bundle_all">Tous</string>
     <string name="bundle_tnt">TNT</string>
@@ -47,8 +47,10 @@
     <string name="no_programs_period">Aucun programme disponible pour cette période.</string>
 
     <string name="calendar_title">Mon Calendrier TV</string>
-    <string name="calendar_empty_title">Aucun rappel prévu ce jour</string>
+    <string name="calendar_empty_title">Aucun rappel prévu</string>
     <string name="calendar_empty_desc">Ajoutez des rappels depuis les grilles TV ou les fiches des émissions pour ne manquer aucun rendez-vous.</string>
+    <string name="calendar_no_reminders_day">Aucun rappel prévu pour ce jour</string>
+    <string name="calendar_reminders_count">%1$d rappel(s)</string>
     <string name="reminder_at_airtime">À l\'heure exacte</string>
     <string name="reminder_lead_time_format">%1$d min avant</string>
     <string name="reminder_active">Rappel actif</string>
@@ -91,6 +93,7 @@
     <string name="reminder_title">Rappel TV</string>
     <string name="reminder_starting_soon">%1$s commence dans %2$d minutes sur %3$s</string>
     <string name="reminder_channel_name">Chaîne %1$s</string>
+    <string name="channel_number_format">Chaîne %1$d</string>
 
     <string name="offline_banner_sync_ago">Dernière mise à jour il y a %1$s</string>
     <string name="offline_banner_no_data">Aucune donnée disponible hors-ligne. Veuillez vous connecter pour télécharger le guide.</string>
@@ -107,17 +110,44 @@
     <string name="label_subtitles">Sous-titres</string>
     <string name="label_hd">HD</string>
 
+    <string name="settings_bundle_title">Bouquets TV</string>
+    <string name="settings_bundle_subtitle">Filtre actif pour toute l\'application</string>
+    <string name="settings_language_title">Langue de l\'application</string>
+    <string name="language_french">Français</string>
+    <string name="language_english">Anglais</string>
+
     <string name="settings_notifications_title">Notifications</string>
     <string name="settings_notifications_enable">Activer les notifications</string>
     <string name="settings_notification_sound">Son de notification</string>
+    <string name="settings_sound_default">Sonnerie par défaut</string>
     <string name="settings_reminder_lead_time">Délai de notification</string>
-    <string name="settings_storage_title">Stockage et cache</string>
-    <string name="settings_clear_cache">Vider le cache</string>
-    <string name="settings_cache_size">Taille actuelle du cache : %1$s</string>
-    <string name="settings_custom_reminder">Délai de rappel personnalisé</string>
+    <string name="settings_custom_reminder">Délai personnalisé</string>
+    <string name="settings_custom_lead_time_dialog_title">Délai personnalisé</string>
+    <string name="settings_custom_lead_time_hint">Nombre de minutes (ex: 7)</string>
+    <string name="action_confirm">Valider</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="label_custom">Personnalisé</string>
+    <string name="label_custom_format">%1$d min (perso)</string>
     <string name="reminder_exact_time">À l\'heure</string>
     <string name="minutes_short">%1$d min</string>
 
+    <string name="settings_sync_title">Actualisation et synchronisation</string>
+    <string name="settings_sync_frequency">Fréquence d\'actualisation</string>
+    <string name="sync_freq_6h">Toutes les 6h</string>
+    <string name="sync_freq_12h">Toutes les 12h</string>
+    <string name="sync_freq_24h">Toutes les 24h</string>
+    <string name="sync_freq_manual">Manuelle uniquement</string>
+    <string name="settings_sync_wifi_only">Uniquement en Wi-Fi</string>
+    <string name="settings_sync_charging_only">Uniquement sur chargeur</string>
+    <string name="settings_sync_auto_background">Actualisation en arrière-plan</string>
+    <string name="action_sync_now">Actualiser maintenant</string>
+
+    <string name="settings_storage_title">Stockage et cache</string>
+    <string name="settings_clear_cache">Vider le cache</string>
+    <string name="settings_cache_size">Taille actuelle du cache : %1$s</string>
+
+    <string name="filter_all_channels">Toutes les chaînes</string>
+    <string name="filter_all_days">Tous les jours</string>
     <string name="channels_search_placeholder">Rechercher une chaîne...</string>
     <string name="channels_empty">Aucune chaîne trouvée.</string>
 </resources>

@@ -12,10 +12,10 @@
     <string name="period_now">Now</string>
     <string name="period_tonight">Tonight</string>
     <string name="period_yesterday">Yesterday</string>
-    <string name="period_tonight_part_1">Tonight Part 1 (9:00 PM)</string>
-    <string name="period_tonight_part_2">Tonight Part 2 (10:45 PM)</string>
-    <string name="period_yesterday_part_1">Yesterday Part 1 (9:00 PM)</string>
-    <string name="period_yesterday_part_2">Yesterday Part 2 (10:45 PM)</string>
+    <string name="period_tonight_part_1">Part 1 (9 PM)</string>
+    <string name="period_tonight_part_2">Part 2 (10:45 PM)</string>
+    <string name="period_yesterday_part_1">Part 1 (9 PM)</string>
+    <string name="period_yesterday_part_2">Part 2 (10:45 PM)</string>
 
     <string name="bundle_all">All</string>
     <string name="bundle_tnt">TNT</string>
@@ -49,6 +49,8 @@
     <string name="calendar_title">TV Calendar</string>
     <string name="calendar_empty_title">No reminders scheduled</string>
     <string name="calendar_empty_desc">Add reminders from the guide or program details to track your shows.</string>
+    <string name="calendar_no_reminders_day">No reminders scheduled for this day</string>
+    <string name="calendar_reminders_count">%1$d reminder(s)</string>
     <string name="reminder_at_airtime">At start time</string>
     <string name="reminder_lead_time_format">%1$d min before</string>
     <string name="reminder_active">Reminder set</string>
@@ -91,6 +93,7 @@
     <string name="reminder_title">TV Reminder</string>
     <string name="reminder_starting_soon">%1$s starts in %2$d minutes on %3$s</string>
     <string name="reminder_channel_name">Channel %1$s</string>
+    <string name="channel_number_format">Channel %1$d</string>
 
     <string name="offline_banner_sync_ago">Last updated: %1$s ago</string>
     <string name="offline_banner_no_data">No data available offline. Please connect to download the guide.</string>
@@ -107,17 +110,44 @@
     <string name="label_subtitles">Subtitles</string>
     <string name="label_hd">HD</string>
 
+    <string name="settings_bundle_title">TV Packages</string>
+    <string name="settings_bundle_subtitle">Active filter applied across the whole app</string>
+    <string name="settings_language_title">Application Language</string>
+    <string name="language_french">French</string>
+    <string name="language_english">English</string>
+
     <string name="settings_notifications_title">Notifications</string>
     <string name="settings_notifications_enable">Enable Notifications</string>
     <string name="settings_notification_sound">Notification Sound</string>
+    <string name="settings_sound_default">Default ringtone</string>
     <string name="settings_reminder_lead_time">Notification Timing</string>
-    <string name="settings_storage_title">Cache &amp; Storage</string>
-    <string name="settings_clear_cache">Clear Cache</string>
-    <string name="settings_cache_size">Current cache size: %1$s</string>
-    <string name="settings_custom_reminder">Custom Reminder Lead Time</string>
+    <string name="settings_custom_reminder">Custom Delay</string>
+    <string name="settings_custom_lead_time_dialog_title">Custom Timing</string>
+    <string name="settings_custom_lead_time_hint">Number of minutes (e.g. 7)</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="label_custom">Custom</string>
+    <string name="label_custom_format">%1$d min (custom)</string>
     <string name="reminder_exact_time">At start time</string>
     <string name="minutes_short">%1$d min</string>
 
+    <string name="settings_sync_title">Update &amp; Synchronization</string>
+    <string name="settings_sync_frequency">Update Frequency</string>
+    <string name="sync_freq_6h">Every 6h</string>
+    <string name="sync_freq_12h">Every 12h</string>
+    <string name="sync_freq_24h">Every 24h</string>
+    <string name="sync_freq_manual">Manual only</string>
+    <string name="settings_sync_wifi_only">Wi-Fi only</string>
+    <string name="settings_sync_charging_only">While charging only</string>
+    <string name="settings_sync_auto_background">Background auto-update</string>
+    <string name="action_sync_now">Update now</string>
+
+    <string name="settings_storage_title">Cache &amp; Storage</string>
+    <string name="settings_clear_cache">Clear Cache</string>
+    <string name="settings_cache_size">Current cache size: %1$s</string>
+
+    <string name="filter_all_channels">All channels</string>
+    <string name="filter_all_days">All days</string>
     <string name="channels_search_placeholder">Search for a channel...</string>
     <string name="channels_empty">No channels found.</string>
 </resources>

@@ -11,8 +11,10 @@ import com.music4music.tvguide.domain.model.SyncProgress
 import com.music4music.tvguide.domain.repository.EpgRepository
 import com.music4music.tvguide.domain.usecase.GetNowPlayingUseCase
 import com.music4music.tvguide.domain.usecase.SyncEpgUseCase
+import com.music4music.tvguide.data.local.ChannelCatalog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -58,9 +61,6 @@ class NowPlayingViewModel @Inject constructor(
     private val _selectedEveningPart = MutableStateFlow(EveningPart.PART_1)
     val selectedEveningPart: StateFlow<EveningPart> = _selectedEveningPart.asStateFlow()
 
-    private val _selectedBundle = MutableStateFlow(ChannelBundle.ALL)
-    val selectedBundle: StateFlow<ChannelBundle> = _selectedBundle.asStateFlow()
-
     val syncProgress: StateFlow<SyncProgress> = epgRepository.getSyncProgress()
 
     val isOnline: StateFlow<Boolean> = connectivityObserver.observe()
@@ -69,17 +69,19 @@ class NowPlayingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(NowPlayingUiState())
     val uiState: StateFlow<NowPlayingUiState> = _uiState.asStateFlow()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     val programs: StateFlow<List<Program>> = combine(
         _selectedPeriod,
         _selectedEveningPart,
-        _selectedBundle
-    ) { period, part, bundle ->
-        Triple(period, part, bundle)
-    }.flatMapLatest { (period, part, _) ->
+        userPreferences.selectedBundle
+    ) { period: BroadcastPeriod, part: EveningPart, bundleId: String ->
+        Triple(period, part, bundleId)
+    }.flatMapLatest { (period, part, bundleId) ->
+        val bundle = ChannelBundle.fromId(bundleId)
         val zone = ZoneId.of("Europe/Paris")
         val today = LocalDate.now(zone)
 
-        when (period) {
+        val flow: Flow<List<Program>> = when (period) {
             BroadcastPeriod.NOW -> getNowPlayingUseCase()
             BroadcastPeriod.TONIGHT -> {
                 val (startTime, endTime) = if (part == EveningPart.PART_1) {
@@ -107,10 +109,31 @@ class NowPlayingViewModel @Inject constructor(
                 epgRepository.getProgramsByTimeRange(startTime, endTime)
             }
         }
+
+        flow.map { list ->
+            val filtered = list.filter { program ->
+                ChannelCatalog.isChannelInBundle(program.channelId, bundle)
+            }
+            if (period == BroadcastPeriod.NOW) {
+                filtered.distinctBy { it.channelId }
+            } else {
+                filtered
+            }
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         refresh(force = false)
+        viewModelScope.launch {
+            epgRepository.getSyncProgress().collect { progress ->
+                if (progress.state == com.music4music.tvguide.domain.model.SyncState.SUCCESS ||
+                    progress.state == com.music4music.tvguide.domain.model.SyncState.ERROR
+                ) {
+                    kotlinx.coroutines.delay(3500)
+                    epgRepository.resetSyncProgress()
+                }
+            }
+        }
     }
 
     fun selectPeriod(period: BroadcastPeriod) {
@@ -121,8 +144,8 @@ class NowPlayingViewModel @Inject constructor(
         _selectedEveningPart.value = part
     }
 
-    fun selectBundle(bundle: ChannelBundle) {
-        _selectedBundle.value = bundle
+    fun dismissSyncBanner() {
+        epgRepository.resetSyncProgress()
     }
 
     fun refresh(force: Boolean = true) {

@@ -112,6 +112,10 @@ class EpgRepositoryImpl @Inject constructor(
         return syncMetadataDao.getSyncMetadata(channelPackage.id).map { it?.lastSyncTimestamp }
     }
 
+    override fun resetSyncProgress() {
+        _syncProgress.value = SyncProgress(state = SyncState.IDLE)
+    }
+
     override suspend fun syncEpg(channelPackage: ChannelPackage, forceRefresh: Boolean): Result<Unit> =
         withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
@@ -191,6 +195,9 @@ class EpgRepositoryImpl @Inject constructor(
                     )
 
                     var totalPrograms = 0
+                    programDao.clearAll()
+                    channelDao.deleteChannelsByPackage(channelPackage.id)
+
                     stream.use { input ->
                         parser.parse(input, channelPackage.id) { channels, programs ->
                             if (channels.isNotEmpty()) {

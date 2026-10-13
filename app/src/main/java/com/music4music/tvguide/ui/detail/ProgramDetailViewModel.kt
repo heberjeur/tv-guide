@@ -88,15 +88,15 @@ class ProgramDetailViewModel @Inject constructor(
     }
 
     fun createExternalCalendarIntent(program: Program): Intent {
+        val desc = buildString {
+            if (!program.subTitle.isNullOrBlank()) append(program.subTitle).append("\n\n")
+            if (program.description.isNotBlank()) append(program.description)
+        }
         return Intent(Intent.ACTION_INSERT).apply {
-            data = CalendarContract.Events.CONTENT_URI
+            setDataAndType(CalendarContract.Events.CONTENT_URI, "vnd.android.cursor.item/event")
             putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, program.startTimestamp)
             putExtra(CalendarContract.EXTRA_EVENT_END_TIME, program.stopTimestamp)
             putExtra(CalendarContract.Events.TITLE, program.title)
-            val desc = buildString {
-                if (!program.subTitle.isNullOrBlank()) append(program.subTitle).append("\n\n")
-                if (program.description.isNotBlank()) append(program.description)
-            }
             putExtra(CalendarContract.Events.DESCRIPTION, desc)
             putExtra(CalendarContract.Events.EVENT_LOCATION, program.channelId)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
