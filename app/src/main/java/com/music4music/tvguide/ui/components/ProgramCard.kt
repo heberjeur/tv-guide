@@ -68,7 +68,7 @@ fun ProgramCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (program.iconUrl != null) {
+                if (!program.iconUrl.isNullOrBlank() && !program.iconUrl.startsWith("data:")) {
                     AsyncImage(
                         model = program.iconUrl,
                         contentDescription = program.title,

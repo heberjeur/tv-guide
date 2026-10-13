@@ -108,7 +108,7 @@ fun ProgramDetailScreen(
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
-                if (currentProgram.iconUrl != null) {
+                if (!currentProgram.iconUrl.isNullOrBlank() && !currentProgram.iconUrl.startsWith("data:")) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -14,6 +14,7 @@ const CHANNELS = require('./channels.json');
 const OUTPUT_DIR = path.resolve(__dirname, '../output');
 const OUTPUT_XML = path.join(OUTPUT_DIR, 'epg_tnt.xml');
 const OUTPUT_GZ = path.join(OUTPUT_DIR, 'epg_tnt.xml.gz');
+const DAYS_TO_FETCH = 13;
 
 const HTTP_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
@@ -33,6 +34,29 @@ function escapeXml(unsafe) {
 
 function formatXmltvDate(date) {
   return dayjs(date).tz('Europe/Paris').format('YYYYMMDDHHmmss ZZ');
+}
+
+function extractImageSrc($el) {
+  const imgEl = $el.find('img').first();
+  if (!imgEl.length) return '';
+
+  const dataSrc = imgEl.attr('data-src');
+  const dataSrcset = imgEl.attr('data-srcset') || imgEl.attr('srcset');
+  const src = imgEl.attr('src');
+
+  let chosen = '';
+  if (dataSrc && !dataSrc.startsWith('data:')) {
+    chosen = dataSrc;
+  } else if (src && !src.startsWith('data:')) {
+    chosen = src;
+  } else if (dataSrcset) {
+    chosen = dataSrcset.split(',')[0].trim().split(' ')[0];
+  }
+
+  if (chosen.startsWith('//')) {
+    chosen = `https:${chosen}`;
+  }
+  return chosen.startsWith('data:') ? '' : chosen;
 }
 
 async function fetchChannelSchedule(channel, date) {
@@ -60,7 +84,7 @@ function parseHtmlSchedule(channel, html, baseDate) {
     const desc = $el.find('.mainBroadcastCard-summary, .gridBroadcastCard-summary, p, .synopsis').first().text().trim();
     const category = $el.find('.mainBroadcastCard-genre, .gridBroadcastCard-genre, .genre').first().text().trim();
     const timeText = $el.find('.mainBroadcastCard-startingHour, .gridBroadcastCard-startingHour, time, .hour').first().text().trim();
-    const imageSrc = $el.find('img').first().attr('src') || $el.find('img').first().attr('data-src') || '';
+    const imageSrc = extractImageSrc($el);
 
     const timeMatch = timeText.match(/(\d{1,2})[h:](\d{2})/i);
     if (!timeMatch) return;
@@ -77,7 +101,7 @@ function parseHtmlSchedule(channel, html, baseDate) {
       category: category || 'General',
       start: startTime,
       stop: startTime.add(60, 'minute'),
-      image: imageSrc.startsWith('//') ? `https:${imageSrc}` : imageSrc
+      image: imageSrc
     });
   });
 
@@ -130,12 +154,23 @@ async function main() {
 
   const today = dayjs().tz('Europe/Paris');
   const allPrograms = [];
+  const batchSize = 4;
 
-  for (const channel of CHANNELS) {
-    for (let dayOffset = 0; dayOffset < 3; dayOffset++) {
-      const targetDate = today.add(dayOffset, 'day');
-      const channelPrograms = await fetchChannelSchedule(channel, targetDate);
-      allPrograms.push(...channelPrograms);
+  for (let i = 0; i < CHANNELS.length; i += batchSize) {
+    const batch = CHANNELS.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(async (channel) => {
+        const channelPrograms = [];
+        for (let dayOffset = 0; dayOffset < DAYS_TO_FETCH; dayOffset++) {
+          const targetDate = today.add(dayOffset, 'day');
+          const programs = await fetchChannelSchedule(channel, targetDate);
+          channelPrograms.push(...programs);
+        }
+        return channelPrograms;
+      })
+    );
+    for (const res of batchResults) {
+      allPrograms.push(...res);
     }
   }
 

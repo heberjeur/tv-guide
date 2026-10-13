@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -41,19 +42,21 @@ class GuideViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val programs: StateFlow<List<Program>> = _selectedChannelId
-        .flatMapLatest { channelId ->
-            if (channelId == null) {
-                flowOf(emptyList())
-            } else {
-                val date = _selectedDate.value
-                val zone = ZoneId.systemDefault()
-                val startOfDay = date.atStartOfDay(zone).toInstant().toEpochMilli()
-                val endOfDay = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-                getProgramsUseCase(channelId, startOfDay, endOfDay)
-            }
+    val programs: StateFlow<List<Program>> = combine(
+        _selectedChannelId,
+        _selectedDate
+    ) { channelId, date ->
+        channelId to date
+    }.flatMapLatest { (channelId, date) ->
+        if (channelId == null) {
+            flowOf(emptyList())
+        } else {
+            val zone = ZoneId.of("Europe/Paris")
+            val startOfDay = date.atStartOfDay(zone).toInstant().toEpochMilli()
+            val endOfDay = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            getProgramsUseCase(channelId, startOfDay, endOfDay)
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun selectChannel(channelId: String) {
         _selectedChannelId.value = channelId

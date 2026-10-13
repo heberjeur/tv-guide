@@ -55,7 +55,7 @@ fun GuideScreen(
     val selectedChannelId by viewModel.selectedChannelId.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
 
-    val availableDates = (0..4).map { LocalDate.now().plusDays(it.toLong()) }
+    val availableDates = (0..13).map { LocalDate.now().plusDays(it.toLong()) }
 
     LaunchedEffect(channels) {
         if (selectedChannelId == null && channels.isNotEmpty()) {
