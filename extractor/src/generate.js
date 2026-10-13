@@ -22,6 +22,16 @@ const HTTP_HEADERS = {
   'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'
 };
 
+const detailCache = new Map();
+
+function cleanTitle(str) {
+  return (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
 function escapeXml(unsafe) {
   if (!unsafe) return '';
   return unsafe
@@ -59,32 +69,136 @@ function extractImageSrc($el) {
   return chosen.startsWith('data:') ? '' : chosen;
 }
 
-async function fetchChannelSchedule(channel, date) {
+async function loadXmltvReference() {
+  const timeMap = new Map();
+  const titleMap = new Map();
+
+  try {
+    const res = await axios.get('https://xmltvfr.fr/xmltv/xmltv_tnt.xml.gz', {
+      responseType: 'arraybuffer',
+      timeout: 20000,
+      headers: HTTP_HEADERS
+    });
+    const xml = zlib.gunzipSync(res.data).toString('utf-8');
+    const $xml = cheerio.load(xml, { xmlMode: true });
+
+    $xml('programme').each((_, el) => {
+      const channel = $xml(el).attr('channel');
+      const start = $xml(el).attr('start');
+      const desc = $xml(el).find('desc').text().trim();
+      const subTitle = $xml(el).find('sub-title').text().trim();
+      const title = $xml(el).find('title').text().trim();
+      const rating = $xml(el).find('rating value').text().trim();
+      const category = $xml(el).find('category').text().trim();
+
+      const presenters = $xml(el).find('credits presenter').map((_, p) => $xml(p).text().trim()).get();
+      const actors = $xml(el).find('credits actor').map((_, a) => $xml(a).text().trim()).get();
+      const directors = $xml(el).find('credits director').map((_, d) => $xml(d).text().trim()).get();
+
+      if (channel && start && desc && desc.length > 5 && !/^\d{1,2}[h:]\d{2}$/i.test(desc)) {
+        const entry = {
+          desc,
+          subTitle: subTitle || null,
+          category: category || null,
+          rating: rating || null,
+          credits: { presenters, actors, directors }
+        };
+
+        const timeKey = `${channel}_${start.substring(0, 12)}`;
+        timeMap.set(timeKey, entry);
+
+        const dayKey = `${channel}_${start.substring(0, 8)}_${cleanTitle(title)}`;
+        titleMap.set(dayKey, entry);
+
+        const generalKey = `${channel}_${cleanTitle(title)}`;
+        if (!titleMap.has(generalKey)) {
+          titleMap.set(generalKey, entry);
+        }
+      }
+    });
+  } catch (err) {
+    process.stderr.write(`Failed to load xmltv reference: ${err.message}\n`);
+  }
+
+  return { timeMap, titleMap };
+}
+
+async function fetchDetailDescription(link) {
+  if (!link || !link.startsWith('/programme/')) return null;
+  const cleanLink = link.split('#')[0];
+  if (detailCache.has(cleanLink)) return detailCache.get(cleanLink);
+
+  const fullUrl = `https://www.programme-tv.net${cleanLink}`;
+  try {
+    const res = await axios.get(fullUrl, { headers: HTTP_HEADERS, timeout: 6000 });
+    const $page = cheerio.load(res.data);
+    let desc = null;
+
+    $page('script[type="application/ld+json"]').each((_, s) => {
+      try {
+        const json = JSON.parse($page(s).html());
+        if (json.description && json.description.length > 20) {
+          desc = json.description;
+        }
+        if (json.episode && Array.isArray(json.episode)) {
+          const anchor = link.includes('#') ? link.split('#')[1].split('-')[0] : '';
+          const ep = json.episode.find(e => anchor && e.url && e.url.includes(anchor));
+          if (ep && ep.description && ep.description.length > 20) {
+            desc = ep.description;
+          }
+        }
+      } catch {}
+    });
+
+    if (!desc) {
+      const og = $page('meta[property="og:description"]').attr('content');
+      if (og && og.length > 20 && !og.includes('Consultez la grille')) {
+        desc = og;
+      }
+    }
+
+    if (!desc) {
+      const syn = $page('.synopsis, .program-summary, [class*="synopsis"]').text().replace(/\s+/g, ' ').trim();
+      if (syn && syn.length > 20) {
+        desc = syn;
+      }
+    }
+
+    detailCache.set(cleanLink, desc);
+    return desc;
+  } catch {
+    detailCache.set(cleanLink, null);
+    return null;
+  }
+}
+
+async function fetchChannelSchedule(channel, date, refData) {
   const formattedDate = date.format('YYYY-MM-DD');
   const url = `https://www.programme-tv.net/programme/chaine/${formattedDate}/programme-${channel.siteId}.html`;
   try {
     const response = await axios.get(url, { headers: HTTP_HEADERS, timeout: 15000 });
-    return parseHtmlSchedule(channel, response.data, date);
-  } catch {
+    return await parseHtmlSchedule(channel, response.data, date, refData);
+  } catch (err) {
+    process.stderr.write(`Failed to fetch ${channel.id} for ${formattedDate}: ${err.message}\n`);
     return [];
   }
 }
 
-function parseHtmlSchedule(channel, html, baseDate) {
+async function parseHtmlSchedule(channel, html, baseDate, refData) {
   const $ = cheerio.load(html);
-  const programs = [];
-  const items = $('.mainBroadcastCard, .gridBroadcastCard, [class*="broadcastCard"]');
+  const rawItems = $('.mainBroadcastCard, .gridBroadcastCard, [class*="broadcastCard"]');
+  const extracted = [];
 
-  items.each((_, el) => {
+  rawItems.each((_, el) => {
     const $el = $(el);
     const title = $el.find('.mainBroadcastCard-title, .gridBroadcastCard-title, h3, a[title]').first().text().trim();
     if (!title) return;
 
     const subTitle = $el.find('.mainBroadcastCard-subtitle, .gridBroadcastCard-subtitle, .subtitle').first().text().trim();
-    const desc = $el.find('.mainBroadcastCard-summary, .gridBroadcastCard-summary, p, .synopsis').first().text().trim();
-    const category = $el.find('.mainBroadcastCard-genre, .gridBroadcastCard-genre, .genre').first().text().trim();
+    const category = $el.find('.mainBroadcastCard-genre, .gridBroadcastCard-genre, .mainBroadcastCard-format, .genre').first().text().trim();
     const timeText = $el.find('.mainBroadcastCard-startingHour, .gridBroadcastCard-startingHour, time, .hour').first().text().trim();
     const imageSrc = extractImageSrc($el);
+    const link = $el.find('a[href*="/programme/"]').first().attr('href');
 
     const timeMatch = timeText.match(/(\d{1,2})[h:](\d{2})/i);
     if (!timeMatch) return;
@@ -93,17 +207,83 @@ function parseHtmlSchedule(channel, html, baseDate) {
     const minutes = parseInt(timeMatch[2], 10);
     const startTime = baseDate.hour(hours).minute(minutes).second(0);
 
-    programs.push({
-      channelId: channel.id,
+    extracted.push({
       title,
       subTitle: subTitle || null,
-      desc: desc || null,
       category: category || 'General',
-      start: startTime,
-      stop: startTime.add(60, 'minute'),
-      image: imageSrc
+      startTime,
+      imageSrc,
+      link,
+      hours
     });
   });
+
+  const programs = [];
+
+  for (const item of extracted) {
+    let matchedDesc = null;
+    let matchedSubtitle = item.subTitle;
+    let matchedCategory = item.category;
+    let matchedRating = null;
+    let matchedCredits = null;
+
+    const timeKey = `${channel.id}_${item.startTime.format('YYYYMMDDHHmm')}`;
+    let refEntry = refData.timeMap.get(timeKey);
+
+    if (!refEntry) {
+      const offsets = [5, -5, 10, -10, 15, -15];
+      for (const offset of offsets) {
+        const shiftedKey = `${channel.id}_${item.startTime.add(offset, 'minute').format('YYYYMMDDHHmm')}`;
+        if (refData.timeMap.has(shiftedKey)) {
+          refEntry = refData.timeMap.get(shiftedKey);
+          break;
+        }
+      }
+    }
+
+    if (!refEntry) {
+      const dayKey = `${channel.id}_${item.startTime.format('YYYYMMDD')}_${cleanTitle(item.title)}`;
+      refEntry = refData.titleMap.get(dayKey);
+    }
+
+    if (!refEntry) {
+      const generalKey = `${channel.id}_${cleanTitle(item.title)}`;
+      refEntry = refData.titleMap.get(generalKey);
+    }
+
+    if (refEntry) {
+      matchedDesc = refEntry.desc;
+      if (!matchedSubtitle && refEntry.subTitle) matchedSubtitle = refEntry.subTitle;
+      if (item.category === 'General' && refEntry.category) matchedCategory = refEntry.category;
+      matchedRating = refEntry.rating;
+      matchedCredits = refEntry.credits;
+    }
+
+    if (item.hours >= 20 && item.hours <= 23 && item.link) {
+      const detailDesc = await fetchDetailDescription(item.link);
+      if (detailDesc && detailDesc.length > 30) {
+        matchedDesc = detailDesc;
+      }
+    } else if (!matchedDesc && item.link) {
+      const detailDesc = await fetchDetailDescription(item.link);
+      if (detailDesc && detailDesc.length > 20) {
+        matchedDesc = detailDesc;
+      }
+    }
+
+    programs.push({
+      channelId: channel.id,
+      title: item.title,
+      subTitle: matchedSubtitle,
+      desc: matchedDesc,
+      category: matchedCategory,
+      start: item.startTime,
+      stop: item.startTime.add(60, 'minute'),
+      image: item.imageSrc,
+      rating: matchedRating,
+      credits: matchedCredits
+    });
+  }
 
   for (let i = 0; i < programs.length - 1; i++) {
     programs[i].stop = programs[i + 1].start;
@@ -140,6 +320,28 @@ function buildXml(channels, programs) {
     if (program.image) {
       xml += `    <icon src="${escapeXml(program.image)}" />\n`;
     }
+    if (program.rating) {
+      xml += `    <rating system="CSA">\n`;
+      xml += `      <value>${escapeXml(program.rating)}</value>\n`;
+      xml += `    </rating>\n`;
+    }
+    if (program.credits) {
+      const { presenters, actors, directors } = program.credits;
+      const hasCredits = (presenters && presenters.length) || (actors && actors.length) || (directors && directors.length);
+      if (hasCredits) {
+        xml += `    <credits>\n`;
+        if (directors) {
+          for (const d of directors) xml += `      <director>${escapeXml(d)}</director>\n`;
+        }
+        if (actors) {
+          for (const a of actors) xml += `      <actor>${escapeXml(a)}</actor>\n`;
+        }
+        if (presenters) {
+          for (const p of presenters) xml += `      <presenter>${escapeXml(p)}</presenter>\n`;
+        }
+        xml += `    </credits>\n`;
+      }
+    }
     xml += `  </programme>\n`;
   }
 
@@ -152,6 +354,10 @@ async function main() {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 
+  process.stdout.write('Loading reference EPG data...\n');
+  const refData = await loadXmltvReference();
+  process.stdout.write(`Indexed ${refData.timeMap.size} reference descriptions.\n`);
+
   const today = dayjs().tz('Europe/Paris');
   const allPrograms = [];
   const batchSize = 4;
@@ -163,7 +369,7 @@ async function main() {
         const channelPrograms = [];
         for (let dayOffset = 0; dayOffset < DAYS_TO_FETCH; dayOffset++) {
           const targetDate = today.add(dayOffset, 'day');
-          const programs = await fetchChannelSchedule(channel, targetDate);
+          const programs = await fetchChannelSchedule(channel, targetDate, refData);
           channelPrograms.push(...programs);
         }
         return channelPrograms;
@@ -179,6 +385,8 @@ async function main() {
 
   const gzippedContent = zlib.gzipSync(Buffer.from(xmlContent, 'utf-8'), { level: 9 });
   fs.writeFileSync(OUTPUT_GZ, gzippedContent);
+
+  process.stdout.write(`Successfully generated ${allPrograms.length} enriched programs in ${OUTPUT_XML} and ${OUTPUT_GZ}\n`);
 }
 
 main().catch((err) => {

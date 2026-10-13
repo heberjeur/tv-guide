@@ -122,6 +122,17 @@ fun ProgramCard(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+
+                    if (program.description.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = program.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary.copy(alpha = 0.8f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
