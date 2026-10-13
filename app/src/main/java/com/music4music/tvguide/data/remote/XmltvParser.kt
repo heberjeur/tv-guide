@@ -66,7 +66,10 @@ class XmltvParser @Inject constructor() {
     }
 
     private fun parseChannel(parser: XmlPullParser, packageId: String): ChannelEntity? {
-        val id = parser.getAttributeValue(null, "id") ?: return null
+        val id = parser.getAttributeValue(null, "id") ?: run {
+            skipElement(parser)
+            return null
+        }
         var displayName = ""
         var iconUrl: String? = null
 
@@ -77,7 +80,7 @@ class XmltvParser @Inject constructor() {
                 "display-name" -> displayName = readText(parser)
                 "icon" -> {
                     iconUrl = parser.getAttributeValue(null, "src")
-                    parser.nextTag()
+                    skipElement(parser)
                 }
                 else -> skipElement(parser)
             }
@@ -92,12 +95,25 @@ class XmltvParser @Inject constructor() {
     }
 
     private fun parseProgram(parser: XmlPullParser): ProgramEntity? {
-        val channelId = parser.getAttributeValue(null, "channel") ?: return null
-        val startString = parser.getAttributeValue(null, "start") ?: return null
-        val stopString = parser.getAttributeValue(null, "stop") ?: return null
+        val channelId = parser.getAttributeValue(null, "channel") ?: run {
+            skipElement(parser)
+            return null
+        }
+        val startString = parser.getAttributeValue(null, "start") ?: run {
+            skipElement(parser)
+            return null
+        }
+        val stopString = parser.getAttributeValue(null, "stop") ?: run {
+            skipElement(parser)
+            return null
+        }
 
-        val startTimestamp = parseDate(startString) ?: return null
-        val stopTimestamp = parseDate(stopString) ?: return null
+        val startTimestamp = parseDate(startString)
+        val stopTimestamp = parseDate(stopString)
+        if (startTimestamp == null || stopTimestamp == null) {
+            skipElement(parser)
+            return null
+        }
 
         var title = ""
         var subTitle: String? = null
@@ -134,7 +150,7 @@ class XmltvParser @Inject constructor() {
                 }
                 "icon" -> {
                     iconUrl = parser.getAttributeValue(null, "src")
-                    parser.nextTag()
+                    skipElement(parser)
                 }
                 "episode-num" -> {
                     val system = parser.getAttributeValue(null, "system")
@@ -154,7 +170,7 @@ class XmltvParser @Inject constructor() {
                 "star-rating" -> starRating = parseStarRating(parser)
                 "premiere" -> {
                     isUnreleased = true
-                    parser.nextTag()
+                    skipElement(parser)
                 }
                 "subtitles" -> {
                     hasSubtitles = true
@@ -273,16 +289,15 @@ class XmltvParser @Inject constructor() {
 
     private fun parseDate(dateStr: String): Long? {
         val trimmed = dateStr.trim()
-        val formatted = if (trimmed.length == 14) {
-            "$trimmed +0000"
-        } else if (trimmed.length >= 19 && trimmed[14] != ' ') {
-            "${trimmed.substring(0, 14)} ${trimmed.substring(14)}"
-        } else {
-            trimmed
+        val normalized = when {
+            trimmed.length == 14 -> "$trimmed +0000"
+            trimmed.length >= 19 && trimmed[14] != ' ' -> "${trimmed.substring(0, 14)} ${trimmed.substring(14)}"
+            else -> trimmed
         }
+        val cleanOffset = normalized.replace("([+-]\\d{2}):(\\d{2})".toRegex(), "$1$2")
 
         return try {
-            val zonedDateTime = ZonedDateTime.parse(formatted, dateFormatter)
+            val zonedDateTime = ZonedDateTime.parse(cleanOffset, dateFormatter)
             zonedDateTime.toInstant().toEpochMilli()
         } catch (_: Exception) {
             null
@@ -291,9 +306,12 @@ class XmltvParser @Inject constructor() {
 
     private fun readText(parser: XmlPullParser): String {
         var result = ""
-        if (parser.next() == XmlPullParser.TEXT) {
-            result = parser.text.trim()
-            parser.nextTag()
+        var eventType = parser.next()
+        while (eventType != XmlPullParser.END_TAG) {
+            if (eventType == XmlPullParser.TEXT) {
+                result += parser.text.trim()
+            }
+            eventType = parser.next()
         }
         return result
     }

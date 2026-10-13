@@ -97,51 +97,72 @@ class EpgRepositoryImpl @Inject constructor(
                 }
             }
 
-            try {
-                val currentEtag = if (forceRefresh) null else metadata?.etag
-                val downloadResult = downloader.downloadFeed(channelPackage.feedUrl, currentEtag)
-
-                if (downloadResult.isNotModified) {
-                    metadata?.let {
-                        syncMetadataDao.insertSyncMetadata(
-                            it.copy(lastSyncTimestamp = now, isSuccess = true)
-                        )
-                    }
-                    return@withContext Result.success(Unit)
-                }
-
-                val stream = downloadResult.inputStream
-                    ?: return@withContext Result.failure(IOException("Empty stream received"))
-
-                var totalPrograms = 0
-                stream.use { input ->
-                    parser.parse(input, channelPackage.id) { channels, programs ->
-                        if (channels.isNotEmpty()) {
-                            channelDao.insertChannels(channels)
-                        }
-                        if (programs.isNotEmpty()) {
-                            programDao.insertPrograms(programs)
-                            totalPrograms += programs.size
-                        }
-                    }
-                }
-
-                syncMetadataDao.insertSyncMetadata(
-                    SyncMetadataEntity(
-                        packageId = channelPackage.id,
-                        lastSyncTimestamp = now,
-                        etag = downloadResult.etag,
-                        programCount = totalPrograms,
-                        isSuccess = true
-                    )
+            val candidateUrls = if (channelPackage == ChannelPackage.COMMUNITY_ENRICHED) {
+                listOf(
+                    channelPackage.feedUrl,
+                    "https://raw.githubusercontent.com/heberjeur/tv-guide/gh-pages/epg_tnt.xml.gz",
+                    ChannelPackage.TERRESTRIAL.feedUrl
                 )
+            } else {
+                listOf(channelPackage.feedUrl)
+            }
 
-                val yesterday = now - 24 * 60 * 60 * 1000L
-                programDao.deleteExpiredPrograms(yesterday)
+            var lastException: Exception? = null
+            var syncSucceeded = false
 
+            for (url in candidateUrls) {
+                try {
+                    val currentEtag = if (forceRefresh) null else metadata?.etag
+                    val downloadResult = downloader.downloadFeed(url, currentEtag)
+
+                    if (downloadResult.isNotModified) {
+                        metadata?.let {
+                            syncMetadataDao.insertSyncMetadata(
+                                it.copy(lastSyncTimestamp = now, isSuccess = true)
+                            )
+                        }
+                        return@withContext Result.success(Unit)
+                    }
+
+                    val stream = downloadResult.inputStream
+                        ?: throw IOException("Empty stream received from $url")
+
+                    var totalPrograms = 0
+                    stream.use { input ->
+                        parser.parse(input, channelPackage.id) { channels, programs ->
+                            if (channels.isNotEmpty()) {
+                                channelDao.insertChannels(channels)
+                            }
+                            if (programs.isNotEmpty()) {
+                                programDao.insertPrograms(programs)
+                                totalPrograms += programs.size
+                            }
+                        }
+                    }
+
+                    syncMetadataDao.insertSyncMetadata(
+                        SyncMetadataEntity(
+                            packageId = channelPackage.id,
+                            lastSyncTimestamp = now,
+                            etag = downloadResult.etag,
+                            programCount = totalPrograms,
+                            isSuccess = true
+                        )
+                    )
+
+                    val yesterday = now - 24 * 60 * 60 * 1000L
+                    programDao.deleteExpiredPrograms(yesterday)
+                    syncSucceeded = true
+                    break
+                } catch (exception: Exception) {
+                    lastException = exception
+                }
+            }
+
+            if (syncSucceeded) {
                 Result.success(Unit)
-            } catch (exception: Exception) {
-                Result.failure(exception)
+            } else {
+                Result.failure(lastException ?: IOException("Failed to sync EPG from all sources"))
             }
         }
 }
