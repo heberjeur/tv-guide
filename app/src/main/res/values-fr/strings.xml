@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TV Guide</string>
+    <string name="tab_now">En ce moment</string>
+    <string name="tab_programs">Programme</string>
+    <string name="tab_guide">Guide TV</string>
+    <string name="tab_channels">Chaînes</string>
+    <string name="tab_settings">Paramètres</string>
+    <string name="tab_categories">Catégories</string>
+    <string name="tab_calendar">Calendrier</string>
+
+    <string name="period_now">En ce moment</string>
+    <string name="period_tonight">Ce soir</string>
+    <string name="period_yesterday">Hier</string>
+    <string name="period_tonight_part_1">Ce soir 1ère partie (21h)</string>
+    <string name="period_tonight_part_2">Ce soir 2ème partie (22h45)</string>
+    <string name="period_yesterday_part_1">Hier 1ère partie (21h)</string>
+    <string name="period_yesterday_part_2">Hier 2ème partie (22h45)</string>
+
+    <string name="bundle_all">Tous</string>
+    <string name="bundle_tnt">TNT</string>
+    <string name="bundle_canal_plus">Canal+</string>
+    <string name="bundle_orange">Orange</string>
+    <string name="bundle_free">Free</string>
+    <string name="bundle_sfr">SFR</string>
+    <string name="bundle_bouygues">Bouygues</string>
+    <string name="bundle_other">Autres</string>
+
+    <string name="category_movies">Films</string>
+    <string name="category_series">Séries TV</string>
+    <string name="category_entertainment">Divertissement</string>
+    <string name="category_sport">Sport</string>
+    <string name="category_news">Information</string>
+    <string name="category_documentaries">Documentaires</string>
+    <string name="category_kids">Jeunesse</string>
+    <string name="category_music">Musique</string>
+    <string name="category_empty">Aucune émission trouvée pour cette catégorie.</string>
+
+    <string name="sync_state_downloading">Téléchargement du guide TV...</string>
+    <string name="sync_state_parsing">Enregistrement des programmes...</string>
+    <string name="sync_state_caching_images">Mise en cache des miniatures...</string>
+    <string name="sync_state_success">Guide à jour : %1$d programmes</string>
+    <string name="sync_state_error">Erreur de mise à jour</string>
+    <string name="status_updating">Mise à jour du guide TV...</string>
+    <string name="status_up_to_date">Guide à jour</string>
+    <string name="status_offline">Mode hors-ligne</string>
+    <string name="no_programs_period">Aucun programme disponible pour cette période.</string>
+
+    <string name="calendar_title">Mon Calendrier TV</string>
+    <string name="calendar_empty_title">Aucun rappel prévu ce jour</string>
+    <string name="calendar_empty_desc">Ajoutez des rappels depuis les grilles TV ou les fiches des émissions pour ne manquer aucun rendez-vous.</string>
+    <string name="reminder_at_airtime">À l\'heure exacte</string>
+    <string name="reminder_lead_time_format">%1$d min avant</string>
+    <string name="reminder_active">Rappel actif</string>
+    <string name="reminder_set">Rappel</string>
+    <string name="reminder_dialog_lead_time">Notifier combien de temps avant ?</string>
+    <string name="action_external_calendar">Mon agenda</string>
+    <string name="no_calendar_app_installed">Aucune application d\'agenda disponible</string>
+
+    <string name="section_information">Informations</string>
+    <string name="label_season">Saison</string>
+    <string name="label_format">Format</string>
+    <string name="label_category">Genre</string>
+    <string name="label_release_year">Sortie</string>
+    <string name="label_country">Pays</string>
+    <string name="label_not_specified">Non spécifié</string>
+    <string name="section_synopsis">Synopsis</string>
+    <string name="section_where_to_watch">Où regarder</string>
+    <string name="broadcast_on_channel">Diffusé sur %1$s le %2$s de %3$s à %4$s.</string>
+    <string name="broadcast_replay_available">Également disponible en Replay sur l\'application officielle de la chaîne.</string>
+    <string name="section_upcoming_broadcasts">Prochaines diffusions TV</string>
+    <string name="broadcast_at_time">%1$s à %2$s</string>
+    <string name="section_credits">Distribution et Équipe</string>
+    <string name="label_season_episode_badge">Saison %1$d • Ép. %2$d</string>
+    <string name="label_season_episode_short">S%1$d • Ép. %2$d</string>
+
+    <string name="channel_selection">Sélectionner une chaîne</string>
+    <string name="package_selection">Bouquet TV</string>
+    <string name="package_community_enriched">Enrichi TNT (Recommandé)</string>
+    <string name="package_terrestrial">TNT Gratuite</string>
+    <string name="package_extended">Étendu</string>
+    <string name="package_all_channels">Toutes les chaînes</string>
+    <string name="action_refresh">Actualiser</string>
+    <string name="action_search">Rechercher</string>
+    <string name="action_filter">Filtrer</string>
+    <string name="action_set_reminder">Définir un rappel</string>
+    <string name="action_remove_reminder">Supprimer le rappel</string>
+    <string name="action_add_calendar">Ajouter au calendrier</string>
+    <string name="action_share">Partager</string>
+
+    <string name="reminder_title">Rappel TV</string>
+    <string name="reminder_starting_soon">%1$s commence dans %2$d minutes sur %3$s</string>
+    <string name="reminder_channel_name">Chaîne %1$s</string>
+
+    <string name="offline_banner_sync_ago">Dernière mise à jour il y a %1$s</string>
+    <string name="offline_banner_no_data">Aucune donnée disponible hors-ligne. Veuillez vous connecter pour télécharger le guide.</string>
+
+    <string name="label_duration_minutes">%1$d min</string>
+    <string name="label_presented_by">Présenté par</string>
+    <string name="label_guests">Participants</string>
+    <string name="label_production">Production</string>
+    <string name="label_director">Réalisateur</string>
+    <string name="label_rating">Classification</string>
+    <string name="label_content_rating">Classification : %1$s</string>
+    <string name="label_unreleased">Inédit</string>
+    <string name="label_rerun">Rediffusion</string>
+    <string name="label_subtitles">Sous-titres</string>
+    <string name="label_hd">HD</string>
+
+    <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_notifications_enable">Activer les notifications</string>
+    <string name="settings_notification_sound">Son de notification</string>
+    <string name="settings_reminder_lead_time">Délai de notification</string>
+    <string name="settings_storage_title">Stockage et cache</string>
+    <string name="settings_clear_cache">Vider le cache</string>
+    <string name="settings_cache_size">Taille actuelle du cache : %1$s</string>
+    <string name="settings_custom_reminder">Délai de rappel personnalisé</string>
+    <string name="reminder_exact_time">À l\'heure</string>
+    <string name="minutes_short">%1$d min</string>
+
+    <string name="channels_search_placeholder">Rechercher une chaîne...</string>
+    <string name="channels_empty">Aucune chaîne trouvée.</string>
+</resources>

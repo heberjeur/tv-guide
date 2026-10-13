@@ -13,6 +13,9 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE packageId = :packageId ORDER BY channelNumber ASC, displayName ASC")
     fun getChannelsByPackage(packageId: String): Flow<List<ChannelEntity>>
 
+    @Query("SELECT * FROM channels ORDER BY channelNumber ASC, displayName ASC")
+    fun getAllChannels(): Flow<List<ChannelEntity>>
+
     @Query("SELECT * FROM channels WHERE packageId = :packageId AND isFavorite = 1 ORDER BY channelNumber ASC")
     fun getFavoriteChannels(packageId: String): Flow<List<ChannelEntity>>
 

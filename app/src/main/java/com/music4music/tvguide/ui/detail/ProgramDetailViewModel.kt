@@ -4,33 +4,38 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.provider.CalendarContract
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.music4music.tvguide.calendar.CalendarHelper
 import com.music4music.tvguide.data.local.prefs.UserPreferences
 import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.domain.model.Reminder
+import com.music4music.tvguide.domain.repository.EpgRepository
 import com.music4music.tvguide.domain.repository.ReminderRepository
 import com.music4music.tvguide.domain.usecase.GetProgramDetailUseCase
 import com.music4music.tvguide.domain.usecase.SetReminderUseCase
 import com.music4music.tvguide.receiver.ReminderReceiver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ProgramDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     getProgramDetailUseCase: GetProgramDetailUseCase,
     private val setReminderUseCase: SetReminderUseCase,
     private val reminderRepository: ReminderRepository,
-    private val calendarHelper: CalendarHelper,
+    private val epgRepository: EpgRepository,
     private val userPreferences: UserPreferences,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -43,37 +48,33 @@ class ProgramDetailViewModel @Inject constructor(
     val reminder: StateFlow<Reminder?> = reminderRepository.getReminderForProgram(programId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    fun toggleReminder() {
+    val defaultLeadTimeMinutes: StateFlow<Int> = userPreferences.reminderLeadTimeMinutes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10)
+
+    val upcomingBroadcasts: StateFlow<List<Program>> = program.flatMapLatest { prog ->
+        if (prog != null && prog.title.isNotBlank()) {
+            epgRepository.getUpcomingBroadcasts(prog.title)
+        } else {
+            flowOf(emptyList())
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun toggleReminder(customLeadTime: Int? = null) {
         val currentProgram = program.value ?: return
         val currentReminder = reminder.value
 
         viewModelScope.launch {
             if (currentReminder != null) {
                 cancelAlarm(currentReminder)
-                if (currentReminder.calendarEventId != null) {
-                    calendarHelper.removeEventFromCalendar(currentReminder.calendarEventId)
-                }
                 reminderRepository.deleteReminder(programId)
             } else {
-                val leadTime = userPreferences.reminderLeadTimeMinutes.first()
-                val syncCalendar = userPreferences.isCalendarSyncEnabled.first()
+                val leadTime = customLeadTime ?: userPreferences.reminderLeadTimeMinutes.first()
                 val soundUri = userPreferences.notificationSound.first()
-
-                var calendarId: Long? = null
-                if (syncCalendar) {
-                    calendarId = calendarHelper.addEventToCalendar(
-                        title = currentProgram.title,
-                        description = currentProgram.description,
-                        startTimestamp = currentProgram.startTimestamp,
-                        stopTimestamp = currentProgram.stopTimestamp,
-                        leadTimeMinutes = leadTime
-                    )
-                }
 
                 setReminderUseCase(
                     program = currentProgram,
                     leadTimeMinutes = leadTime,
-                    syncToCalendar = syncCalendar,
+                    syncToCalendar = false,
                     soundUri = soundUri
                 )
 
@@ -83,6 +84,22 @@ class ProgramDetailViewModel @Inject constructor(
                     soundUri = soundUri
                 )
             }
+        }
+    }
+
+    fun createExternalCalendarIntent(program: Program): Intent {
+        return Intent(Intent.ACTION_INSERT).apply {
+            data = CalendarContract.Events.CONTENT_URI
+            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, program.startTimestamp)
+            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, program.stopTimestamp)
+            putExtra(CalendarContract.Events.TITLE, program.title)
+            val desc = buildString {
+                if (!program.subTitle.isNullOrBlank()) append(program.subTitle).append("\n\n")
+                if (program.description.isNotBlank()) append(program.description)
+            }
+            putExtra(CalendarContract.Events.DESCRIPTION, desc)
+            putExtra(CalendarContract.Events.EVENT_LOCATION, program.channelId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
     }
 
@@ -113,6 +130,11 @@ class ProgramDetailViewModel @Inject constructor(
                 pendingIntent
             )
         } catch (_: SecurityException) {
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.music4music.tvguide.data.local.prefs.UserPreferences
 import com.music4music.tvguide.domain.model.Channel
+import com.music4music.tvguide.domain.model.ChannelBundle
 import com.music4music.tvguide.domain.model.ChannelPackage
 import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.domain.usecase.GetChannelsUseCase
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -30,17 +32,34 @@ class GuideViewModel @Inject constructor(
     userPreferences: UserPreferences
 ) : ViewModel() {
 
-    private val _selectedDate = MutableStateFlow(LocalDate.now())
+    private val _selectedDate = MutableStateFlow(LocalDate.now(ZoneId.of("Europe/Paris")))
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
     private val _selectedChannelId = MutableStateFlow<String?>(null)
     val selectedChannelId: StateFlow<String?> = _selectedChannelId.asStateFlow()
 
-    val channels: StateFlow<List<Channel>> = userPreferences.selectedPackage
+    private val _selectedBundle = MutableStateFlow(ChannelBundle.ALL)
+    val selectedBundle: StateFlow<ChannelBundle> = _selectedBundle.asStateFlow()
+
+    private val _channelSearchQuery = MutableStateFlow("")
+    val channelSearchQuery: StateFlow<String> = _channelSearchQuery.asStateFlow()
+
+    private val rawChannels: StateFlow<List<Channel>> = userPreferences.selectedPackage
         .flatMapLatest { packageId ->
             getChannelsUseCase(ChannelPackage.fromId(packageId))
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val filteredChannels: StateFlow<List<Channel>> = combine(
+        rawChannels,
+        _selectedBundle,
+        _channelSearchQuery
+    ) { list, bundle, query ->
+        list.filter { channel ->
+            val matchesQuery = query.isBlank() || channel.displayName.contains(query, ignoreCase = true)
+            matchesQuery
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val programs: StateFlow<List<Program>> = combine(
         _selectedChannelId,
@@ -58,11 +77,29 @@ class GuideViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    init {
+        viewModelScope.launch {
+            filteredChannels.collect { list ->
+                if (_selectedChannelId.value == null && list.isNotEmpty()) {
+                    _selectedChannelId.value = list.first().id
+                }
+            }
+        }
+    }
+
     fun selectChannel(channelId: String) {
         _selectedChannelId.value = channelId
     }
 
     fun selectDate(date: LocalDate) {
         _selectedDate.value = date
+    }
+
+    fun selectBundle(bundle: ChannelBundle) {
+        _selectedBundle.value = bundle
+    }
+
+    fun updateChannelSearch(query: String) {
+        _channelSearchQuery.value = query
     }
 }

@@ -24,6 +24,18 @@ interface ProgramDao {
     @Query("SELECT * FROM programs WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY startTimestamp ASC LIMIT 100")
     fun searchPrograms(query: String): Flow<List<ProgramEntity>>
 
+    @Query("SELECT * FROM programs WHERE title = :title AND startTimestamp > :fromTime ORDER BY startTimestamp ASC LIMIT 10")
+    fun getUpcomingBroadcasts(title: String, fromTime: Long): Flow<List<ProgramEntity>>
+
+    @Query("SELECT * FROM programs WHERE categories LIKE '%' || :category || '%' AND stopTimestamp > :fromTime ORDER BY startTimestamp ASC LIMIT 60")
+    fun getProgramsByCategory(category: String, fromTime: Long): Flow<List<ProgramEntity>>
+
+    @Query("SELECT * FROM programs WHERE stopTimestamp > :startTime AND startTimestamp < :endTime ORDER BY channelId ASC, startTimestamp ASC")
+    fun getProgramsByTimeRange(startTime: Long, endTime: Long): Flow<List<ProgramEntity>>
+
+    @Query("SELECT COUNT(*) FROM programs")
+    suspend fun getProgramCount(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPrograms(programs: List<ProgramEntity>)
 

@@ -2,10 +2,12 @@ package com.music4music.tvguide.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -25,6 +27,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.music4music.tvguide.R
+import com.music4music.tvguide.ui.calendar.CalendarScreen
+import com.music4music.tvguide.ui.categories.CategoryExploreScreen
 import com.music4music.tvguide.ui.channels.ChannelListScreen
 import com.music4music.tvguide.ui.detail.ProgramDetailScreen
 import com.music4music.tvguide.ui.guide.GuideScreen
@@ -33,13 +37,14 @@ import com.music4music.tvguide.ui.settings.SettingsScreen
 import com.music4music.tvguide.ui.theme.AccentRed
 import com.music4music.tvguide.ui.theme.DarkBackground
 import com.music4music.tvguide.ui.theme.DarkSurface
-import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
 
 sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
-    data object Now : Screen("now", R.string.tab_now, Icons.Default.PlayArrow)
+    data object Now : Screen("now", R.string.tab_programs, Icons.Default.Tv)
     data object Guide : Screen("guide", R.string.tab_guide, Icons.Default.Schedule)
-    data object Channels : Screen("channels", R.string.tab_channels, Icons.Default.List)
+    data object Categories : Screen("categories", R.string.tab_categories, Icons.Default.Category)
+    data object Calendar : Screen("calendar", R.string.tab_calendar, Icons.Default.CalendarMonth)
+    data object Channels : Screen("channels", R.string.tab_channels, Icons.AutoMirrored.Filled.List)
     data object Settings : Screen("settings", R.string.tab_settings, Icons.Default.Settings)
 }
 
@@ -52,8 +57,9 @@ fun TvGuideAppNavigation() {
     val bottomNavItems = listOf(
         Screen.Now,
         Screen.Guide,
-        Screen.Channels,
-        Screen.Settings
+        Screen.Categories,
+        Screen.Calendar,
+        Screen.Channels
     )
 
     val showBottomBar = bottomNavItems.any { it.route == currentRoute }
@@ -107,11 +113,31 @@ fun TvGuideAppNavigation() {
                 NowPlayingScreen(
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Screen.Settings.route)
                     }
                 )
             }
             composable(Screen.Guide.route) {
                 GuideScreen(
+                    onProgramClick = { programId ->
+                        navController.navigate("program/$programId")
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Screen.Settings.route)
+                    }
+                )
+            }
+            composable(Screen.Categories.route) {
+                CategoryExploreScreen(
+                    onProgramClick = { programId ->
+                        navController.navigate("program/$programId")
+                    }
+                )
+            }
+            composable(Screen.Calendar.route) {
+                CalendarScreen(
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
                     }
@@ -125,7 +151,9 @@ fun TvGuideAppNavigation() {
                 )
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onBackClick = { navController.popBackStack() }
+                )
             }
             composable(
                 route = "program/{programId}",

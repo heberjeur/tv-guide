@@ -1,5 +1,6 @@
 package com.music4music.tvguide.ui.detail
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -19,13 +22,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AlarmOn
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
@@ -34,12 +42,17 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,8 +70,10 @@ import com.music4music.tvguide.ui.theme.TextSecondary
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val dateFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -68,11 +83,23 @@ fun ProgramDetailScreen(
 ) {
     val program by viewModel.program.collectAsStateWithLifecycle()
     val reminder by viewModel.reminder.collectAsStateWithLifecycle()
+    val upcomingBroadcasts by viewModel.upcomingBroadcasts.collectAsStateWithLifecycle()
+    val defaultLeadTime by viewModel.defaultLeadTimeMinutes.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    var selectedLeadTime by remember(defaultLeadTime) { mutableIntStateOf(defaultLeadTime) }
+    var showLeadTimeOptions by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = program?.title ?: "", color = TextPrimary) },
+                title = {
+                    Text(
+                        text = program?.title ?: "",
+                        color = TextPrimary,
+                        maxLines = 1
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -101,6 +128,7 @@ fun ProgramDetailScreen(
             val zone = ZoneId.systemDefault()
             val startTime = Instant.ofEpochMilli(currentProgram.startTimestamp).atZone(zone).format(timeFormatter)
             val stopTime = Instant.ofEpochMilli(currentProgram.stopTimestamp).atZone(zone).format(timeFormatter)
+            val broadcastDate = Instant.ofEpochMilli(currentProgram.startTimestamp).atZone(zone).format(dateFormatter)
 
             Column(
                 modifier = Modifier
@@ -165,65 +193,211 @@ fun ProgramDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        if (currentProgram.seasonNumber != null && currentProgram.episodeNumber != null) {
+                            BadgeItem(
+                                text = stringResource(
+                                    R.string.label_season_episode_badge,
+                                    currentProgram.seasonNumber,
+                                    currentProgram.episodeNumber
+                                ),
+                                color = TextPrimary
+                            )
+                        } else if (!currentProgram.episodeDisplay.isNullOrBlank()) {
+                            BadgeItem(text = currentProgram.episodeDisplay, color = TextPrimary)
+                        }
                         if (currentProgram.isUnreleased) {
                             BadgeItem(text = stringResource(R.string.label_unreleased), color = IndicatorGreen)
                         }
                         if (currentProgram.isHd) {
                             BadgeItem(text = stringResource(R.string.label_hd), color = AccentRed)
                         }
-                        if (currentProgram.hasSubtitles) {
-                            BadgeItem(text = stringResource(R.string.label_subtitles), color = TextSecondary)
-                        }
                         if (currentProgram.contentRating != null) {
-                            BadgeItem(
-                                text = stringResource(R.string.label_content_rating, currentProgram.contentRating),
-                                color = TextSecondary
-                            )
+                            BadgeItem(text = currentProgram.contentRating, color = TextSecondary)
                         }
                         if (currentProgram.starRating != null) {
                             BadgeItem(
-                                text = "★ ${"%.1f".format(currentProgram.starRating)}/5",
+                                text = "★ ${"%.1f".format(Locale.US, currentProgram.starRating)}/5",
                                 color = Color(0xFFFFD54F)
-                            )
-                        }
-                        if (currentProgram.seasonNumber != null && currentProgram.episodeNumber != null) {
-                            BadgeItem(
-                                text = stringResource(
-                                    R.string.label_season_episode,
-                                    currentProgram.seasonNumber,
-                                    currentProgram.episodeNumber
-                                ),
-                                color = TextSecondary
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Button(
-                        onClick = { viewModel.toggleReminder() },
+                    Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (reminder != null) DarkSurfaceVariant else AccentRed
-                        ),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurface),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(
-                            imageVector = if (reminder != null) Icons.Default.AlarmOn else Icons.Default.Alarm,
-                            contentDescription = null
-                        )
-                        Spacer(modifier = Modifier.padding(4.dp))
-                        Text(
-                            text = if (reminder != null) {
-                                stringResource(R.string.action_remove_reminder)
-                            } else {
-                                stringResource(R.string.action_set_reminder)
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = stringResource(R.string.section_information),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentRed
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            InfoRow(
+                                label = stringResource(R.string.label_season),
+                                value = currentProgram.seasonNumber?.toString()
+                                    ?: stringResource(R.string.label_not_specified)
+                            )
+                            InfoRow(
+                                label = stringResource(R.string.label_format),
+                                value = currentProgram.categories.firstOrNull()
+                                    ?: stringResource(R.string.label_not_specified)
+                            )
+                            InfoRow(
+                                label = stringResource(R.string.label_category),
+                                value = currentProgram.categories.getOrNull(1)
+                                    ?: currentProgram.categories.firstOrNull()
+                                    ?: stringResource(R.string.label_not_specified)
+                            )
+                            InfoRow(
+                                label = stringResource(R.string.label_release_year),
+                                value = if (currentProgram.isUnreleased) {
+                                    stringResource(R.string.label_unreleased)
+                                } else {
+                                    stringResource(R.string.label_not_specified)
+                                }
+                            )
+                            InfoRow(
+                                label = stringResource(R.string.label_country),
+                                value = if (currentProgram.channelId.endsWith(".fr")) {
+                                    "France"
+                                } else {
+                                    stringResource(R.string.label_not_specified)
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                if (reminder != null) {
+                                    viewModel.toggleReminder()
+                                } else {
+                                    showLeadTimeOptions = !showLeadTimeOptions
+                                    if (!showLeadTimeOptions) {
+                                        viewModel.toggleReminder(selectedLeadTime)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (reminder != null) DarkSurfaceVariant else AccentRed
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (reminder != null) Icons.Default.AlarmOn else Icons.Default.Alarm,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (reminder != null) {
+                                    stringResource(R.string.reminder_active)
+                                } else {
+                                    stringResource(R.string.reminder_set)
+                                }
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                val intent = viewModel.createExternalCalendarIntent(currentProgram)
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: android.content.ActivityNotFoundException) {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.no_calendar_app_installed),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(R.string.action_external_calendar),
+                                color = TextPrimary
+                            )
+                        }
+                    }
+
+                    if (showLeadTimeOptions && reminder == null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = stringResource(R.string.reminder_dialog_lead_time),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf(0, 5, 10, 15, 30).forEach { mins ->
+                                        val isChosen = selectedLeadTime == mins
+                                        SuggestionChip(
+                                            onClick = {
+                                                selectedLeadTime = mins
+                                                showLeadTimeOptions = false
+                                                viewModel.toggleReminder(mins)
+                                            },
+                                            label = {
+                                                Text(
+                                                    text = if (mins == 0) {
+                                                        stringResource(R.string.reminder_exact_time)
+                                                    } else {
+                                                        stringResource(R.string.minutes_short, mins)
+                                                    },
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (isChosen) AccentRed else TextPrimary
+                                                )
+                                            },
+                                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                                containerColor = if (isChosen) DarkSurfaceVariant else Color.Transparent
+                                            ),
+                                            border = null
+                                        )
+                                    }
+                                }
                             }
-                        )
+                        }
                     }
 
                     if (currentProgram.description.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.section_synopsis),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = currentProgram.description,
                             style = MaterialTheme.typography.bodyMedium,
@@ -232,28 +406,111 @@ fun ProgramDetailScreen(
                         )
                     }
 
-                    if (currentProgram.categories.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            currentProgram.categories.forEach { category ->
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = { Text(text = category, color = TextSecondary) },
-                                    colors = SuggestionChipDefaults.suggestionChipColors(
-                                        containerColor = DarkSurface
-                                    ),
-                                    border = null
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Tv,
+                                    contentDescription = null,
+                                    tint = AccentRed,
+                                    modifier = Modifier.size(20.dp)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(R.string.section_where_to_watch),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(
+                                    R.string.broadcast_on_channel,
+                                    currentProgram.channelId,
+                                    broadcastDate,
+                                    startTime,
+                                    stopTime
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(R.string.broadcast_replay_available),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+
+                    if (upcomingBroadcasts.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.section_upcoming_broadcasts),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        upcomingBroadcasts.take(5).forEach { upcoming ->
+                            val upStart = Instant.ofEpochMilli(upcoming.startTimestamp).atZone(zone).format(timeFormatter)
+                            val upDate = Instant.ofEpochMilli(upcoming.startTimestamp).atZone(zone).format(dateFormatter)
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = DarkSurface),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = upcoming.channelId,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = AccentRed,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = upcoming.subTitle ?: upcoming.title,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextPrimary,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    Text(
+                                        text = stringResource(R.string.broadcast_at_time, upDate, upStart),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary
+                                    )
+                                }
                             }
                         }
                     }
 
                     val credits = currentProgram.credit
                     if (credits.presenters.isNotEmpty() || credits.guests.isNotEmpty() || credits.directors.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = stringResource(R.string.section_credits),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         if (credits.presenters.isNotEmpty()) {
                             CreditSection(
@@ -261,31 +518,44 @@ fun ProgramDetailScreen(
                                 names = credits.presenters
                             )
                         }
-
                         if (credits.guests.isNotEmpty()) {
                             CreditSection(
                                 label = stringResource(R.string.label_guests),
                                 names = credits.guests
                             )
                         }
-
                         if (credits.directors.isNotEmpty()) {
                             CreditSection(
                                 label = stringResource(R.string.label_director),
                                 names = credits.directors
                             )
                         }
-
-                        if (credits.producers.isNotEmpty()) {
-                            CreditSection(
-                                label = stringResource(R.string.label_production),
-                                names = credits.producers
-                            )
-                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
     }
 }
 
@@ -308,7 +578,7 @@ private fun BadgeItem(text: String, color: Color) {
 
 @Composable
 private fun CreditSection(label: String, names: List<String>) {
-    Column(modifier = Modifier.padding(bottom = 12.dp)) {
+    Column(modifier = Modifier.padding(bottom = 8.dp)) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,

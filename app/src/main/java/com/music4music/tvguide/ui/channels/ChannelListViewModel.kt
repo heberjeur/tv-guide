@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.music4music.tvguide.data.local.prefs.UserPreferences
 import com.music4music.tvguide.domain.model.Channel
+import com.music4music.tvguide.domain.model.ChannelBundle
 import com.music4music.tvguide.domain.model.ChannelPackage
 import com.music4music.tvguide.domain.repository.EpgRepository
 import com.music4music.tvguide.domain.usecase.GetChannelsUseCase
@@ -24,11 +25,17 @@ import javax.inject.Inject
 class ChannelListViewModel @Inject constructor(
     getChannelsUseCase: GetChannelsUseCase,
     private val epgRepository: EpgRepository,
-    userPreferences: UserPreferences
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _selectedBundle = MutableStateFlow(ChannelBundle.ALL)
+    val selectedBundle: StateFlow<ChannelBundle> = _selectedBundle.asStateFlow()
+
+    val isGridMode: StateFlow<Boolean> = userPreferences.isChannelGridMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val allChannels: StateFlow<List<Channel>> = userPreferences.selectedPackage
         .flatMapLatest { packageId ->
@@ -36,16 +43,29 @@ class ChannelListViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val filteredChannels: StateFlow<List<Channel>> = combine(allChannels, _searchQuery) { channels, query ->
-        if (query.isBlank()) {
-            channels
-        } else {
-            channels.filter { it.displayName.contains(query, ignoreCase = true) }
+    val filteredChannels: StateFlow<List<Channel>> = combine(
+        allChannels,
+        _searchQuery,
+        _selectedBundle
+    ) { channels, query, bundle ->
+        channels.filter { channel ->
+            val matchesQuery = query.isBlank() || channel.displayName.contains(query, ignoreCase = true)
+            matchesQuery
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun selectBundle(bundle: ChannelBundle) {
+        _selectedBundle.value = bundle
+    }
+
+    fun toggleGridMode() {
+        viewModelScope.launch {
+            userPreferences.setChannelGridMode(!isGridMode.value)
+        }
     }
 
     fun toggleFavorite(channelId: String, currentFavorite: Boolean) {

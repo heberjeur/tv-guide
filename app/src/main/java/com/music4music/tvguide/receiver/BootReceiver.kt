@@ -51,6 +51,11 @@ class BootReceiver : BroadcastReceiver() {
                             pendingIntent
                         )
                     } catch (_: SecurityException) {
+                        alarmManager.setAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            reminder.triggerTimestamp,
+                            pendingIntent
+                        )
                     }
                 }
             } finally {

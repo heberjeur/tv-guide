@@ -46,11 +46,23 @@ private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 fun ProgramCard(
     program: Program,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    channelName: String? = null
 ) {
     val zone = ZoneId.systemDefault()
     val startTime = Instant.ofEpochMilli(program.startTimestamp).atZone(zone).format(timeFormatter)
     val stopTime = Instant.ofEpochMilli(program.stopTimestamp).atZone(zone).format(timeFormatter)
+    val channelLabel = channelName ?: program.channelId.removeSuffix(".fr")
+
+    val episodeLabel = when {
+        program.seasonNumber != null && program.episodeNumber != null -> stringResource(
+            R.string.label_season_episode_short,
+            program.seasonNumber,
+            program.episodeNumber
+        )
+        !program.episodeDisplay.isNullOrBlank() -> program.episodeDisplay
+        else -> null
+    }
 
     Card(
         modifier = modifier
@@ -86,12 +98,20 @@ fun ProgramCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "$startTime - $stopTime",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (program.isNowPlaying) IndicatorGreen else TextSecondary,
-                            fontWeight = if (program.isNowPlaying) FontWeight.Bold else FontWeight.Normal
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = channelLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AccentRed,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "  •  $startTime - $stopTime",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (program.isNowPlaying) IndicatorGreen else TextSecondary,
+                                fontWeight = if (program.isNowPlaying) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
 
                         if (program.durationMinutes > 0) {
                             Text(
@@ -113,11 +133,18 @@ fun ProgramCard(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    if (!program.subTitle.isNullOrEmpty()) {
+                    if (!program.subTitle.isNullOrEmpty() || episodeLabel != null) {
+                        val subText = buildString {
+                            if (episodeLabel != null) append(episodeLabel)
+                            if (!program.subTitle.isNullOrEmpty()) {
+                                if (isNotEmpty()) append(" - ")
+                                append(program.subTitle)
+                            }
+                        }
                         Text(
-                            text = program.subTitle,
+                            text = subText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
+                            color = AccentRed.copy(alpha = 0.9f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

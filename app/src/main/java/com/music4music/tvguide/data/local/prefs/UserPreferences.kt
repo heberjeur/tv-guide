@@ -24,10 +24,19 @@ class UserPreferences @Inject constructor(
     private val keyNotificationsEnabled = booleanPreferencesKey("notifications_enabled")
     private val keyNotificationSound = stringPreferencesKey("notification_sound")
     private val keyReminderLeadTime = intPreferencesKey("reminder_lead_time")
-    private val keyCalendarSyncEnabled = booleanPreferencesKey("calendar_sync_enabled")
+    private val keySelectedBundle = stringPreferencesKey("selected_bundle")
+    private val keyChannelGridMode = booleanPreferencesKey("channel_grid_mode")
 
     val selectedPackage: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[keyPackage] ?: "community_enriched"
+    }
+
+    val selectedBundle: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keySelectedBundle] ?: "all"
+    }
+
+    val isChannelGridMode: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keyChannelGridMode] ?: false
     }
 
     val isNotificationsEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -42,13 +51,21 @@ class UserPreferences @Inject constructor(
         preferences[keyReminderLeadTime] ?: 10
     }
 
-    val isCalendarSyncEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[keyCalendarSyncEnabled] ?: false
-    }
-
     suspend fun setSelectedPackage(packageId: String) {
         context.dataStore.edit { preferences ->
             preferences[keyPackage] = packageId
+        }
+    }
+
+    suspend fun setSelectedBundle(bundleId: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keySelectedBundle] = bundleId
+        }
+    }
+
+    suspend fun setChannelGridMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keyChannelGridMode] = enabled
         }
     }
 
@@ -71,12 +88,6 @@ class UserPreferences @Inject constructor(
     suspend fun setReminderLeadTime(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[keyReminderLeadTime] = minutes
-        }
-    }
-
-    suspend fun setCalendarSyncEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[keyCalendarSyncEnabled] = enabled
         }
     }
 }

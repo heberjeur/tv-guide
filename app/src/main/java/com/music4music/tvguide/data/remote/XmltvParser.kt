@@ -7,6 +7,7 @@ import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -299,7 +300,7 @@ class XmltvParser @Inject constructor() {
         return try {
             val zonedDateTime = ZonedDateTime.parse(cleanOffset, dateFormatter)
             zonedDateTime.toInstant().toEpochMilli()
-        } catch (_: Exception) {
+        } catch (_: DateTimeParseException) {
             null
         }
     }
