@@ -1,0 +1,311 @@
+package com.music4music.tvguide.data.remote
+
+import android.util.Xml
+import com.music4music.tvguide.data.local.entity.ChannelEntity
+import com.music4music.tvguide.data.local.entity.ProgramEntity
+import org.xmlpull.v1.XmlPullParser
+import java.io.InputStream
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import javax.inject.Inject
+import javax.inject.Singleton
+
+private const val XML_TAG_CHANNEL = "channel"
+private const val XML_TAG_PROGRAM = "programme"
+
+@Singleton
+class XmltvParser @Inject constructor() {
+
+    private val dateFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss Z", Locale.ROOT)
+
+    suspend fun parse(
+        inputStream: InputStream,
+        packageId: String,
+        onBatchParsed: suspend (channels: List<ChannelEntity>, programs: List<ProgramEntity>) -> Unit
+    ) {
+        val parser = Xml.newPullParser()
+        parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+        parser.setInput(inputStream, "UTF-8")
+
+        val channelsBatch = mutableListOf<ChannelEntity>()
+        val programsBatch = mutableListOf<ProgramEntity>()
+        val batchLimit = 500
+
+        var eventType = parser.eventType
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            if (eventType == XmlPullParser.START_TAG) {
+                when (parser.name) {
+                    XML_TAG_CHANNEL -> {
+                        val channel = parseChannel(parser, packageId)
+                        if (channel != null) {
+                            channelsBatch.add(channel)
+                        }
+                    }
+                    XML_TAG_PROGRAM -> {
+                        val program = parseProgram(parser)
+                        if (program != null) {
+                            programsBatch.add(program)
+                            if (programsBatch.size >= batchLimit) {
+                                onBatchParsed(channelsBatch.toList(), programsBatch.toList())
+                                channelsBatch.clear()
+                                programsBatch.clear()
+                            }
+                        }
+                    }
+                }
+            }
+            eventType = parser.next()
+        }
+
+        if (channelsBatch.isNotEmpty() || programsBatch.isNotEmpty()) {
+            onBatchParsed(channelsBatch.toList(), programsBatch.toList())
+            channelsBatch.clear()
+            programsBatch.clear()
+        }
+    }
+
+    private fun parseChannel(parser: XmlPullParser, packageId: String): ChannelEntity? {
+        val id = parser.getAttributeValue(null, "id") ?: return null
+        var displayName = ""
+        var iconUrl: String? = null
+
+        while (parser.next() != XmlPullParser.END_TAG || parser.name != XML_TAG_CHANNEL) {
+            if (parser.eventType != XmlPullParser.START_TAG) continue
+
+            when (parser.name) {
+                "display-name" -> displayName = readText(parser)
+                "icon" -> {
+                    iconUrl = parser.getAttributeValue(null, "src")
+                    parser.nextTag()
+                }
+                else -> skipElement(parser)
+            }
+        }
+
+        return ChannelEntity(
+            id = id,
+            displayName = displayName.ifEmpty { id },
+            iconUrl = iconUrl,
+            packageId = packageId
+        )
+    }
+
+    private fun parseProgram(parser: XmlPullParser): ProgramEntity? {
+        val channelId = parser.getAttributeValue(null, "channel") ?: return null
+        val startString = parser.getAttributeValue(null, "start") ?: return null
+        val stopString = parser.getAttributeValue(null, "stop") ?: return null
+
+        val startTimestamp = parseDate(startString) ?: return null
+        val stopTimestamp = parseDate(stopString) ?: return null
+
+        var title = ""
+        var subTitle: String? = null
+        var description = ""
+        val categories = mutableListOf<String>()
+        var iconUrl: String? = null
+        var seasonNumber: Int? = null
+        var episodeNumber: Int? = null
+        var episodeDisplay: String? = null
+        val presenters = mutableListOf<String>()
+        val actors = mutableListOf<String>()
+        val guests = mutableListOf<String>()
+        val directors = mutableListOf<String>()
+        val producers = mutableListOf<String>()
+        val writers = mutableListOf<String>()
+        var contentRating: String? = null
+        var starRating: Float? = null
+        var isUnreleased = false
+        var hasSubtitles = false
+        var isHd = false
+        var lengthMinutes = 0
+
+        while (parser.next() != XmlPullParser.END_TAG || parser.name != XML_TAG_PROGRAM) {
+            if (parser.eventType != XmlPullParser.START_TAG) continue
+
+            when (parser.name) {
+                "title" -> title = readText(parser)
+                "sub-title" -> subTitle = readText(parser)
+                "desc" -> description = readText(parser)
+                "category" -> categories.add(readText(parser))
+                "length" -> {
+                    val text = readText(parser)
+                    lengthMinutes = text.toIntOrNull() ?: 0
+                }
+                "icon" -> {
+                    iconUrl = parser.getAttributeValue(null, "src")
+                    parser.nextTag()
+                }
+                "episode-num" -> {
+                    val system = parser.getAttributeValue(null, "system")
+                    val text = readText(parser)
+                    if (system == "xmltv_ns") {
+                        val parts = text.split(".")
+                        if (parts.isNotEmpty()) seasonNumber = parts[0].trim().toIntOrNull()?.plus(1)
+                        if (parts.size > 1) episodeNumber = parts[1].trim().toIntOrNull()?.plus(1)
+                    } else {
+                        episodeDisplay = text
+                    }
+                }
+                "credits" -> parseCredits(
+                    parser, presenters, actors, guests, directors, producers, writers
+                )
+                "rating" -> contentRating = parseRating(parser)
+                "star-rating" -> starRating = parseStarRating(parser)
+                "premiere" -> {
+                    isUnreleased = true
+                    parser.nextTag()
+                }
+                "subtitles" -> {
+                    hasSubtitles = true
+                    skipElement(parser)
+                }
+                "video" -> {
+                    isHd = parseVideoQuality(parser)
+                }
+                else -> skipElement(parser)
+            }
+        }
+
+        val calculatedDuration = if (lengthMinutes > 0) {
+            lengthMinutes
+        } else {
+            ((stopTimestamp - startTimestamp) / 60000L).toInt().coerceAtLeast(0)
+        }
+
+        return ProgramEntity(
+            channelId = channelId,
+            startTimestamp = startTimestamp,
+            stopTimestamp = stopTimestamp,
+            title = title,
+            subTitle = subTitle,
+            description = description,
+            categories = categories,
+            iconUrl = iconUrl,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber,
+            episodeDisplay = episodeDisplay,
+            presenters = presenters,
+            actors = actors,
+            guests = guests,
+            directors = directors,
+            producers = producers,
+            writers = writers,
+            contentRating = contentRating,
+            starRating = starRating,
+            isUnreleased = isUnreleased,
+            hasSubtitles = hasSubtitles,
+            isHd = isHd,
+            durationMinutes = calculatedDuration
+        )
+    }
+
+    private fun parseCredits(
+        parser: XmlPullParser,
+        presenters: MutableList<String>,
+        actors: MutableList<String>,
+        guests: MutableList<String>,
+        directors: MutableList<String>,
+        producers: MutableList<String>,
+        writers: MutableList<String>
+    ) {
+        while (parser.next() != XmlPullParser.END_TAG || parser.name != "credits") {
+            if (parser.eventType != XmlPullParser.START_TAG) continue
+            when (parser.name) {
+                "presenter" -> presenters.add(readText(parser))
+                "actor" -> actors.add(readText(parser))
+                "guest" -> guests.add(readText(parser))
+                "director" -> directors.add(readText(parser))
+                "producer" -> producers.add(readText(parser))
+                "writer" -> writers.add(readText(parser))
+                else -> skipElement(parser)
+            }
+        }
+    }
+
+    private fun parseRating(parser: XmlPullParser): String? {
+        var value: String? = null
+        while (parser.next() != XmlPullParser.END_TAG || parser.name != "rating") {
+            if (parser.eventType != XmlPullParser.START_TAG) continue
+            if (parser.name == "value") {
+                value = readText(parser)
+            } else {
+                skipElement(parser)
+            }
+        }
+        return value
+    }
+
+    private fun parseStarRating(parser: XmlPullParser): Float? {
+        var value: Float? = null
+        while (parser.next() != XmlPullParser.END_TAG || parser.name != "star-rating") {
+            if (parser.eventType != XmlPullParser.START_TAG) continue
+            if (parser.name == "value") {
+                val text = readText(parser)
+                val split = text.split("/")
+                val numeric = split.firstOrNull()?.trim()?.toFloatOrNull()
+                if (numeric != null) {
+                    val max = split.getOrNull(1)?.trim()?.toFloatOrNull() ?: 5f
+                    value = (numeric / max) * 5f
+                }
+            } else {
+                skipElement(parser)
+            }
+        }
+        return value
+    }
+
+    private fun parseVideoQuality(parser: XmlPullParser): Boolean {
+        var isHd = false
+        while (parser.next() != XmlPullParser.END_TAG || parser.name != "video") {
+            if (parser.eventType != XmlPullParser.START_TAG) continue
+            if (parser.name == "quality") {
+                val text = readText(parser)
+                if (text.contains("HD", ignoreCase = true)) {
+                    isHd = true
+                }
+            } else {
+                skipElement(parser)
+            }
+        }
+        return isHd
+    }
+
+    private fun parseDate(dateStr: String): Long? {
+        val trimmed = dateStr.trim()
+        val formatted = if (trimmed.length == 14) {
+            "$trimmed +0000"
+        } else if (trimmed.length >= 19 && trimmed[14] != ' ') {
+            "${trimmed.substring(0, 14)} ${trimmed.substring(14)}"
+        } else {
+            trimmed
+        }
+
+        return try {
+            val zonedDateTime = ZonedDateTime.parse(formatted, dateFormatter)
+            zonedDateTime.toInstant().toEpochMilli()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun readText(parser: XmlPullParser): String {
+        var result = ""
+        if (parser.next() == XmlPullParser.TEXT) {
+            result = parser.text.trim()
+            parser.nextTag()
+        }
+        return result
+    }
+
+    private fun skipElement(parser: XmlPullParser) {
+        if (parser.eventType != XmlPullParser.START_TAG) return
+        var depth = 1
+        while (depth != 0) {
+            when (parser.next()) {
+                XmlPullParser.END_TAG -> depth--
+                XmlPullParser.START_TAG -> depth++
+            }
+        }
+    }
+}

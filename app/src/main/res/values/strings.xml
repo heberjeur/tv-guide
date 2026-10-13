@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TV Guide</string>
+    <string name="tab_now">Now Playing</string>
+    <string name="tab_guide">Guide</string>
+    <string name="tab_channels">Channels</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="channel_selection">Select Channel</string>
+    <string name="package_selection">Channel Package</string>
+    <string name="package_community_enriched">Enriched (Recommended)</string>
+    <string name="package_terrestrial">Free Terrestrial</string>
+    <string name="package_extended">Extended</string>
+    <string name="package_all_channels">All Channels</string>
+
+    <string name="action_refresh">Refresh</string>
+    <string name="action_search">Search</string>
+    <string name="action_filter">Filter</string>
+    <string name="action_set_reminder">Set Reminder</string>
+    <string name="action_remove_reminder">Remove Reminder</string>
+    <string name="action_add_calendar">Add to Calendar</string>
+    <string name="action_share">Share</string>
+
+    <string name="reminder_title">TV Reminder</string>
+    <string name="reminder_starting_soon">%1$s starts in %2$d minutes on %3$s</string>
+    <string name="reminder_channel_name">Channel %1$s</string>
+
+    <string name="offline_banner_sync_ago">Last updated: %1$s ago</string>
+    <string name="offline_banner_no_data">No data available offline. Please connect to download the guide.</string>
+    <string name="status_updating">Updating EPG…</string>
+    <string name="status_up_to_date">Guide is up to date</string>
+    <string name="status_offline">Offline mode</string>
+
+    <string name="label_duration_minutes">%1$d min</string>
+    <string name="label_season_episode">S%1$02dE%2$02d</string>
+    <string name="label_season">Season %1$d</string>
+    <string name="label_episode">Episode %1$d</string>
+    <string name="label_presented_by">Presented by</string>
+    <string name="label_guests">Participants</string>
+    <string name="label_production">Production</string>
+    <string name="label_director">Director</string>
+    <string name="label_rating">Rating</string>
+    <string name="label_content_rating">Rating: %1$s</string>
+    <string name="label_unreleased">New</string>
+    <string name="label_rerun">Rerun</string>
+    <string name="label_subtitles">Subtitles</string>
+    <string name="label_hd">HD</string>
+
+    <string name="settings_notifications_title">Notifications and Sounds</string>
+    <string name="settings_notifications_enable">Enable Notifications</string>
+    <string name="settings_notification_sound">Notification Sound</string>
+    <string name="settings_reminder_lead_time">Lead Time (Minutes)</string>
+    <string name="settings_calendar_title">Calendar Integration</string>
+    <string name="settings_calendar_enable">Sync Reminders to Calendar</string>
+    <string name="settings_storage_title">Cache and Storage</string>
+    <string name="settings_clear_cache">Clear Image Cache</string>
+</resources>
