@@ -20,10 +20,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -34,6 +36,8 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
@@ -42,6 +46,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +68,7 @@ import com.music4music.tvguide.ui.theme.DarkBackground
 import com.music4music.tvguide.ui.theme.DarkSurface
 import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
 import com.music4music.tvguide.ui.theme.IndicatorGreen
+import com.music4music.tvguide.ui.theme.SurfaceBorder
 import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
 
@@ -77,6 +85,8 @@ fun NowPlayingScreen(
     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
     val selectedEveningPart by viewModel.selectedEveningPart.collectAsStateWithLifecycle()
     val syncProgress by viewModel.syncProgress.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    var isSearchActive by remember { mutableStateOf(false) }
 
     val syncMessage = when (syncProgress.state) {
         SyncState.DOWNLOADING -> stringResource(R.string.sync_state_downloading)
@@ -91,37 +101,83 @@ fun NowPlayingScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (isSearchActive) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = viewModel::setSearchQuery,
+                            placeholder = { Text(stringResource(R.string.search_programs_placeholder)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary,
+                                focusedBorderColor = AccentRed,
+                                unfocusedBorderColor = SurfaceBorder
+                            ),
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear_search), tint = TextSecondary)
+                                    }
+                                }
+                            }
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.refresh(force = true) },
-                        enabled = !uiState.isRefreshing
-                    ) {
-                        if (uiState.isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = AccentRed,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
+                navigationIcon = {
+                    if (isSearchActive) {
+                        IconButton(onClick = {
+                            isSearchActive = false
+                            viewModel.setSearchQuery("")
+                        }) {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = stringResource(R.string.action_refresh),
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
                                 tint = TextPrimary
                             )
                         }
                     }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.tab_settings),
-                            tint = TextPrimary
-                        )
+                },
+                actions = {
+                    if (!isSearchActive) {
+                        IconButton(onClick = { isSearchActive = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(R.string.action_search),
+                                tint = TextPrimary
+                            )
+                        }
+                        IconButton(
+                            onClick = { viewModel.refresh(force = true) },
+                            enabled = !uiState.isRefreshing
+                        ) {
+                            if (uiState.isRefreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = AccentRed,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = stringResource(R.string.action_refresh),
+                                    tint = TextPrimary
+                                )
+                            }
+                        }
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.tab_settings),
+                                tint = TextPrimary
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
@@ -305,10 +361,10 @@ fun NowPlayingScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Text(
-                                text = if (!isOnline) {
-                                    stringResource(R.string.offline_banner_no_data)
-                                } else {
-                                    uiState.errorMessage ?: stringResource(R.string.no_programs_period)
+                                text = when {
+                                    !isOnline -> stringResource(R.string.offline_banner_no_data)
+                                    searchQuery.isNotEmpty() -> stringResource(R.string.search_empty)
+                                    else -> uiState.errorMessage ?: stringResource(R.string.no_programs_period)
                                 },
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = TextSecondary,

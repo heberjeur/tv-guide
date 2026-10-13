@@ -146,6 +146,53 @@
     <string name="settings_clear_cache">Vider le cache</string>
     <string name="settings_cache_size">Taille actuelle du cache : %1$s</string>
 
+    <string name="settings_bundle_explanation">Filtre les chaînes affichées dans toute l\'application selon votre opérateur.</string>
+    <string name="settings_package_explanation">Sélectionne la source du fichier XMLTV téléchargée pour le mode hors-ligne.</string>
+
+    <string name="settings_theme_title">Thème et apparence</string>
+    <string name="theme_dark">Sombre</string>
+    <string name="theme_oled">Noir OLED</string>
+    <string name="theme_light">Clair</string>
+    <string name="theme_system">Système</string>
+    <string name="settings_density_title">Densité d\'affichage</string>
+    <string name="density_comfort">Confort</string>
+    <string name="density_compact">Compact</string>
+    <string name="settings_font_scale_title">Taille du texte</string>
+    <string name="font_scale_normal">Normal</string>
+    <string name="font_scale_large">Grand</string>
+    <string name="settings_hide_reruns">Masquer les rediffusions</string>
+    <string name="settings_highlight_accessibility">Badges d\'accessibilité</string>
+    <string name="settings_highlight_accessibility_desc">Mettre en valeur sous-titres et audiodescription</string>
+
+    <string name="settings_channel_management_title">Chaînes et favoris</string>
+    <string name="settings_channel_sort_title">Ordre des chaînes</string>
+    <string name="channel_sort_number">Par numéro</string>
+    <string name="channel_sort_name">Alphabétique</string>
+    <string name="channel_sort_favorites_first">Favoris en premier</string>
+    <string name="settings_manage_favorites">Chaînes favorites (%1$d)</string>
+    <string name="settings_manage_hidden">Chaînes masquées (%1$d)</string>
+    <string name="dialog_select_favorites_title">Choisir les chaînes favorites</string>
+    <string name="dialog_select_hidden_title">Choisir les chaînes à masquer</string>
+
+    <string name="settings_retention_days_title">Durée de conservation hors-ligne</string>
+    <string name="retention_3_days">3 jours</string>
+    <string name="retention_7_days">7 jours</string>
+    <string name="retention_14_days">14 jours</string>
+    <string name="settings_image_download_policy">Téléchargement des images</string>
+    <string name="image_policy_always">Toujours</string>
+    <string name="image_policy_wifi_only">Wi-Fi uniquement</string>
+    <string name="image_policy_never">Désactivé</string>
+
+    <string name="settings_vibration_enable">Vibrer lors du rappel</string>
+    <string name="settings_custom_datetime_title">Date et heure du rappel</string>
+    <string name="settings_pick_date">Choisir la date</string>
+    <string name="settings_pick_time">Choisir l\'heure</string>
+    <string name="action_pick_datetime">Date et heure personnalisées</string>
+
+    <string name="category_all">Toutes les catégories</string>
+    <string name="search_programs_placeholder">Rechercher une émission...</string>
+    <string name="search_empty">Aucun programme correspondant trouvé.</string>
+    <string name="action_clear_search">Effacer la recherche</string>
     <string name="filter_all_channels">Toutes les chaînes</string>
     <string name="filter_all_days">Tous les jours</string>
     <string name="channels_search_placeholder">Rechercher une chaîne...</string>

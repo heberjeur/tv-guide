@@ -27,7 +27,7 @@ interface ProgramDao {
     @Query("SELECT * FROM programs WHERE title = :title AND startTimestamp > :fromTime ORDER BY startTimestamp ASC LIMIT 10")
     fun getUpcomingBroadcasts(title: String, fromTime: Long): Flow<List<ProgramEntity>>
 
-    @Query("SELECT * FROM programs WHERE categories LIKE '%' || :category || '%' AND stopTimestamp > :fromTime ORDER BY startTimestamp ASC LIMIT 60")
+    @Query("SELECT * FROM programs WHERE (:category = '' OR categories LIKE '%' || :category || '%') AND stopTimestamp > :fromTime ORDER BY startTimestamp ASC LIMIT 250")
     fun getProgramsByCategory(category: String, fromTime: Long): Flow<List<ProgramEntity>>
 
     @Query("SELECT * FROM programs WHERE stopTimestamp > :startTime AND startTimestamp < :endTime ORDER BY channelId ASC, startTimestamp ASC")

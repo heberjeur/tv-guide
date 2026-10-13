@@ -33,14 +33,17 @@ class CategoryExploreViewModel @Inject constructor(
     getChannelsUseCase: GetChannelsUseCase
 ) : ViewModel() {
 
-    private val _selectedCategory = MutableStateFlow(TvCategory.MOVIES)
-    val selectedCategory: StateFlow<TvCategory> = _selectedCategory.asStateFlow()
+    private val _selectedCategory = MutableStateFlow<TvCategory?>(null)
+    val selectedCategory: StateFlow<TvCategory?> = _selectedCategory.asStateFlow()
 
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)
     val selectedDate: StateFlow<LocalDate?> = _selectedDate.asStateFlow()
 
     private val _selectedChannelId = MutableStateFlow<String?>(null)
     val selectedChannelId: StateFlow<String?> = _selectedChannelId.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     private val rawChannels: StateFlow<List<Channel>> = userPreferences.selectedPackage
         .flatMapLatest { packageId ->
@@ -66,10 +69,12 @@ class CategoryExploreViewModel @Inject constructor(
         _selectedCategory,
         _selectedDate,
         _selectedChannelId,
+        _searchQuery,
         userPreferences.selectedBundle
-    ) { category, date, channelId, bundleId ->
+    ) { category, date, channelId, query, bundleId ->
         val bundle = ChannelBundle.fromId(bundleId)
-        epgRepository.getProgramsByCategory(category.searchKeyword).map { list ->
+        val keyword = category?.searchKeyword ?: ""
+        epgRepository.getProgramsByCategory(keyword).map { list ->
             val zone = ZoneId.of("Europe/Paris")
             val (dayStart, dayEnd) = if (date != null) {
                 val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
@@ -85,14 +90,18 @@ class CategoryExploreViewModel @Inject constructor(
                 val matchesDate = if (dayStart != null && dayEnd != null) {
                     program.stopTimestamp > dayStart && program.startTimestamp < dayEnd
                 } else true
+                val matchesQuery = query.isBlank() ||
+                        program.title.contains(query, ignoreCase = true) ||
+                        program.description.contains(query, ignoreCase = true) ||
+                        program.channelId.contains(query, ignoreCase = true)
 
-                matchesBundle && matchesChannel && matchesDate
+                matchesBundle && matchesChannel && matchesDate && matchesQuery
             }
         }
     }.flatMapLatest { it }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun selectCategory(category: TvCategory) {
+    fun selectCategory(category: TvCategory?) {
         _selectedCategory.value = category
     }
 
@@ -102,5 +111,9 @@ class CategoryExploreViewModel @Inject constructor(
 
     fun selectChannel(channelId: String?) {
         _selectedChannelId.value = channelId
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 }

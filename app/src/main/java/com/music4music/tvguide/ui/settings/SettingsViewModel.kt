@@ -33,11 +33,15 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
+import com.music4music.tvguide.domain.model.Channel
+import com.music4music.tvguide.domain.repository.EpgRepository
+
 @OptIn(coil.annotation.ExperimentalCoilApi::class)
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val userPreferences: UserPreferences,
     private val syncEpgUseCase: SyncEpgUseCase,
+    private val epgRepository: EpgRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -70,6 +74,42 @@ class SettingsViewModel @Inject constructor(
 
     val autoSyncEnabled: StateFlow<Boolean> = userPreferences.autoSyncEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val themeMode: StateFlow<String> = userPreferences.themeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "dark")
+
+    val displayDensity: StateFlow<String> = userPreferences.displayDensity
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "comfort")
+
+    val fontSizeScale: StateFlow<String> = userPreferences.fontSizeScale
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "normal")
+
+    val hideReruns: StateFlow<Boolean> = userPreferences.hideReruns
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val channelSortOrder: StateFlow<String> = userPreferences.channelSortOrder
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "number")
+
+    val favoriteChannels: StateFlow<Set<String>> = userPreferences.favoriteChannels
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    val hiddenChannels: StateFlow<Set<String>> = userPreferences.hiddenChannels
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    val retentionDays: StateFlow<Int> = userPreferences.retentionDays
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
+
+    val imageDownloadPolicy: StateFlow<String> = userPreferences.imageDownloadPolicy
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "wifi_only")
+
+    val vibrationEnabled: StateFlow<Boolean> = userPreferences.vibrationEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val highlightAccessibility: StateFlow<Boolean> = userPreferences.highlightAccessibility
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val allChannels: StateFlow<List<Channel>> = epgRepository.getChannels(ChannelPackage.COMMUNITY_ENRICHED)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
@@ -221,6 +261,72 @@ class SettingsViewModel @Inject constructor(
             ExistingPeriodicWorkPolicy.UPDATE,
             request
         )
+    }
+
+    fun setThemeMode(mode: String) {
+        viewModelScope.launch {
+            userPreferences.setThemeMode(mode)
+        }
+    }
+
+    fun setDisplayDensity(density: String) {
+        viewModelScope.launch {
+            userPreferences.setDisplayDensity(density)
+        }
+    }
+
+    fun setFontSizeScale(scale: String) {
+        viewModelScope.launch {
+            userPreferences.setFontSizeScale(scale)
+        }
+    }
+
+    fun setHideReruns(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setHideReruns(enabled)
+        }
+    }
+
+    fun setChannelSortOrder(order: String) {
+        viewModelScope.launch {
+            userPreferences.setChannelSortOrder(order)
+        }
+    }
+
+    fun toggleFavoriteChannel(channelId: String) {
+        viewModelScope.launch {
+            userPreferences.toggleFavoriteChannel(channelId)
+        }
+    }
+
+    fun toggleHiddenChannel(channelId: String) {
+        viewModelScope.launch {
+            userPreferences.toggleHiddenChannel(channelId)
+        }
+    }
+
+    fun setRetentionDays(days: Int) {
+        viewModelScope.launch {
+            userPreferences.setRetentionDays(days)
+        }
+    }
+
+    fun setImageDownloadPolicy(policy: String) {
+        viewModelScope.launch {
+            userPreferences.setImageDownloadPolicy(policy)
+        }
+    }
+
+    fun setVibrationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setVibrationEnabled(enabled)
+        }
+    }
+
+    fun setHighlightAccessibility(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setHighlightAccessibility(enabled)
+        }
     }
 
     fun clearCache() {

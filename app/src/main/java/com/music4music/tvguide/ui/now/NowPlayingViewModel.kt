@@ -40,6 +40,13 @@ enum class EveningPart {
     PART_2
 }
 
+private data class Params(
+    val period: BroadcastPeriod,
+    val part: EveningPart,
+    val query: String,
+    val bundleId: String
+)
+
 data class NowPlayingUiState(
     val isRefreshing: Boolean = false,
     val errorMessage: String? = null
@@ -69,14 +76,18 @@ class NowPlayingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(NowPlayingUiState())
     val uiState: StateFlow<NowPlayingUiState> = _uiState.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val programs: StateFlow<List<Program>> = combine(
         _selectedPeriod,
         _selectedEveningPart,
+        _searchQuery,
         userPreferences.selectedBundle
-    ) { period: BroadcastPeriod, part: EveningPart, bundleId: String ->
-        Triple(period, part, bundleId)
-    }.flatMapLatest { (period, part, bundleId) ->
+    ) { period: BroadcastPeriod, part: EveningPart, query: String, bundleId: String ->
+        Params(period, part, query, bundleId)
+    }.flatMapLatest { (period, part, query, bundleId) ->
         val bundle = ChannelBundle.fromId(bundleId)
         val zone = ZoneId.of("Europe/Paris")
         val today = LocalDate.now(zone)
@@ -112,7 +123,12 @@ class NowPlayingViewModel @Inject constructor(
 
         flow.map { list ->
             val filtered = list.filter { program ->
-                ChannelCatalog.isChannelInBundle(program.channelId, bundle)
+                val inBundle = ChannelCatalog.isChannelInBundle(program.channelId, bundle)
+                val matchesQuery = query.isBlank() ||
+                        program.title.contains(query, ignoreCase = true) ||
+                        program.categories.any { cat -> cat.contains(query, ignoreCase = true) } ||
+                        program.channelId.contains(query, ignoreCase = true)
+                inBundle && matchesQuery
             }
             if (period == BroadcastPeriod.NOW) {
                 filtered.distinctBy { it.channelId }
@@ -121,6 +137,10 @@ class NowPlayingViewModel @Inject constructor(
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 
     init {
         refresh(force = false)

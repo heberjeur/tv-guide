@@ -87,6 +87,33 @@ class ProgramDetailViewModel @Inject constructor(
         }
     }
 
+    fun setCustomDateTimeReminder(triggerTimestamp: Long) {
+        val currentProgram = program.value ?: return
+        viewModelScope.launch {
+            val existingReminder = reminder.value
+            if (existingReminder != null) {
+                cancelAlarm(existingReminder)
+                reminderRepository.deleteReminder(existingReminder.programId)
+            }
+            val soundUri = userPreferences.notificationSound.first()
+            val leadTime = ((currentProgram.startTimestamp - triggerTimestamp) / 60000L).toInt().coerceAtLeast(0)
+
+            setReminderUseCase(
+                program = currentProgram,
+                leadTimeMinutes = leadTime,
+                syncToCalendar = false,
+                soundUri = soundUri
+            )
+
+            scheduleAlarm(
+                program = currentProgram,
+                leadTime = leadTime,
+                soundUri = soundUri,
+                explicitTriggerTime = triggerTimestamp
+            )
+        }
+    }
+
     fun createExternalCalendarIntent(program: Program): Intent {
         val desc = buildString {
             if (!program.subTitle.isNullOrBlank()) append(program.subTitle).append("\n\n")
@@ -103,8 +130,13 @@ class ProgramDetailViewModel @Inject constructor(
         }
     }
 
-    private fun scheduleAlarm(program: Program, leadTime: Int, soundUri: String?) {
-        val triggerTime = program.startTimestamp - (leadTime * 60 * 1000L)
+    private fun scheduleAlarm(
+        program: Program,
+        leadTime: Int,
+        soundUri: String?,
+        explicitTriggerTime: Long? = null
+    ) {
+        val triggerTime = explicitTriggerTime ?: (program.startTimestamp - (leadTime * 60 * 1000L))
         if (triggerTime <= System.currentTimeMillis()) return
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager

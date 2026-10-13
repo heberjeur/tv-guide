@@ -25,19 +25,30 @@ class CalendarViewModel @Inject constructor(
     private val _selectedDate = MutableStateFlow(LocalDate.now(ZoneId.of("Europe/Paris")))
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
     val allReminders: StateFlow<List<Reminder>> = reminderRepository.getAllReminders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val filteredReminders: StateFlow<List<Reminder>> = combine(allReminders, _selectedDate) { reminders, date ->
+    val filteredReminders: StateFlow<List<Reminder>> = combine(allReminders, _selectedDate, _searchQuery) { reminders, date, query ->
         val zone = ZoneId.of("Europe/Paris")
         reminders.filter { reminder ->
             val reminderDate = Instant.ofEpochMilli(reminder.startTimestamp).atZone(zone).toLocalDate()
-            reminderDate == date
+            val matchesDate = reminderDate == date
+            val matchesQuery = query.isBlank() ||
+                reminder.title.contains(query, ignoreCase = true) ||
+                reminder.channelId.contains(query, ignoreCase = true)
+            matchesDate && matchesQuery
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun selectDate(date: LocalDate) {
         _selectedDate.value = date
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     fun removeReminder(programId: Long) {

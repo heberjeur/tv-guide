@@ -21,6 +21,10 @@ import kotlinx.coroutines.runBlocking
 import java.util.Locale
 import javax.inject.Inject
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -32,10 +36,11 @@ class MainActivity : ComponentActivity() {
         applySavedLocale()
         enableEdgeToEdge()
         setContent {
-            TvGuideTheme {
+            val themeMode by userPreferences.themeMode.collectAsStateWithLifecycle(initialValue = "dark")
+            TvGuideTheme(themeMode = themeMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = DarkBackground
+                    color = MaterialTheme.colorScheme.background
                 ) {
                     TvGuideAppNavigation()
                 }

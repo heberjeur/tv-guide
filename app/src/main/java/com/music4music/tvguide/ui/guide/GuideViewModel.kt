@@ -64,6 +64,9 @@ class GuideViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
     val programs: StateFlow<List<Program>> = combine(
         _selectedChannelId,
         _selectedDate
@@ -77,6 +80,16 @@ class GuideViewModel @Inject constructor(
             val startOfDay = date.atStartOfDay(zone).toInstant().toEpochMilli()
             val endOfDay = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
             getProgramsUseCase(channelId, startOfDay, endOfDay)
+        }
+    }.combine(_searchQuery) { list, query ->
+        if (query.isBlank()) {
+            list
+        } else {
+            list.filter {
+                it.title.contains(query, ignoreCase = true) ||
+                    it.description.contains(query, ignoreCase = true) ||
+                    it.categories.any { cat -> cat.contains(query, ignoreCase = true) }
+            }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -100,5 +113,9 @@ class GuideViewModel @Inject constructor(
 
     fun updateChannelSearch(query: String) {
         _channelSearchQuery.value = query
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 }

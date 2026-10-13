@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -20,6 +21,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,6 +37,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -101,8 +107,23 @@ fun SettingsScreen(
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     val cacheSizeText by viewModel.cacheSizeText.collectAsStateWithLifecycle()
 
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val displayDensity by viewModel.displayDensity.collectAsStateWithLifecycle()
+    val fontSizeScale by viewModel.fontSizeScale.collectAsStateWithLifecycle()
+    val hideReruns by viewModel.hideReruns.collectAsStateWithLifecycle()
+    val channelSortOrder by viewModel.channelSortOrder.collectAsStateWithLifecycle()
+    val favoriteChannels by viewModel.favoriteChannels.collectAsStateWithLifecycle()
+    val hiddenChannels by viewModel.hiddenChannels.collectAsStateWithLifecycle()
+    val retentionDays by viewModel.retentionDays.collectAsStateWithLifecycle()
+    val imageDownloadPolicy by viewModel.imageDownloadPolicy.collectAsStateWithLifecycle()
+    val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
+    val highlightAccessibility by viewModel.highlightAccessibility.collectAsStateWithLifecycle()
+    val allChannels by viewModel.allChannels.collectAsStateWithLifecycle()
+
     var showCustomLeadTimeDialog by remember { mutableStateOf(false) }
     var customLeadTimeInput by remember { mutableStateOf("") }
+    var showFavoritesDialog by remember { mutableStateOf(false) }
+    var showHiddenDialog by remember { mutableStateOf(false) }
 
     val soundDisplayName = remember(notificationSound) {
         if (notificationSound != null) {
@@ -183,6 +204,112 @@ fun SettingsScreen(
         )
     }
 
+    if (showFavoritesDialog) {
+        AlertDialog(
+            onDismissRequest = { showFavoritesDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.dialog_select_favorites_title),
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                ) {
+                    items(allChannels, key = { it.id }) { channel ->
+                        val isFav = favoriteChannels.contains(channel.id)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.toggleFavoriteChannel(channel.id) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = isFav,
+                                onCheckedChange = { viewModel.toggleFavoriteChannel(channel.id) },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = AccentRed,
+                                    uncheckedColor = TextSecondary,
+                                    checkmarkColor = TextPrimary
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = channel.displayName,
+                                color = TextPrimary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFavoritesDialog = false }) {
+                    Text(text = stringResource(R.string.action_confirm), color = AccentRed)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
+
+    if (showHiddenDialog) {
+        AlertDialog(
+            onDismissRequest = { showHiddenDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.dialog_select_hidden_title),
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                ) {
+                    items(allChannels, key = { it.id }) { channel ->
+                        val isHidden = hiddenChannels.contains(channel.id)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.toggleHiddenChannel(channel.id) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = isHidden,
+                                onCheckedChange = { viewModel.toggleHiddenChannel(channel.id) },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = AccentRed,
+                                    uncheckedColor = TextSecondary,
+                                    checkmarkColor = TextPrimary
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = channel.displayName,
+                                color = TextPrimary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showHiddenDialog = false }) {
+                    Text(text = stringResource(R.string.action_confirm), color = AccentRed)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -224,7 +351,7 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = stringResource(R.string.settings_bundle_subtitle),
+                        text = stringResource(R.string.settings_bundle_explanation),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -247,6 +374,283 @@ fun SettingsScreen(
                                 ),
                                 border = null,
                                 shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.package_selection),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.settings_package_explanation),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "community_enriched" to stringResource(R.string.package_community_enriched),
+                            "terrestrial" to stringResource(R.string.package_terrestrial),
+                            "extended" to stringResource(R.string.package_extended),
+                            "all_channels" to stringResource(R.string.package_all_channels)
+                        ).forEach { (id, label) ->
+                            FilterChip(
+                                selected = selectedPackage == id,
+                                onClick = { viewModel.selectPackage(id) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = TextPrimary,
+                                    containerColor = DarkSurfaceVariant,
+                                    labelColor = TextSecondary
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_theme_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "dark" to stringResource(R.string.theme_dark),
+                            "oled" to stringResource(R.string.theme_oled),
+                            "light" to stringResource(R.string.theme_light),
+                            "system" to stringResource(R.string.theme_system)
+                        ).forEach { (mode, label) ->
+                            FilterChip(
+                                selected = themeMode == mode,
+                                onClick = { viewModel.setThemeMode(mode) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = TextPrimary,
+                                    containerColor = DarkSurfaceVariant,
+                                    labelColor = TextSecondary
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.settings_density_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "comfort" to stringResource(R.string.density_comfort),
+                            "compact" to stringResource(R.string.density_compact)
+                        ).forEach { (density, label) ->
+                            FilterChip(
+                                selected = displayDensity == density,
+                                onClick = { viewModel.setDisplayDensity(density) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = TextPrimary,
+                                    containerColor = DarkSurfaceVariant,
+                                    labelColor = TextSecondary
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.settings_font_scale_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "normal" to stringResource(R.string.font_scale_normal),
+                            "large" to stringResource(R.string.font_scale_large)
+                        ).forEach { (scale, label) ->
+                            FilterChip(
+                                selected = fontSizeScale == scale,
+                                onClick = { viewModel.setFontSizeScale(scale) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = TextPrimary,
+                                    containerColor = DarkSurfaceVariant,
+                                    labelColor = TextSecondary
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_hide_reruns),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                        Switch(
+                            checked = hideReruns,
+                            onCheckedChange = viewModel::setHideReruns,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = TextPrimary,
+                                checkedTrackColor = AccentRed
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_highlight_accessibility),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_highlight_accessibility_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        }
+                        Switch(
+                            checked = highlightAccessibility,
+                            onCheckedChange = viewModel::setHighlightAccessibility,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = TextPrimary,
+                                checkedTrackColor = AccentRed
+                            )
+                        )
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_channel_management_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(R.string.settings_channel_sort_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "number" to stringResource(R.string.channel_sort_number),
+                            "name" to stringResource(R.string.channel_sort_name),
+                            "favorites_first" to stringResource(R.string.channel_sort_favorites_first)
+                        ).forEach { (order, label) ->
+                            FilterChip(
+                                selected = channelSortOrder == order,
+                                onClick = { viewModel.setChannelSortOrder(order) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = TextPrimary,
+                                    containerColor = DarkSurfaceVariant,
+                                    labelColor = TextSecondary
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showFavoritesDialog = true },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_manage_favorites, favoriteChannels.size),
+                                color = TextPrimary
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { showHiddenDialog = true },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_manage_hidden, hiddenChannels.size),
+                                color = TextPrimary
                             )
                         }
                     }
@@ -374,6 +778,27 @@ fun SettingsScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_vibration_enable),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary
+                            )
+                            Switch(
+                                checked = vibrationEnabled,
+                                onCheckedChange = viewModel::setVibrationEnabled,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = TextPrimary,
+                                    checkedTrackColor = AccentRed
+                                )
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -550,6 +975,74 @@ fun SettingsScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.settings_retention_days_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            3 to stringResource(R.string.retention_3_days),
+                            7 to stringResource(R.string.retention_7_days),
+                            14 to stringResource(R.string.retention_14_days)
+                        ).forEach { (days, label) ->
+                            FilterChip(
+                                selected = retentionDays == days,
+                                onClick = { viewModel.setRetentionDays(days) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = TextPrimary,
+                                    containerColor = DarkSurfaceVariant,
+                                    labelColor = TextSecondary
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.settings_image_download_policy),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "always" to stringResource(R.string.image_policy_always),
+                            "wifi_only" to stringResource(R.string.image_policy_wifi_only),
+                            "never" to stringResource(R.string.image_policy_never)
+                        ).forEach { (policy, label) ->
+                            FilterChip(
+                                selected = imageDownloadPolicy == policy,
+                                onClick = { viewModel.setImageDownloadPolicy(policy) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = TextPrimary,
+                                    containerColor = DarkSurfaceVariant,
+                                    labelColor = TextSecondary
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = { viewModel.triggerSyncNow() },
                         enabled = !isSyncing,
@@ -572,47 +1065,6 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.size(8.dp))
                         Text(text = stringResource(R.string.action_sync_now), color = TextPrimary)
-                    }
-                }
-            }
-
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.package_selection),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            "community_enriched" to stringResource(R.string.package_community_enriched),
-                            "terrestrial" to stringResource(R.string.package_terrestrial),
-                            "extended" to stringResource(R.string.package_extended),
-                            "all_channels" to stringResource(R.string.package_all_channels)
-                        ).forEach { (id, label) ->
-                            FilterChip(
-                                selected = selectedPackage == id,
-                                onClick = { viewModel.selectPackage(id) },
-                                label = { Text(text = label) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
                     }
                 }
             }

@@ -146,6 +146,53 @@
     <string name="settings_clear_cache">Clear Cache</string>
     <string name="settings_cache_size">Current cache size: %1$s</string>
 
+    <string name="settings_bundle_explanation">Filters channels displayed across the app according to your TV provider.</string>
+    <string name="settings_package_explanation">Selects the XMLTV feed source downloaded for offline use.</string>
+
+    <string name="settings_theme_title">Theme &amp; Appearance</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_oled">OLED Black</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_system">System</string>
+    <string name="settings_density_title">Display Density</string>
+    <string name="density_comfort">Comfort</string>
+    <string name="density_compact">Compact</string>
+    <string name="settings_font_scale_title">Font Size</string>
+    <string name="font_scale_normal">Normal</string>
+    <string name="font_scale_large">Large</string>
+    <string name="settings_hide_reruns">Hide reruns</string>
+    <string name="settings_highlight_accessibility">Accessibility Badges</string>
+    <string name="settings_highlight_accessibility_desc">Highlight subtitles and audio description</string>
+
+    <string name="settings_channel_management_title">Channels &amp; Favorites</string>
+    <string name="settings_channel_sort_title">Channel Order</string>
+    <string name="channel_sort_number">By Number</string>
+    <string name="channel_sort_name">Alphabetical</string>
+    <string name="channel_sort_favorites_first">Favorites first</string>
+    <string name="settings_manage_favorites">Favorite Channels (%1$d)</string>
+    <string name="settings_manage_hidden">Hidden Channels (%1$d)</string>
+    <string name="dialog_select_favorites_title">Select Favorite Channels</string>
+    <string name="dialog_select_hidden_title">Select Hidden Channels</string>
+
+    <string name="settings_retention_days_title">Offline Guide Retention</string>
+    <string name="retention_3_days">3 days</string>
+    <string name="retention_7_days">7 days</string>
+    <string name="retention_14_days">14 days</string>
+    <string name="settings_image_download_policy">Image Downloads</string>
+    <string name="image_policy_always">Always</string>
+    <string name="image_policy_wifi_only">Wi-Fi only</string>
+    <string name="image_policy_never">Disabled</string>
+
+    <string name="settings_vibration_enable">Vibrate on notification</string>
+    <string name="settings_custom_datetime_title">Custom Notification Date &amp; Time</string>
+    <string name="settings_pick_date">Select Date</string>
+    <string name="settings_pick_time">Select Time</string>
+    <string name="action_pick_datetime">Pick date &amp; time</string>
+
+    <string name="category_all">All categories</string>
+    <string name="search_programs_placeholder">Search programs...</string>
+    <string name="search_empty">No matching programs found.</string>
+    <string name="action_clear_search">Clear search</string>
     <string name="filter_all_channels">All channels</string>
     <string name="filter_all_days">All days</string>
     <string name="channels_search_placeholder">Search for a channel...</string>

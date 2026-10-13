@@ -31,6 +31,17 @@ class UserPreferences @Inject constructor(
     private val keySyncWifiOnly = booleanPreferencesKey("sync_wifi_only")
     private val keySyncChargingOnly = booleanPreferencesKey("sync_charging_only")
     private val keyAutoSyncEnabled = booleanPreferencesKey("auto_sync_enabled")
+    private val keyThemeMode = stringPreferencesKey("theme_mode")
+    private val keyDisplayDensity = stringPreferencesKey("display_density")
+    private val keyFontSizeScale = stringPreferencesKey("font_size_scale")
+    private val keyHideReruns = booleanPreferencesKey("hide_reruns")
+    private val keyChannelSortOrder = stringPreferencesKey("channel_sort_order")
+    private val keyFavoriteChannels = androidx.datastore.preferences.core.stringSetPreferencesKey("favorite_channels")
+    private val keyHiddenChannels = androidx.datastore.preferences.core.stringSetPreferencesKey("hidden_channels")
+    private val keyRetentionDays = intPreferencesKey("retention_days")
+    private val keyImageDownloadPolicy = stringPreferencesKey("image_download_policy")
+    private val keyVibrationEnabled = booleanPreferencesKey("vibration_enabled")
+    private val keyHighlightAccessibility = booleanPreferencesKey("highlight_accessibility")
 
     val selectedPackage: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[keyPackage] ?: "community_enriched"
@@ -74,6 +85,50 @@ class UserPreferences @Inject constructor(
 
     val reminderLeadTimeMinutes: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[keyReminderLeadTime] ?: 10
+    }
+
+    val themeMode: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyThemeMode] ?: "dark"
+    }
+
+    val displayDensity: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyDisplayDensity] ?: "comfort"
+    }
+
+    val fontSizeScale: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyFontSizeScale] ?: "normal"
+    }
+
+    val hideReruns: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keyHideReruns] ?: false
+    }
+
+    val channelSortOrder: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyChannelSortOrder] ?: "number"
+    }
+
+    val favoriteChannels: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[keyFavoriteChannels] ?: emptySet()
+    }
+
+    val hiddenChannels: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[keyHiddenChannels] ?: emptySet()
+    }
+
+    val retentionDays: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[keyRetentionDays] ?: 7
+    }
+
+    val imageDownloadPolicy: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyImageDownloadPolicy] ?: "wifi_only"
+    }
+
+    val vibrationEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keyVibrationEnabled] ?: true
+    }
+
+    val highlightAccessibility: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keyHighlightAccessibility] ?: true
     }
 
     suspend fun setSelectedPackage(packageId: String) {
@@ -143,6 +198,84 @@ class UserPreferences @Inject constructor(
     suspend fun setAutoSyncEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[keyAutoSyncEnabled] = enabled
+        }
+    }
+
+    suspend fun setThemeMode(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyThemeMode] = mode
+        }
+    }
+
+    suspend fun setDisplayDensity(density: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyDisplayDensity] = density
+        }
+    }
+
+    suspend fun setFontSizeScale(scale: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyFontSizeScale] = scale
+        }
+    }
+
+    suspend fun setHideReruns(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keyHideReruns] = enabled
+        }
+    }
+
+    suspend fun setChannelSortOrder(order: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyChannelSortOrder] = order
+        }
+    }
+
+    suspend fun toggleFavoriteChannel(channelId: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[keyFavoriteChannels]?.toMutableSet() ?: mutableSetOf()
+            if (current.contains(channelId)) {
+                current.remove(channelId)
+            } else {
+                current.add(channelId)
+            }
+            preferences[keyFavoriteChannels] = current
+        }
+    }
+
+    suspend fun toggleHiddenChannel(channelId: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[keyHiddenChannels]?.toMutableSet() ?: mutableSetOf()
+            if (current.contains(channelId)) {
+                current.remove(channelId)
+            } else {
+                current.add(channelId)
+            }
+            preferences[keyHiddenChannels] = current
+        }
+    }
+
+    suspend fun setRetentionDays(days: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[keyRetentionDays] = days
+        }
+    }
+
+    suspend fun setImageDownloadPolicy(policy: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyImageDownloadPolicy] = policy
+        }
+    }
+
+    suspend fun setVibrationEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keyVibrationEnabled] = enabled
+        }
+    }
+
+    suspend fun setHighlightAccessibility(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keyHighlightAccessibility] = enabled
         }
     }
 }
