@@ -78,7 +78,7 @@
 
     <string name="channel_selection">Sélectionner une chaîne</string>
     <string name="package_selection">Bouquet TV</string>
-    <string name="package_community_enriched">Enrichi TNT (Recommandé)</string>
+    <string name="package_community_enriched">TNT+ (Recommandé)</string>
     <string name="package_terrestrial">TNT Gratuite</string>
     <string name="package_extended">Étendu</string>
     <string name="package_all_channels">Toutes les chaînes</string>

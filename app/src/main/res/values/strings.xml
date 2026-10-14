@@ -78,7 +78,7 @@
 
     <string name="channel_selection">Select Channel</string>
     <string name="package_selection">Channel Package</string>
-    <string name="package_community_enriched">Enriched (Recommended)</string>
+    <string name="package_community_enriched">TNT+ (Recommended)</string>
     <string name="package_terrestrial">Free Terrestrial</string>
     <string name="package_extended">Extended</string>
     <string name="package_all_channels">All Channels</string>

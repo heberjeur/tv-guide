@@ -85,6 +85,42 @@ async function loadXmltvReference() {
   const timeMap = new Map();
   const titleMap = new Map();
 
+  const aliases = {
+    'LaChaineParlementaire.fr': 'LCP.fr',
+    'NT1.fr': 'TFX.fr',
+    'LEquipe21.fr': 'LEquipe.fr',
+    'Numero23.fr': 'RMCStory.fr',
+    'Cherie25.fr': 'RMCLife.fr',
+    'TV5MondeEurope.fr': 'TV5Monde.fr'
+  };
+
+  const registerEntry = (channel, start, desc, subTitle, title, rating, category, credits) => {
+    if (!channel || !start || !desc || desc.length <= 5 || /^\d{1,2}[h:]\d{2}$/i.test(desc)) return;
+    const entry = {
+      desc,
+      subTitle: subTitle || null,
+      category: category || null,
+      rating: rating || null,
+      credits
+    };
+
+    const targetChannels = [channel];
+    if (aliases[channel]) targetChannels.push(aliases[channel]);
+
+    for (const ch of targetChannels) {
+      const timeKey = `${ch}_${start.substring(0, 12)}`;
+      timeMap.set(timeKey, entry);
+
+      const dayKey = `${ch}_${start.substring(0, 8)}_${cleanTitle(title)}`;
+      titleMap.set(dayKey, entry);
+
+      const generalKey = `${ch}_${cleanTitle(title)}`;
+      if (!titleMap.has(generalKey)) {
+        titleMap.set(generalKey, entry);
+      }
+    }
+  };
+
   try {
     const res = await axios.get('https://xmltvfr.fr/xmltv/xmltv_tnt.xml.gz', {
       responseType: 'arraybuffer',
@@ -107,29 +143,40 @@ async function loadXmltvReference() {
       const actors = $xml(el).find('credits actor').map((_, a) => $xml(a).text().trim()).get();
       const directors = $xml(el).find('credits director').map((_, d) => $xml(d).text().trim()).get();
 
-      if (channel && start && desc && desc.length > 5 && !/^\d{1,2}[h:]\d{2}$/i.test(desc)) {
-        const entry = {
-          desc,
-          subTitle: subTitle || null,
-          category: category || null,
-          rating: rating || null,
-          credits: { presenters, actors, directors }
-        };
+      registerEntry(channel, start, desc, subTitle, title, rating, category, { presenters, actors, directors });
+    });
+  } catch (err) {
+    process.stderr.write(`Failed to load xmltv_tnt reference: ${err.message}\n`);
+  }
 
-        const timeKey = `${channel}_${start.substring(0, 12)}`;
-        timeMap.set(timeKey, entry);
+  try {
+    const res = await axios.get('https://xmltvfr.fr/xmltv/xmltv.xml.gz', {
+      responseType: 'arraybuffer',
+      timeout: 30000,
+      headers: HTTP_HEADERS
+    });
+    const xml = zlib.gunzipSync(res.data).toString('utf-8');
+    const $xml = cheerio.load(xml, { xmlMode: true });
 
-        const dayKey = `${channel}_${start.substring(0, 8)}_${cleanTitle(title)}`;
-        titleMap.set(dayKey, entry);
+    $xml('programme').each((_, el) => {
+      const channel = $xml(el).attr('channel');
+      if (channel === 'TV5Monde.fr' || channel === 'TV5MondeEurope.fr' || channel === 'France24.fr') {
+        const start = $xml(el).attr('start');
+        const desc = $xml(el).find('desc').text().trim();
+        const subTitle = $xml(el).find('sub-title').text().trim();
+        const title = $xml(el).find('title').text().trim();
+        const rating = $xml(el).find('rating value').text().trim();
+        const category = $xml(el).find('category').text().trim();
 
-        const generalKey = `${channel}_${cleanTitle(title)}`;
-        if (!titleMap.has(generalKey)) {
-          titleMap.set(generalKey, entry);
-        }
+        const presenters = $xml(el).find('credits presenter').map((_, p) => $xml(p).text().trim()).get();
+        const actors = $xml(el).find('credits actor').map((_, a) => $xml(a).text().trim()).get();
+        const directors = $xml(el).find('credits director').map((_, d) => $xml(d).text().trim()).get();
+
+        registerEntry(channel, start, desc, subTitle, title, rating, category, { presenters, actors, directors });
       }
     });
   } catch (err) {
-    process.stderr.write(`Failed to load xmltv reference: ${err.message}\n`);
+    process.stderr.write(`Failed to load extended xmltv reference: ${err.message}\n`);
   }
 
   return { timeMap, titleMap };
@@ -307,7 +354,7 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
 function buildXml(channels, programs) {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<!DOCTYPE tv SYSTEM "xmltv.dtd">\n';
-  xml += '<tv source-info-name="TV Guide Enriched Extractor" source-info-url="https://github.com/heberjeur/tv-guide">\n';
+  xml += '<tv source-info-name="TV Guide TNT+ Extractor" source-info-url="https://github.com/heberjeur/tv-guide">\n';
 
   for (const channel of channels) {
     xml += `  <channel id="${escapeXml(channel.id)}">\n`;
@@ -401,7 +448,7 @@ async function main() {
   const gzippedContent = zlib.gzipSync(Buffer.from(xmlContent, 'utf-8'), { level: 9 });
   fs.writeFileSync(OUTPUT_GZ, gzippedContent);
 
-  process.stdout.write(`Successfully generated ${allPrograms.length} enriched programs in ${OUTPUT_XML} and ${OUTPUT_GZ}\n`);
+  process.stdout.write(`Successfully generated ${allPrograms.length} TNT+ programs in ${OUTPUT_XML} and ${OUTPUT_GZ}\n`);
 }
 
 main().catch((err) => {

@@ -7,7 +7,7 @@ A native, offline-first Android TV Guide application for French television chann
 - **Rich Episode Details**: Displays episode titles, season and episode numbers, detailed synopses, and credits.
 - **Alerts and Notifications**: Set custom reminders before programs air, with system notifications and alarm scheduling.
 - **Calendar Integration**: Synchronize program reminders directly with the Android system calendar.
-- **Channel Packages**: Choose between Enriched Community, Free Terrestrial (TNT), Extended, or All Channels.
+- **Channel Packages**: Choose between TNT+ (Recommended), Free Terrestrial (TNT), Extended, or All Channels.
 - **Automated EPG Generation**: Integrated GitHub Actions pipeline in `extractor/` that automatically updates rich XMLTV feeds daily and publishes to GitHub Pages.
 
 ## Architecture
