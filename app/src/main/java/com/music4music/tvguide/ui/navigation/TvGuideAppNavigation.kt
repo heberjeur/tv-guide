@@ -29,7 +29,6 @@ import androidx.navigation.navArgument
 import androidx.compose.material3.MaterialTheme
 import com.music4music.tvguide.R
 import com.music4music.tvguide.ui.calendar.CalendarScreen
-import com.music4music.tvguide.ui.categories.CategoryExploreScreen
 import com.music4music.tvguide.ui.channels.ChannelListScreen
 import com.music4music.tvguide.ui.detail.ProgramDetailScreen
 import com.music4music.tvguide.ui.guide.GuideScreen
@@ -40,7 +39,6 @@ import com.music4music.tvguide.ui.theme.AccentRed
 sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
     data object Now : Screen("now", R.string.tab_programs, Icons.Default.Tv)
     data object Guide : Screen("guide", R.string.tab_guide, Icons.Default.Schedule)
-    data object Categories : Screen("categories", R.string.tab_categories, Icons.Default.Category)
     data object Calendar : Screen("calendar", R.string.tab_calendar, Icons.Default.CalendarMonth)
     data object Channels : Screen("channels", R.string.tab_channels, Icons.AutoMirrored.Filled.List)
     data object Settings : Screen("settings", R.string.tab_settings, Icons.Default.Settings)
@@ -55,7 +53,6 @@ fun TvGuideAppNavigation() {
     val bottomNavItems = listOf(
         Screen.Now,
         Screen.Guide,
-        Screen.Categories,
         Screen.Calendar,
         Screen.Channels
     )
@@ -141,8 +138,8 @@ fun TvGuideAppNavigation() {
                     initialChannelId = channelId
                 )
             }
-            composable(Screen.Categories.route) {
-                CategoryExploreScreen(
+            composable("categories") {
+                GuideScreen(
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
                     },

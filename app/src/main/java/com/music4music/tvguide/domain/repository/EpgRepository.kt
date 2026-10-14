@@ -14,6 +14,7 @@ interface EpgRepository {
     fun searchPrograms(query: String): Flow<List<Program>>
     fun getUpcomingBroadcasts(title: String): Flow<List<Program>>
     fun getProgramsByCategory(category: String): Flow<List<Program>>
+    fun getFilteredPrograms(category: String, channelId: String?, dayStart: Long, dayEnd: Long): Flow<List<Program>>
     fun getProgramsByTimeRange(startTime: Long, endTime: Long): Flow<List<Program>>
     fun getSyncProgress(): kotlinx.coroutines.flow.StateFlow<com.music4music.tvguide.domain.model.SyncProgress>
     suspend fun toggleFavoriteChannel(channelId: String, isFavorite: Boolean)

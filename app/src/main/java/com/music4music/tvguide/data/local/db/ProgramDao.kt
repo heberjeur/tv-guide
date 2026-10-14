@@ -30,6 +30,9 @@ interface ProgramDao {
     @Query("SELECT * FROM programs WHERE (:category = '' OR categories LIKE '%' || :category || '%') AND stopTimestamp > :fromTime ORDER BY startTimestamp ASC LIMIT 250")
     fun getProgramsByCategory(category: String, fromTime: Long): Flow<List<ProgramEntity>>
 
+    @Query("SELECT * FROM programs WHERE (:category = '' OR categories LIKE '%' || :category || '%') AND (:channelId IS NULL OR channelId = :channelId) AND (:dayStart = 0 OR (stopTimestamp > :dayStart AND startTimestamp < :dayEnd)) AND stopTimestamp > :fromTime ORDER BY startTimestamp ASC LIMIT 1000")
+    fun getFilteredPrograms(category: String, channelId: String?, dayStart: Long, dayEnd: Long, fromTime: Long): Flow<List<ProgramEntity>>
+
     @Query("SELECT * FROM programs WHERE stopTimestamp > :startTime AND startTimestamp < :endTime ORDER BY channelId ASC, startTimestamp ASC")
     fun getProgramsByTimeRange(startTime: Long, endTime: Long): Flow<List<ProgramEntity>>
 

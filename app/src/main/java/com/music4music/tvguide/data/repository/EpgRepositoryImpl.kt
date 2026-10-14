@@ -107,6 +107,19 @@ class EpgRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getFilteredPrograms(
+        category: String,
+        channelId: String?,
+        dayStart: Long,
+        dayEnd: Long
+    ): Flow<List<Program>> {
+        val now = System.currentTimeMillis() - 2 * 3600 * 1000L
+        val fromTime = if (dayStart > 0L) minOf(now, dayStart) else now
+        return programDao.getFilteredPrograms(category, channelId, dayStart, dayEnd, fromTime).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
     override fun getProgramsByTimeRange(startTime: Long, endTime: Long): Flow<List<Program>> {
         return programDao.getProgramsByTimeRange(startTime, endTime).map { list ->
             list.map { it.toDomain() }
