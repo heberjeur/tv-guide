@@ -53,8 +53,8 @@ fun TvGuideAppNavigation() {
     val bottomNavItems = listOf(
         Screen.Now,
         Screen.Guide,
-        Screen.Calendar,
-        Screen.Channels
+        Screen.Channels,
+        Screen.Calendar
     )
 
     val showBottomBar = bottomNavItems.any { screen ->

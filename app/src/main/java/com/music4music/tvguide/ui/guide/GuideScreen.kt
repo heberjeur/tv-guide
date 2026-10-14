@@ -54,9 +54,11 @@ import com.music4music.tvguide.R
 import com.music4music.tvguide.domain.model.TvCategory
 import com.music4music.tvguide.ui.components.ProgramCard
 import com.music4music.tvguide.ui.theme.AccentRed
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private val dayChipFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
 
@@ -346,20 +348,55 @@ fun GuideScreen(
                     }
                 }
             } else {
+                val dayHeaderFormatter = remember { DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.FRENCH) }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(
-                        items = programs,
-                        key = { it.id }
-                    ) { program ->
-                        ProgramCard(
-                            program = program,
-                            onClick = { onProgramClick(program.id) },
-                            channelName = channelNameMap[program.channelId]
-                        )
+                    if (selectedDate == null) {
+                        val grouped = programs.groupBy { prog ->
+                            Instant.ofEpochMilli(prog.startTimestamp).atZone(parisZone).toLocalDate()
+                        }
+                        grouped.forEach { (date, datePrograms) ->
+                            item(key = "header_$date") {
+                                val headerTitle = when (date) {
+                                    today -> "Aujourd'hui • " + date.format(dayHeaderFormatter).replaceFirstChar { it.uppercase() }
+                                    tomorrow -> "Demain • " + date.format(dayHeaderFormatter).replaceFirstChar { it.uppercase() }
+                                    else -> date.format(dayHeaderFormatter).replaceFirstChar { it.uppercase() }
+                                }
+                                Text(
+                                    text = headerTitle,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AccentRed,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 16.dp, bottom = 4.dp)
+                                )
+                            }
+                            items(
+                                items = datePrograms,
+                                key = { it.id }
+                            ) { program ->
+                                ProgramCard(
+                                    program = program,
+                                    onClick = { onProgramClick(program.id) },
+                                    channelName = channelNameMap[program.channelId]
+                                )
+                            }
+                        }
+                    } else {
+                        items(
+                            items = programs,
+                            key = { it.id }
+                        ) { program ->
+                            ProgramCard(
+                                program = program,
+                                onClick = { onProgramClick(program.id) },
+                                channelName = channelNameMap[program.channelId]
+                            )
+                        }
                     }
                 }
             }

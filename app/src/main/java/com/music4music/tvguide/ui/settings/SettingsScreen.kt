@@ -1,5 +1,12 @@
 package com.music4music.tvguide.ui.settings
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import androidx.compose.ui.graphics.Color
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -26,7 +33,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -47,8 +53,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -66,17 +70,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music4music.tvguide.R
 import com.music4music.tvguide.ui.theme.AccentRed
-import com.music4music.tvguide.ui.theme.DarkBackground
-import com.music4music.tvguide.ui.theme.DarkSurface
-import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
-import com.music4music.tvguide.ui.theme.TextPrimary
-import com.music4music.tvguide.ui.theme.TextSecondary
 
 private fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -97,6 +95,7 @@ fun SettingsScreen(
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsStateWithLifecycle()
     val notificationSound by viewModel.notificationSound.collectAsStateWithLifecycle()
     val reminderLeadTime by viewModel.reminderLeadTime.collectAsStateWithLifecycle()
+    val customNotificationDateTime by viewModel.customNotificationDateTime.collectAsStateWithLifecycle()
     val syncFrequencyHours by viewModel.syncFrequencyHours.collectAsStateWithLifecycle()
     val syncWifiOnly by viewModel.syncWifiOnly.collectAsStateWithLifecycle()
     val syncChargingOnly by viewModel.syncChargingOnly.collectAsStateWithLifecycle()
@@ -116,8 +115,6 @@ fun SettingsScreen(
     val highlightAccessibility by viewModel.highlightAccessibility.collectAsStateWithLifecycle()
     val allChannels by viewModel.allChannels.collectAsStateWithLifecycle()
 
-    var showCustomLeadTimeDialog by remember { mutableStateOf(false) }
-    var customLeadTimeInput by remember { mutableStateOf("") }
     var showFavoritesDialog by remember { mutableStateOf(false) }
     var showHiddenDialog by remember { mutableStateOf(false) }
 
@@ -148,57 +145,6 @@ fun SettingsScreen(
         }
     }
 
-    if (showCustomLeadTimeDialog) {
-        AlertDialog(
-            onDismissRequest = { showCustomLeadTimeDialog = false },
-            title = {
-                Text(
-                    text = stringResource(R.string.settings_custom_lead_time_dialog_title),
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = customLeadTimeInput,
-                        onValueChange = { customLeadTimeInput = it.filter { char -> char.isDigit() } },
-                        label = { Text(text = stringResource(R.string.settings_custom_lead_time_hint)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AccentRed,
-                            unfocusedBorderColor = DarkSurfaceVariant,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedLabelColor = AccentRed,
-                            unfocusedLabelColor = TextSecondary
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val minutes = customLeadTimeInput.toIntOrNull()
-                        if (minutes != null && minutes >= 0) {
-                            viewModel.setLeadTime(minutes)
-                        }
-                        showCustomLeadTimeDialog = false
-                    }
-                ) {
-                    Text(text = stringResource(R.string.action_confirm), color = AccentRed)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCustomLeadTimeDialog = false }) {
-                    Text(text = stringResource(R.string.action_cancel), color = TextSecondary)
-                }
-            },
-            containerColor = DarkSurface
-        )
-    }
 
     if (showFavoritesDialog) {
         AlertDialog(
@@ -206,7 +152,7 @@ fun SettingsScreen(
             title = {
                 Text(
                     text = stringResource(R.string.dialog_select_favorites_title),
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -230,14 +176,14 @@ fun SettingsScreen(
                                 onCheckedChange = { viewModel.toggleFavoriteChannel(channel.id) },
                                 colors = CheckboxDefaults.colors(
                                     checkedColor = AccentRed,
-                                    uncheckedColor = TextSecondary,
-                                    checkmarkColor = TextPrimary
+                                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    checkmarkColor = Color.White
                                 )
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = channel.displayName,
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -249,7 +195,7 @@ fun SettingsScreen(
                     Text(text = stringResource(R.string.action_confirm), color = AccentRed)
                 }
             },
-            containerColor = DarkSurface
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -259,7 +205,7 @@ fun SettingsScreen(
             title = {
                 Text(
                     text = stringResource(R.string.dialog_select_hidden_title),
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -283,14 +229,14 @@ fun SettingsScreen(
                                 onCheckedChange = { viewModel.toggleHiddenChannel(channel.id) },
                                 colors = CheckboxDefaults.colors(
                                     checkedColor = AccentRed,
-                                    uncheckedColor = TextSecondary,
-                                    checkmarkColor = TextPrimary
+                                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    checkmarkColor = Color.White
                                 )
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = channel.displayName,
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -302,29 +248,29 @@ fun SettingsScreen(
                     Text(text = stringResource(R.string.action_confirm), color = AccentRed)
                 }
             },
-            containerColor = DarkSurface
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(R.string.tab_settings), color = TextPrimary, fontWeight = FontWeight.Bold) },
+                title = { Text(text = stringResource(R.string.tab_settings), color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     if (onBackClick != null) {
                         IconButton(onClick = onBackClick) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = null,
-                                tint = TextPrimary
+                                tint = MaterialTheme.colorScheme.onBackground
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -337,14 +283,14 @@ fun SettingsScreen(
 
             Card(
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(R.string.settings_theme_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     FlowRow(
@@ -364,9 +310,9 @@ fun SettingsScreen(
                                 label = { Text(text = label) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = null,
                                 shape = RoundedCornerShape(8.dp)
@@ -379,12 +325,13 @@ fun SettingsScreen(
                         text = stringResource(R.string.settings_density_title),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
                             "comfort" to stringResource(R.string.density_comfort),
@@ -396,13 +343,12 @@ fun SettingsScreen(
                                 label = { Text(text = label) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = null,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
+                                shape = RoundedCornerShape(8.dp)
                             )
                         }
                     }
@@ -412,12 +358,13 @@ fun SettingsScreen(
                         text = stringResource(R.string.settings_font_scale_title),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
                             "normal" to stringResource(R.string.font_scale_normal),
@@ -429,13 +376,12 @@ fun SettingsScreen(
                                 label = { Text(text = label) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = null,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
+                                shape = RoundedCornerShape(8.dp)
                             )
                         }
                     }
@@ -449,13 +395,13 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_hide_reruns),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Switch(
                             checked = hideReruns,
                             onCheckedChange = viewModel::setHideReruns,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = TextPrimary,
+                                checkedThumbColor = Color.White,
                                 checkedTrackColor = AccentRed
                             )
                         )
@@ -471,19 +417,19 @@ fun SettingsScreen(
                             Text(
                                 text = stringResource(R.string.settings_highlight_accessibility),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = stringResource(R.string.settings_highlight_accessibility_desc),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
                             checked = highlightAccessibility,
                             onCheckedChange = viewModel::setHighlightAccessibility,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = TextPrimary,
+                                checkedThumbColor = Color.White,
                                 checkedTrackColor = AccentRed
                             )
                         )
@@ -493,21 +439,21 @@ fun SettingsScreen(
 
             Card(
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(R.string.settings_channel_management_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = stringResource(R.string.settings_channel_sort_title),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
@@ -527,9 +473,9 @@ fun SettingsScreen(
                                 label = { Text(text = label) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = null,
                                 shape = RoundedCornerShape(8.dp)
@@ -549,7 +495,7 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = stringResource(R.string.settings_manage_favorites, favoriteChannels.size),
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         OutlinedButton(
@@ -559,7 +505,7 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = stringResource(R.string.settings_manage_hidden, hiddenChannels.size),
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -568,62 +514,53 @@ fun SettingsScreen(
 
             Card(
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(R.string.settings_language_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        FilterChip(
-                            selected = appLanguage == "fr",
-                            onClick = { viewModel.setLanguage("fr", activity) },
-                            label = { Text(text = stringResource(R.string.language_french)) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AccentRed,
-                                selectedLabelColor = TextPrimary,
-                                containerColor = DarkSurfaceVariant,
-                                labelColor = TextSecondary
-                            ),
-                            border = null,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
-                            selected = appLanguage == "en",
-                            onClick = { viewModel.setLanguage("en", activity) },
-                            label = { Text(text = stringResource(R.string.language_english)) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AccentRed,
-                                selectedLabelColor = TextPrimary,
-                                containerColor = DarkSurfaceVariant,
-                                labelColor = TextSecondary
-                            ),
-                            border = null,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.weight(1f)
-                        )
+                        listOf(
+                            "fr" to stringResource(R.string.language_french),
+                            "en" to stringResource(R.string.language_english)
+                        ).forEach { (lang, label) ->
+                            FilterChip(
+                                selected = appLanguage == lang,
+                                onClick = { viewModel.setLanguage(lang, activity) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
                     }
                 }
             }
 
             Card(
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(R.string.settings_notifications_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
@@ -634,13 +571,13 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_notifications_enable),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Switch(
                             checked = isNotificationsEnabled,
                             onCheckedChange = viewModel::toggleNotifications,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = TextPrimary,
+                                checkedThumbColor = Color.White,
                                 checkedTrackColor = AccentRed
                             )
                         )
@@ -658,13 +595,13 @@ fun SettingsScreen(
                                     text = stringResource(R.string.settings_notification_sound),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
-                                    color = TextPrimary
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = soundDisplayName,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             OutlinedButton(
@@ -698,13 +635,13 @@ fun SettingsScreen(
                             Text(
                                 text = stringResource(R.string.settings_vibration_enable),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Switch(
                                 checked = vibrationEnabled,
                                 onCheckedChange = viewModel::setVibrationEnabled,
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = TextPrimary,
+                                    checkedThumbColor = Color.White,
                                     checkedTrackColor = AccentRed
                                 )
                             )
@@ -715,12 +652,12 @@ fun SettingsScreen(
                             text = stringResource(R.string.settings_reminder_lead_time),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
-                            color = TextPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
                         val presetLeadTimes = listOf(0, 5, 10, 15, 30)
-                        val isCustomLeadTime = !presetLeadTimes.contains(reminderLeadTime)
+                        val isCustomSelected = customNotificationDateTime != null || (!presetLeadTimes.contains(reminderLeadTime) && reminderLeadTime != 10)
 
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
@@ -734,37 +671,80 @@ fun SettingsScreen(
                                     stringResource(R.string.minutes_short, minutes)
                                 }
                                 FilterChip(
-                                    selected = reminderLeadTime == minutes,
-                                    onClick = { viewModel.setLeadTime(minutes) },
+                                    selected = reminderLeadTime == minutes && customNotificationDateTime == null,
+                                    onClick = {
+                                        viewModel.setLeadTime(minutes)
+                                        viewModel.setCustomNotificationDateTime(null)
+                                    },
                                     label = { Text(text = label) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = AccentRed,
-                                        selectedLabelColor = TextPrimary,
-                                        containerColor = DarkSurfaceVariant,
-                                        labelColor = TextSecondary
+                                        selectedLabelColor = Color.White,
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                     ),
                                     border = null,
                                     shape = RoundedCornerShape(8.dp)
                                 )
                             }
 
-                            val customChipLabel = if (isCustomLeadTime) {
-                                stringResource(R.string.label_custom_format, reminderLeadTime)
+                            val customFormatter = remember { SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()) }
+                            val customChipLabel = if (customNotificationDateTime != null) {
+                                "${stringResource(R.string.label_custom)} (${customFormatter.format(Date(customNotificationDateTime!!))})"
                             } else {
                                 stringResource(R.string.label_custom)
                             }
+
                             FilterChip(
-                                selected = isCustomLeadTime,
+                                selected = isCustomSelected,
                                 onClick = {
-                                    customLeadTimeInput = if (isCustomLeadTime) reminderLeadTime.toString() else "7"
-                                    showCustomLeadTimeDialog = true
+                                    val currentCal = Calendar.getInstance()
+                                    if (customNotificationDateTime != null && customNotificationDateTime!! > System.currentTimeMillis()) {
+                                        currentCal.timeInMillis = customNotificationDateTime!!
+                                    }
+                                    val initYear = currentCal.get(Calendar.YEAR)
+                                    val initMonth = currentCal.get(Calendar.MONTH)
+                                    val initDay = currentCal.get(Calendar.DAY_OF_MONTH)
+                                    val initHour = currentCal.get(Calendar.HOUR_OF_DAY)
+                                    val initMinute = currentCal.get(Calendar.MINUTE)
+
+                                    val datePicker = DatePickerDialog(
+                                        context,
+                                        { _, year, month, dayOfMonth ->
+                                            val timePicker = TimePickerDialog(
+                                                context,
+                                                { _, hourOfDay, minute ->
+                                                    val pickedCal = Calendar.getInstance().apply {
+                                                        set(Calendar.YEAR, year)
+                                                        set(Calendar.MONTH, month)
+                                                        set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                                        set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                                        set(Calendar.MINUTE, minute)
+                                                        set(Calendar.SECOND, 0)
+                                                        set(Calendar.MILLISECOND, 0)
+                                                    }
+                                                    viewModel.setCustomNotificationDateTime(pickedCal.timeInMillis)
+                                                    viewModel.setLeadTime(-1)
+                                                },
+                                                initHour,
+                                                initMinute,
+                                                true
+                                            )
+                                            timePicker.show()
+                                        },
+                                        initYear,
+                                        initMonth,
+                                        initDay
+                                    )
+                                    datePicker.datePicker.minDate = System.currentTimeMillis()
+                                    datePicker.show()
                                 },
                                 label = { Text(text = customChipLabel) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = null,
                                 shape = RoundedCornerShape(8.dp)
@@ -776,21 +756,21 @@ fun SettingsScreen(
 
             Card(
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(R.string.settings_sync_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         text = stringResource(R.string.settings_sync_frequency),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
@@ -810,9 +790,9 @@ fun SettingsScreen(
                                 label = { Text(text = label) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = null,
                                 shape = RoundedCornerShape(8.dp)
@@ -829,13 +809,13 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_sync_auto_background),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Switch(
                             checked = autoSyncEnabled,
                             onCheckedChange = viewModel::setAutoSync,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = TextPrimary,
+                                checkedThumbColor = Color.White,
                                 checkedTrackColor = AccentRed
                             )
                         )
@@ -850,13 +830,13 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_sync_wifi_only),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Switch(
                             checked = syncWifiOnly,
                             onCheckedChange = viewModel::setSyncWifiOnly,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = TextPrimary,
+                                checkedThumbColor = Color.White,
                                 checkedTrackColor = AccentRed
                             )
                         )
@@ -871,13 +851,13 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_sync_charging_only),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Switch(
                             checked = syncChargingOnly,
                             onCheckedChange = viewModel::setSyncChargingOnly,
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = TextPrimary,
+                                checkedThumbColor = Color.White,
                                 checkedTrackColor = AccentRed
                             )
                         )
@@ -888,12 +868,13 @@ fun SettingsScreen(
                         text = stringResource(R.string.settings_retention_days_title),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
                             3 to stringResource(R.string.retention_3_days),
@@ -906,17 +887,15 @@ fun SettingsScreen(
                                 label = { Text(text = label) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 border = null,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
+                                shape = RoundedCornerShape(8.dp)
                             )
                         }
                     }
-
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
@@ -929,7 +908,7 @@ fun SettingsScreen(
                         if (isSyncing) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
-                                color = TextPrimary,
+                                color = Color.White,
                                 strokeWidth = 2.dp
                             )
                         } else {
@@ -940,27 +919,27 @@ fun SettingsScreen(
                             )
                         }
                         Spacer(modifier = Modifier.size(8.dp))
-                        Text(text = stringResource(R.string.action_sync_now), color = TextPrimary)
+                        Text(text = stringResource(R.string.action_sync_now), color = Color.White)
                     }
                 }
             }
 
             Card(
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = stringResource(R.string.settings_storage_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.settings_cache_size, cacheSizeText),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                     Button(
@@ -968,7 +947,7 @@ fun SettingsScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(text = stringResource(R.string.settings_clear_cache), color = TextPrimary)
+                        Text(text = stringResource(R.string.settings_clear_cache), color = Color.White)
                     }
                 }
             }

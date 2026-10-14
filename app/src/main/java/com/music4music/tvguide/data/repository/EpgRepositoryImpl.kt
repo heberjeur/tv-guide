@@ -34,6 +34,8 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.time.LocalDate
+import java.time.ZoneId
 import com.music4music.tvguide.data.local.prefs.UserPreferences
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -247,7 +249,8 @@ class EpgRepositoryImpl @Inject constructor(
                     )
 
                     val retentionDays = userPreferences.retentionDays.first()
-                    val cutoffTimestamp = now - (retentionDays.coerceAtLeast(1) * 24 * 60 * 60 * 1000L)
+                    val zone = ZoneId.of("Europe/Paris")
+                    val cutoffTimestamp = LocalDate.now(zone).minusDays(retentionDays.coerceAtLeast(2).toLong()).atStartOfDay(zone).toInstant().toEpochMilli()
                     programDao.deleteExpiredPrograms(cutoffTimestamp)
 
                     _syncProgress.value = SyncProgress(

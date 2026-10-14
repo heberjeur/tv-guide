@@ -440,7 +440,7 @@ async function main() {
     const batchResults = await Promise.all(
       batch.map(async (channel) => {
         const channelPrograms = [];
-        for (let dayOffset = 0; dayOffset < DAYS_TO_FETCH; dayOffset++) {
+        for (let dayOffset = -1; dayOffset < DAYS_TO_FETCH; dayOffset++) {
           const targetDate = today.add(dayOffset, 'day');
           const programs = await fetchChannelSchedule(channel, targetDate, refData);
           channelPrograms.push(...programs);

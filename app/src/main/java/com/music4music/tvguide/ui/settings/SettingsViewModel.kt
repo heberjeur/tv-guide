@@ -58,6 +58,9 @@ class SettingsViewModel @Inject constructor(
     val reminderLeadTime: StateFlow<Int> = userPreferences.reminderLeadTimeMinutes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10)
 
+    val customNotificationDateTime: StateFlow<Long?> = userPreferences.customNotificationDateTime
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     val syncFrequencyHours: StateFlow<Int> = userPreferences.syncFrequencyHours
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 6)
 
@@ -148,6 +151,12 @@ class SettingsViewModel @Inject constructor(
     fun setLeadTime(minutes: Int) {
         viewModelScope.launch {
             userPreferences.setReminderLeadTime(minutes)
+        }
+    }
+
+    fun setCustomNotificationDateTime(timestamp: Long?) {
+        viewModelScope.launch {
+            userPreferences.setCustomNotificationDateTime(timestamp)
         }
     }
 

@@ -39,6 +39,11 @@ class UserPreferences @Inject constructor(
     private val keyRetentionDays = intPreferencesKey("retention_days")
     private val keyVibrationEnabled = booleanPreferencesKey("vibration_enabled")
     private val keyHighlightAccessibility = booleanPreferencesKey("highlight_accessibility")
+    private val keyCustomNotificationDateTime = androidx.datastore.preferences.core.longPreferencesKey("custom_notification_datetime")
+
+    val customNotificationDateTime: Flow<Long?> = context.dataStore.data.map { preferences ->
+        preferences[keyCustomNotificationDateTime]
+    }
 
     val appLanguage: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[keyAppLanguage] ?: "fr"
@@ -143,6 +148,16 @@ class UserPreferences @Inject constructor(
     suspend fun setReminderLeadTime(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[keyReminderLeadTime] = minutes
+        }
+    }
+
+    suspend fun setCustomNotificationDateTime(timestamp: Long?) {
+        context.dataStore.edit { preferences ->
+            if (timestamp != null) {
+                preferences[keyCustomNotificationDateTime] = timestamp
+            } else {
+                preferences.remove(keyCustomNotificationDateTime)
+            }
         }
     }
 
