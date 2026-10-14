@@ -85,16 +85,24 @@ async function loadXmltvReference() {
   const timeMap = new Map();
   const titleMap = new Map();
 
-  const aliases = {
-    'LaChaineParlementaire.fr': 'LCP.fr',
-    'NT1.fr': 'TFX.fr',
-    'LEquipe21.fr': 'LEquipe.fr',
-    'Numero23.fr': 'RMCStory.fr',
-    'Cherie25.fr': 'RMCLife.fr',
-    'TV5MondeEurope.fr': 'TV5Monde.fr'
+  const resolveChannelMap = ($root) => {
+    const map = new Map();
+    $root('channel').each((_, el) => {
+      const rawId = $root(el).attr('id');
+      const dispName = cleanTitle($root(el).find('display-name').text());
+      const matched = CHANNELS.find(c => {
+        const cName = cleanTitle(c.name);
+        const cId = cleanTitle(c.id);
+        return cName === dispName || cId === cleanTitle(rawId) || (cName.length > 3 && dispName.includes(cName)) || (dispName.length > 3 && cName.includes(dispName));
+      });
+      if (matched) {
+        map.set(rawId, matched.id);
+      }
+    });
+    return map;
   };
 
-  const registerEntry = (channel, start, desc, subTitle, title, rating, category, credits) => {
+  const registerEntry = (channel, start, desc, subTitle, title, rating, category, credits, channelMap) => {
     if (!channel || !start || !desc || desc.length <= 5 || /^\d{1,2}[h:]\d{2}$/i.test(desc)) return;
     const entry = {
       desc,
@@ -105,7 +113,8 @@ async function loadXmltvReference() {
     };
 
     const targetChannels = [channel];
-    if (aliases[channel]) targetChannels.push(aliases[channel]);
+    const mapped = channelMap.get(channel);
+    if (mapped && mapped !== channel) targetChannels.push(mapped);
 
     for (const ch of targetChannels) {
       const timeKey = `${ch}_${start.substring(0, 12)}`;
@@ -129,6 +138,7 @@ async function loadXmltvReference() {
     });
     const xml = zlib.gunzipSync(res.data).toString('utf-8');
     const $xml = cheerio.load(xml, { xmlMode: true });
+    const channelMap = resolveChannelMap($xml);
 
     $xml('programme').each((_, el) => {
       const channel = $xml(el).attr('channel');
@@ -143,7 +153,7 @@ async function loadXmltvReference() {
       const actors = $xml(el).find('credits actor').map((_, a) => $xml(a).text().trim()).get();
       const directors = $xml(el).find('credits director').map((_, d) => $xml(d).text().trim()).get();
 
-      registerEntry(channel, start, desc, subTitle, title, rating, category, { presenters, actors, directors });
+      registerEntry(channel, start, desc, subTitle, title, rating, category, { presenters, actors, directors }, channelMap);
     });
   } catch (err) {
     process.stderr.write(`Failed to load xmltv_tnt reference: ${err.message}\n`);
@@ -157,10 +167,11 @@ async function loadXmltvReference() {
     });
     const xml = zlib.gunzipSync(res.data).toString('utf-8');
     const $xml = cheerio.load(xml, { xmlMode: true });
+    const channelMap = resolveChannelMap($xml);
 
     $xml('programme').each((_, el) => {
       const channel = $xml(el).attr('channel');
-      if (channel === 'TV5Monde.fr' || channel === 'TV5MondeEurope.fr' || channel === 'France24.fr') {
+      if (channelMap.has(channel)) {
         const start = $xml(el).attr('start');
         const desc = $xml(el).find('desc').text().trim();
         const subTitle = $xml(el).find('sub-title').text().trim();
@@ -172,7 +183,7 @@ async function loadXmltvReference() {
         const actors = $xml(el).find('credits actor').map((_, a) => $xml(a).text().trim()).get();
         const directors = $xml(el).find('credits director').map((_, d) => $xml(d).text().trim()).get();
 
-        registerEntry(channel, start, desc, subTitle, title, rating, category, { presenters, actors, directors });
+        registerEntry(channel, start, desc, subTitle, title, rating, category, { presenters, actors, directors }, channelMap);
       }
     });
   } catch (err) {
