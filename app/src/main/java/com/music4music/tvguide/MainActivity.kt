@@ -47,7 +47,18 @@ class MainActivity : ComponentActivity() {
             val highlightAccessibility by userPreferences.highlightAccessibility.collectAsStateWithLifecycle(initialValue = true)
 
             TvGuideTheme(themeMode = themeMode, fontSizeScale = fontSizeScale) {
+                val currentDensity = androidx.compose.ui.platform.LocalDensity.current
+                val effectiveDensity = if (displayDensity == "compact") {
+                    androidx.compose.ui.unit.Density(
+                        density = currentDensity.density * 0.88f,
+                        fontScale = currentDensity.fontScale * 0.92f
+                    )
+                } else {
+                    currentDensity
+                }
+
                 CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalDensity provides effectiveDensity,
                     LocalDisplayDensity provides displayDensity,
                     LocalHighlightAccessibility provides highlightAccessibility,
                     LocalFontSizeScale provides fontSizeScale

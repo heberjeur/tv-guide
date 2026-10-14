@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.compose.material3.MaterialTheme
 import com.music4music.tvguide.R
 import com.music4music.tvguide.ui.calendar.CalendarScreen
 import com.music4music.tvguide.ui.categories.CategoryExploreScreen
@@ -35,9 +36,6 @@ import com.music4music.tvguide.ui.guide.GuideScreen
 import com.music4music.tvguide.ui.now.NowPlayingScreen
 import com.music4music.tvguide.ui.settings.SettingsScreen
 import com.music4music.tvguide.ui.theme.AccentRed
-import com.music4music.tvguide.ui.theme.DarkBackground
-import com.music4music.tvguide.ui.theme.DarkSurface
-import com.music4music.tvguide.ui.theme.TextSecondary
 
 sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
     data object Now : Screen("now", R.string.tab_programs, Icons.Default.Tv)
@@ -62,16 +60,19 @@ fun TvGuideAppNavigation() {
         Screen.Channels
     )
 
-    val showBottomBar = bottomNavItems.any { it.route == currentRoute }
+    val showBottomBar = bottomNavItems.any { screen ->
+        currentRoute == screen.route || (screen == Screen.Guide && currentRoute?.startsWith("guide") == true)
+    }
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    containerColor = DarkSurface
+                    containerColor = MaterialTheme.colorScheme.surface
                 ) {
                     bottomNavItems.forEach { screen ->
-                        val isSelected = currentRoute == screen.route
+                        val isSelected = currentRoute == screen.route ||
+                            (screen == Screen.Guide && currentRoute?.startsWith("guide") == true)
                         NavigationBarItem(
                             selected = isSelected,
                             onClick = {
@@ -93,16 +94,16 @@ fun TvGuideAppNavigation() {
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = AccentRed,
                                 selectedTextColor = AccentRed,
-                                indicatorColor = DarkBackground,
-                                unselectedIconColor = TextSecondary,
-                                unselectedTextColor = TextSecondary
+                                indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                     }
                 }
             }
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         NavHost(
             navController = navController,
@@ -119,14 +120,25 @@ fun TvGuideAppNavigation() {
                     }
                 )
             }
-            composable(Screen.Guide.route) {
+            composable(
+                route = "guide?channelId={channelId}",
+                arguments = listOf(
+                    navArgument("channelId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                val channelId = backStackEntry.arguments?.getString("channelId")
                 GuideScreen(
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
                     },
                     onSettingsClick = {
                         navController.navigate(Screen.Settings.route)
-                    }
+                    },
+                    initialChannelId = channelId
                 )
             }
             composable(Screen.Categories.route) {
@@ -151,8 +163,13 @@ fun TvGuideAppNavigation() {
             }
             composable(Screen.Channels.route) {
                 ChannelListScreen(
-                    onChannelClick = { _ ->
-                        navController.navigate(Screen.Guide.route)
+                    onChannelClick = { channelId ->
+                        navController.navigate("guide?channelId=$channelId") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                        }
                     },
                     onSettingsClick = {
                         navController.navigate(Screen.Settings.route)

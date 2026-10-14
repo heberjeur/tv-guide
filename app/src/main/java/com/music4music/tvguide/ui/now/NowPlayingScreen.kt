@@ -59,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music4music.tvguide.R
-import com.music4music.tvguide.domain.model.ChannelBundle
 import com.music4music.tvguide.domain.model.SyncState
 import com.music4music.tvguide.ui.components.OfflineBanner
 import com.music4music.tvguide.ui.components.ProgramCard

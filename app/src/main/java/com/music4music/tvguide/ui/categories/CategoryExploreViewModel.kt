@@ -2,10 +2,8 @@ package com.music4music.tvguide.ui.categories
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.music4music.tvguide.data.local.ChannelCatalog
 import com.music4music.tvguide.data.local.prefs.UserPreferences
 import com.music4music.tvguide.domain.model.Channel
-import com.music4music.tvguide.domain.model.ChannelBundle
 import com.music4music.tvguide.domain.model.ChannelPackage
 import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.domain.model.TvCategory
@@ -53,12 +51,10 @@ class CategoryExploreViewModel @Inject constructor(
 
     val channels: StateFlow<List<Channel>> = combine(
         rawChannels,
-        userPreferences.selectedBundle,
         userPreferences.hiddenChannels
-    ) { list, bundleId, hidden ->
-        val bundle = ChannelBundle.fromId(bundleId)
+    ) { list, hidden ->
         list.filter { channel ->
-            !hidden.contains(channel.id) && ChannelCatalog.isChannelInBundle(channel.id, bundle)
+            !hidden.contains(channel.id)
         }.sortedWith(
             compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
                 .thenBy { it.channelNumber }
@@ -67,17 +63,15 @@ class CategoryExploreViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private data class FilterPreferences(
-        val bundleId: String,
         val hiddenChannels: Set<String>,
         val hideReruns: Boolean
     )
 
     private val filterPrefsFlow = combine(
-        userPreferences.selectedBundle,
         userPreferences.hiddenChannels,
         userPreferences.hideReruns
-    ) { bundleId, hidden, hideReruns ->
-        FilterPreferences(bundleId, hidden, hideReruns)
+    ) { hidden, hideReruns ->
+        FilterPreferences(hidden, hideReruns)
     }
 
     private data class ExploreFilter(
@@ -100,7 +94,6 @@ class CategoryExploreViewModel @Inject constructor(
         exploreFilterFlow,
         filterPrefsFlow
     ) { filter, prefs ->
-        val bundle = ChannelBundle.fromId(prefs.bundleId)
         val keyword = filter.category?.searchKeyword ?: ""
         epgRepository.getProgramsByCategory(keyword).map { list ->
             val zone = ZoneId.of("Europe/Paris")
@@ -115,7 +108,6 @@ class CategoryExploreViewModel @Inject constructor(
             list.filter { program ->
                 val notHidden = !prefs.hiddenChannels.contains(program.channelId)
                 val notRerun = if (prefs.hideReruns) program.isUnreleased else true
-                val matchesBundle = ChannelCatalog.isChannelInBundle(program.channelId, bundle)
                 val matchesChannel = filter.channelId == null || program.channelId == filter.channelId
                 val matchesDate = if (dayStart != null && dayEnd != null) {
                     program.stopTimestamp > dayStart && program.startTimestamp < dayEnd
@@ -125,7 +117,7 @@ class CategoryExploreViewModel @Inject constructor(
                         program.description.contains(filter.query, ignoreCase = true) ||
                         program.channelId.contains(filter.query, ignoreCase = true)
 
-                notHidden && notRerun && matchesBundle && matchesChannel && matchesDate && matchesQuery
+                notHidden && notRerun && matchesChannel && matchesDate && matchesQuery
             }
         }
     }.flatMapLatest { it }

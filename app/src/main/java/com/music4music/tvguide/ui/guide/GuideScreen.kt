@@ -50,15 +50,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music4music.tvguide.R
-import com.music4music.tvguide.domain.model.ChannelBundle
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Color
 import com.music4music.tvguide.ui.components.ProgramCard
 import com.music4music.tvguide.ui.theme.AccentRed
-import com.music4music.tvguide.ui.theme.DarkBackground
-import com.music4music.tvguide.ui.theme.DarkSurface
-import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
-import com.music4music.tvguide.ui.theme.SurfaceBorder
-import com.music4music.tvguide.ui.theme.TextPrimary
-import com.music4music.tvguide.ui.theme.TextSecondary
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -70,6 +66,7 @@ private val dayFormatter = DateTimeFormatter.ofPattern("EEE dd MMM")
 fun GuideScreen(
     onProgramClick: (Long) -> Unit,
     onSettingsClick: () -> Unit = {},
+    initialChannelId: String? = null,
     viewModel: GuideViewModel = hiltViewModel()
 ) {
     val channels by viewModel.filteredChannels.collectAsStateWithLifecycle()
@@ -78,6 +75,20 @@ fun GuideScreen(
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     var isSearchActive by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialChannelId) {
+        if (!initialChannelId.isNullOrBlank()) {
+            viewModel.selectChannel(initialChannelId)
+        }
+    }
+
+    val channelListState = rememberLazyListState()
+    LaunchedEffect(selectedChannelId, channels) {
+        val index = channels.indexOfFirst { it.id == selectedChannelId }
+        if (index >= 0) {
+            channelListState.animateScrollToItem(index)
+        }
+    }
 
     val availableDates = remember {
         val zone = ZoneId.of("Europe/Paris")
@@ -98,15 +109,19 @@ fun GuideScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = TextPrimary,
-                                unfocusedTextColor = TextPrimary,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                                 focusedBorderColor = AccentRed,
-                                unfocusedBorderColor = SurfaceBorder
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
                             ),
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {
                                     IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear_search), tint = TextSecondary)
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = stringResource(R.string.action_clear_search),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }
@@ -114,7 +129,7 @@ fun GuideScreen(
                     } else {
                         Text(
                             text = stringResource(R.string.tab_guide),
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -128,7 +143,7 @@ fun GuideScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = null,
-                                tint = TextPrimary
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -139,22 +154,22 @@ fun GuideScreen(
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = stringResource(R.string.action_search),
-                                tint = TextPrimary
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         IconButton(onClick = onSettingsClick) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
                                 contentDescription = stringResource(R.string.tab_settings),
-                                tint = TextPrimary
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -163,8 +178,8 @@ fun GuideScreen(
         ) {
             ScrollableTabRow(
                 selectedTabIndex = availableDates.indexOf(selectedDate).coerceAtLeast(0),
-                containerColor = DarkBackground,
-                contentColor = TextPrimary,
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.onSurface,
                 indicator = { tabPositions ->
                     val index = availableDates.indexOf(selectedDate).coerceAtLeast(0)
                     if (index < tabPositions.size) {
@@ -183,7 +198,7 @@ fun GuideScreen(
                         text = {
                             Text(
                                 text = date.format(dayFormatter),
-                                color = if (selectedDate == date) AccentRed else TextSecondary,
+                                color = if (selectedDate == date) AccentRed else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = if (selectedDate == date) FontWeight.Bold else FontWeight.Normal
                             )
                         }
@@ -193,9 +208,8 @@ fun GuideScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-
-
             LazyRow(
+                state = channelListState,
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -208,10 +222,10 @@ fun GuideScreen(
                         onClick = { viewModel.selectChannel(channel.id) },
                         label = { Text(text = channel.displayName) },
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = DarkSurface,
-                            labelColor = TextSecondary,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             selectedContainerColor = AccentRed,
-                            selectedLabelColor = TextPrimary
+                            selectedLabelColor = Color.White
                         ),
                         border = null,
                         shape = RoundedCornerShape(8.dp)
@@ -235,7 +249,7 @@ fun GuideScreen(
                             stringResource(R.string.no_programs_for_date)
                         },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {

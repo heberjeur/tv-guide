@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.music4music.tvguide.data.local.prefs.UserPreferences
 import com.music4music.tvguide.domain.model.Channel
-import com.music4music.tvguide.domain.model.ChannelBundle
 import com.music4music.tvguide.domain.model.ChannelPackage
 import com.music4music.tvguide.domain.repository.EpgRepository
 import com.music4music.tvguide.domain.usecase.GetChannelsUseCase
@@ -31,11 +30,8 @@ class ChannelListViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _selectedBundle = MutableStateFlow(ChannelBundle.ALL)
-    val selectedBundle: StateFlow<ChannelBundle> = _selectedBundle.asStateFlow()
-
     val isGridMode: StateFlow<Boolean> = userPreferences.isChannelGridMode
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val allChannels: StateFlow<List<Channel>> = userPreferences.selectedPackage
         .flatMapLatest { packageId ->
@@ -43,28 +39,18 @@ class ChannelListViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init {
-        viewModelScope.launch {
-            userPreferences.selectedBundle.collect { bundleId ->
-                _selectedBundle.value = ChannelBundle.fromId(bundleId)
-            }
-        }
-    }
-
     private data class ChannelPreferences(
-        val bundleId: String,
         val hiddenChannels: Set<String>,
         val favoriteChannels: Set<String>,
         val channelSortOrder: String
     )
 
     private val channelPrefsFlow = combine(
-        userPreferences.selectedBundle,
         userPreferences.hiddenChannels,
         userPreferences.favoriteChannels,
         userPreferences.channelSortOrder
-    ) { bundleId, hidden, favorites, sortOrder ->
-        ChannelPreferences(bundleId, hidden, favorites, sortOrder)
+    ) { hidden, favorites, sortOrder ->
+        ChannelPreferences(hidden, favorites, sortOrder)
     }
 
     val filteredChannels: StateFlow<List<Channel>> = combine(
@@ -72,21 +58,25 @@ class ChannelListViewModel @Inject constructor(
         _searchQuery,
         channelPrefsFlow
     ) { channels, query, prefs ->
-        val bundle = ChannelBundle.fromId(prefs.bundleId)
         val filtered = channels.filter { channel ->
             val notHidden = !prefs.hiddenChannels.contains(channel.id)
             val matchesQuery = query.isBlank() ||
                 channel.displayName.contains(query, ignoreCase = true) ||
                 (channel.channelNumber > 0 && channel.channelNumber.toString() == query.trim())
-            val matchesBundle = com.music4music.tvguide.data.local.ChannelCatalog.isChannelInBundle(channel.id, bundle)
-            notHidden && matchesQuery && matchesBundle
+            notHidden && matchesQuery
         }.map { channel ->
             val isFav = prefs.favoriteChannels.contains(channel.id) || channel.isFavorite
             if (channel.isFavorite != isFav) channel.copy(isFavorite = isFav) else channel
         }
 
         when (prefs.channelSortOrder) {
-            "favorites" -> filtered.sortedWith(
+            "popular" -> filtered.sortedWith(
+                compareBy<Channel> { com.music4music.tvguide.data.local.ChannelCatalog.getPopularityRank(it.id) }
+                    .thenBy { if (it.channelNumber > 0) 0 else 1 }
+                    .thenBy { it.channelNumber }
+                    .thenBy { it.displayName }
+            )
+            "favorites", "favorites_first" -> filtered.sortedWith(
                 compareByDescending<Channel> { it.isFavorite }
                     .thenBy { if (it.channelNumber > 0) 0 else 1 }
                     .thenBy { it.channelNumber }
@@ -103,13 +93,6 @@ class ChannelListViewModel @Inject constructor(
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
-    }
-
-    fun selectBundle(bundle: ChannelBundle) {
-        _selectedBundle.value = bundle
-        viewModelScope.launch {
-            userPreferences.setSelectedBundle(bundle.id)
-        }
     }
 
     fun toggleGridMode() {

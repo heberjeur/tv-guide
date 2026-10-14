@@ -48,8 +48,6 @@ class SettingsViewModel @Inject constructor(
     val selectedPackage: StateFlow<String> = userPreferences.selectedPackage
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "community_enriched")
 
-    val selectedBundle: StateFlow<String> = userPreferences.selectedBundle
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "all")
 
     val appLanguage: StateFlow<String> = userPreferences.appLanguage
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "fr")
@@ -129,11 +127,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun selectBundle(bundleId: String) {
-        viewModelScope.launch {
-            userPreferences.setSelectedBundle(bundleId)
-        }
-    }
 
     fun setLanguage(langCode: String, activity: Activity?) {
         viewModelScope.launch {

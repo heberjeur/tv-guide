@@ -59,13 +59,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.music4music.tvguide.R
 import com.music4music.tvguide.domain.model.Channel
-import com.music4music.tvguide.domain.model.ChannelBundle
 import com.music4music.tvguide.ui.theme.AccentRed
-import com.music4music.tvguide.ui.theme.DarkBackground
-import com.music4music.tvguide.ui.theme.DarkSurface
-import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
-import com.music4music.tvguide.ui.theme.TextPrimary
-import com.music4music.tvguide.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +70,6 @@ fun ChannelListScreen(
 ) {
     val channels by viewModel.filteredChannels.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val selectedBundle by viewModel.selectedBundle.collectAsStateWithLifecycle()
     val isGridMode by viewModel.isGridMode.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -85,7 +78,7 @@ fun ChannelListScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.tab_channels),
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -94,21 +87,21 @@ fun ChannelListScreen(
                         Icon(
                             imageVector = if (isGridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
                             contentDescription = null,
-                            tint = TextPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = stringResource(R.string.tab_settings),
-                            tint = TextPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -122,51 +115,29 @@ fun ChannelListScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 placeholder = {
-                    Text(text = stringResource(R.string.action_search), color = TextSecondary)
+                    Text(
+                        text = stringResource(R.string.action_search),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = stringResource(R.string.action_search),
-                        tint = TextSecondary
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = DarkSurface,
-                    unfocusedContainerColor = DarkSurface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     focusedBorderColor = AccentRed,
-                    unfocusedBorderColor = DarkSurfaceVariant,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 ),
                 shape = RoundedCornerShape(12.dp)
             )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                ChannelBundle.entries.forEach { bundle ->
-                    val isSelected = selectedBundle == bundle
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.selectBundle(bundle) },
-                        label = { Text(text = stringResource(bundle.nameRes)) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = DarkSurfaceVariant,
-                            selectedLabelColor = AccentRed,
-                            containerColor = DarkSurface,
-                            labelColor = TextSecondary
-                        ),
-                        border = null,
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -222,7 +193,7 @@ private fun ChannelListCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier
@@ -234,7 +205,7 @@ private fun ChannelListCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(DarkSurfaceVariant),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 if (!channel.iconUrl.isNullOrBlank() && !channel.iconUrl.startsWith("data:")) {
@@ -263,13 +234,13 @@ private fun ChannelListCard(
                     text = channel.displayName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 if (channel.channelNumber > 0) {
                     Text(
                         text = stringResource(R.string.channel_number_format, channel.channelNumber),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -278,7 +249,7 @@ private fun ChannelListCard(
                 Icon(
                     imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = null,
-                    tint = if (channel.isFavorite) AccentRed else TextSecondary
+                    tint = if (channel.isFavorite) AccentRed else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -296,7 +267,7 @@ private fun ChannelGridCard(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
@@ -309,7 +280,7 @@ private fun ChannelGridCard(
                 modifier = Modifier
                     .size(54.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(DarkSurfaceVariant),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 if (!channel.iconUrl.isNullOrBlank() && !channel.iconUrl.startsWith("data:")) {
@@ -337,7 +308,7 @@ private fun ChannelGridCard(
                 text = channel.displayName,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center
@@ -347,7 +318,7 @@ private fun ChannelGridCard(
                 Text(
                     text = stringResource(R.string.channel_number_format, channel.channelNumber),
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

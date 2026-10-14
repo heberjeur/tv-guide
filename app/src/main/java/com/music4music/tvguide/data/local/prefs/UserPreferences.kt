@@ -24,7 +24,6 @@ class UserPreferences @Inject constructor(
     private val keyNotificationsEnabled = booleanPreferencesKey("notifications_enabled")
     private val keyNotificationSound = stringPreferencesKey("notification_sound")
     private val keyReminderLeadTime = intPreferencesKey("reminder_lead_time")
-    private val keySelectedBundle = stringPreferencesKey("selected_bundle")
     private val keyChannelGridMode = booleanPreferencesKey("channel_grid_mode")
     private val keyAppLanguage = stringPreferencesKey("app_language")
     private val keySyncFrequencyHours = intPreferencesKey("sync_frequency_hours")
@@ -45,10 +44,6 @@ class UserPreferences @Inject constructor(
 
     val selectedPackage: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[keyPackage] ?: "community_enriched"
-    }
-
-    val selectedBundle: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[keySelectedBundle] ?: "all"
     }
 
     val appLanguage: Flow<String> = context.dataStore.data.map { preferences ->
@@ -72,7 +67,7 @@ class UserPreferences @Inject constructor(
     }
 
     val isChannelGridMode: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[keyChannelGridMode] ?: false
+        preferences[keyChannelGridMode] ?: true
     }
 
     val isNotificationsEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -134,12 +129,6 @@ class UserPreferences @Inject constructor(
     suspend fun setSelectedPackage(packageId: String) {
         context.dataStore.edit { preferences ->
             preferences[keyPackage] = packageId
-        }
-    }
-
-    suspend fun setSelectedBundle(bundleId: String) {
-        context.dataStore.edit { preferences ->
-            preferences[keySelectedBundle] = bundleId
         }
     }
 

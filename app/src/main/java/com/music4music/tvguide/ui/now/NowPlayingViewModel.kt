@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.music4music.tvguide.data.connectivity.ConnectivityObserver
 import com.music4music.tvguide.data.local.prefs.UserPreferences
-import com.music4music.tvguide.domain.model.ChannelBundle
 import com.music4music.tvguide.domain.model.ChannelPackage
 import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.domain.model.SyncProgress
@@ -51,7 +50,6 @@ private data class Params(
     val period: BroadcastPeriod,
     val part: EveningPart,
     val query: String,
-    val bundleId: String,
     val prefs: FilterPrefs
 )
 
@@ -101,12 +99,10 @@ class NowPlayingViewModel @Inject constructor(
         _selectedPeriod,
         _selectedEveningPart,
         _searchQuery,
-        userPreferences.selectedBundle,
         filterPrefsFlow
-    ) { period, part, query, bundleId, prefs ->
-        Params(period, part, query, bundleId, prefs)
-    }.flatMapLatest { (period, part, query, bundleId, prefs) ->
-        val bundle = ChannelBundle.fromId(bundleId)
+    ) { period, part, query, prefs ->
+        Params(period, part, query, prefs)
+    }.flatMapLatest { (period, part, query, prefs) ->
         val zone = ZoneId.of("Europe/Paris")
         val today = LocalDate.now(zone)
 
@@ -142,13 +138,12 @@ class NowPlayingViewModel @Inject constructor(
         flow.map { list ->
             val filtered = list.filter { program ->
                 val notHidden = !prefs.hiddenChannels.contains(program.channelId)
-                val inBundle = ChannelCatalog.isChannelInBundle(program.channelId, bundle)
                 val notRerun = if (prefs.hideReruns) program.isUnreleased else true
                 val matchesQuery = query.isBlank() ||
                         program.title.contains(query, ignoreCase = true) ||
                         program.categories.any { cat -> cat.contains(query, ignoreCase = true) } ||
                         program.channelId.contains(query, ignoreCase = true)
-                notHidden && inBundle && notRerun && matchesQuery
+                notHidden && notRerun && matchesQuery
             }
             val distinctList = if (period == BroadcastPeriod.NOW) {
                 filtered.distinctBy { it.channelId }
@@ -156,7 +151,12 @@ class NowPlayingViewModel @Inject constructor(
                 filtered
             }
             when (prefs.sortOrder) {
-                "favorites_first" -> distinctList.sortedWith(
+                "popular" -> distinctList.sortedWith(
+                    compareBy<Program> { ChannelCatalog.getPopularityRank(it.channelId) }
+                        .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                        .thenBy { it.startTimestamp }
+                )
+                "favorites", "favorites_first" -> distinctList.sortedWith(
                     compareByDescending<Program> { prefs.favoriteChannels.contains(it.channelId) }
                         .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
                         .thenBy { it.startTimestamp }

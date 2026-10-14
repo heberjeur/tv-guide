@@ -17,14 +17,6 @@
     <string name="period_yesterday_part_1">Part 1 (9 PM)</string>
     <string name="period_yesterday_part_2">Part 2 (10:45 PM)</string>
 
-    <string name="bundle_all">All</string>
-    <string name="bundle_tnt">TNT</string>
-    <string name="bundle_canal_plus">Canal+</string>
-    <string name="bundle_orange">Orange</string>
-    <string name="bundle_free">Free</string>
-    <string name="bundle_sfr">SFR</string>
-    <string name="bundle_bouygues">Bouygues</string>
-    <string name="bundle_other">Other</string>
 
     <string name="category_movies">Movies</string>
     <string name="category_series">Series</string>
@@ -110,8 +102,6 @@
     <string name="label_subtitles">Subtitles</string>
     <string name="label_hd">HD</string>
 
-    <string name="settings_bundle_title">TV Packages</string>
-    <string name="settings_bundle_subtitle">Active filter applied across the whole app</string>
     <string name="settings_language_title">Application Language</string>
     <string name="language_french">French</string>
     <string name="language_english">English</string>
@@ -146,7 +136,6 @@
     <string name="settings_clear_cache">Clear Cache</string>
     <string name="settings_cache_size">Current cache size: %1$s</string>
 
-    <string name="settings_bundle_explanation">Filters channels displayed across the app according to your TV provider.</string>
     <string name="settings_package_explanation">Selects the XMLTV feed source downloaded for offline use.</string>
 
     <string name="settings_theme_title">Theme &amp; Appearance</string>
@@ -166,6 +155,7 @@
 
     <string name="settings_channel_management_title">Channels &amp; Favorites</string>
     <string name="settings_channel_sort_title">Channel Order</string>
+    <string name="channel_sort_popular">Popular</string>
     <string name="channel_sort_number">By Number</string>
     <string name="channel_sort_name">Alphabetical</string>
     <string name="channel_sort_favorites_first">Favorites first</string>

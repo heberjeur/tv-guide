@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.music4music.tvguide.data.local.prefs.UserPreferences
 import com.music4music.tvguide.domain.model.Channel
-import com.music4music.tvguide.domain.model.ChannelBundle
 import com.music4music.tvguide.domain.model.ChannelPackage
 import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.domain.usecase.GetChannelsUseCase
@@ -48,19 +47,17 @@ class GuideViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private data class ChannelPreferences(
-        val bundleId: String,
         val hiddenChannels: Set<String>,
         val favoriteChannels: Set<String>,
         val channelSortOrder: String
     )
 
     private val channelPrefsFlow = combine(
-        userPreferences.selectedBundle,
         userPreferences.hiddenChannels,
         userPreferences.favoriteChannels,
         userPreferences.channelSortOrder
-    ) { bundleId, hidden, favorites, sortOrder ->
-        ChannelPreferences(bundleId, hidden, favorites, sortOrder)
+    ) { hidden, favorites, sortOrder ->
+        ChannelPreferences(hidden, favorites, sortOrder)
     }
 
     val filteredChannels: StateFlow<List<Channel>> = combine(
@@ -68,21 +65,25 @@ class GuideViewModel @Inject constructor(
         _channelSearchQuery,
         channelPrefsFlow
     ) { list, query, prefs ->
-        val bundle = ChannelBundle.fromId(prefs.bundleId)
         val filtered = list.filter { channel ->
             val notHidden = !prefs.hiddenChannels.contains(channel.id)
             val matchesQuery = query.isBlank() ||
                 channel.displayName.contains(query, ignoreCase = true) ||
                 (channel.channelNumber > 0 && channel.channelNumber.toString() == query.trim())
-            val matchesBundle = com.music4music.tvguide.data.local.ChannelCatalog.isChannelInBundle(channel.id, bundle)
-            notHidden && matchesQuery && matchesBundle
+            notHidden && matchesQuery
         }.map { channel ->
             val isFav = prefs.favoriteChannels.contains(channel.id) || channel.isFavorite
             if (channel.isFavorite != isFav) channel.copy(isFavorite = isFav) else channel
         }
 
         when (prefs.channelSortOrder) {
-            "favorites" -> filtered.sortedWith(
+            "popular" -> filtered.sortedWith(
+                compareBy<Channel> { com.music4music.tvguide.data.local.ChannelCatalog.getPopularityRank(it.id) }
+                    .thenBy { if (it.channelNumber > 0) 0 else 1 }
+                    .thenBy { it.channelNumber }
+                    .thenBy { it.displayName }
+            )
+            "favorites", "favorites_first" -> filtered.sortedWith(
                 compareByDescending<Channel> { it.isFavorite }
                     .thenBy { if (it.channelNumber > 0) 0 else 1 }
                     .thenBy { it.channelNumber }
@@ -133,8 +134,11 @@ class GuideViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             filteredChannels.collect { list ->
-                if (_selectedChannelId.value == null || list.none { it.id == _selectedChannelId.value }) {
-                    _selectedChannelId.value = list.firstOrNull()?.id
+                if (list.isNotEmpty()) {
+                    val current = _selectedChannelId.value
+                    if (current == null || list.none { it.id == current }) {
+                        _selectedChannelId.value = list.first().id
+                    }
                 }
             }
         }

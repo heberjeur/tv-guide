@@ -12,12 +12,15 @@ import androidx.compose.ui.graphics.Color
 private val DarkColorScheme = darkColorScheme(
     primary = AccentRed,
     secondary = AccentRedVariant,
-    background = DarkBackground,
-    surface = DarkSurface,
-    surfaceVariant = DarkSurfaceVariant,
-    onPrimary = TextPrimary,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary
+    background = RawDarkBackground,
+    surface = RawDarkSurface,
+    surfaceVariant = RawDarkSurfaceVariant,
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onBackground = RawTextPrimary,
+    onSurface = RawTextPrimary,
+    onSurfaceVariant = RawTextSecondary,
+    outline = RawSurfaceBorder
 )
 
 private val OledColorScheme = darkColorScheme(
@@ -26,9 +29,12 @@ private val OledColorScheme = darkColorScheme(
     background = Color.Black,
     surface = Color(0xFF0F0F0F),
     surfaceVariant = Color(0xFF1E1E1E),
-    onPrimary = TextPrimary,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onBackground = RawTextPrimary,
+    onSurface = RawTextPrimary,
+    onSurfaceVariant = RawTextSecondary,
+    outline = Color(0xFF2E2E2E)
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -38,8 +44,11 @@ private val LightColorScheme = lightColorScheme(
     surface = LightSurface,
     surfaceVariant = LightSurfaceVariant,
     onPrimary = Color.White,
+    onSecondary = Color.White,
     onBackground = LightTextPrimary,
-    onSurface = LightTextPrimary
+    onSurface = LightTextPrimary,
+    onSurfaceVariant = LightTextSecondary,
+    outline = Color(0xFFCCCCCC)
 )
 
 val LocalDisplayDensity = compositionLocalOf { "comfort" }

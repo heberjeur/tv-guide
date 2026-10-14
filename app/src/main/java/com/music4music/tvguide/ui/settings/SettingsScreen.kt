@@ -71,7 +71,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music4music.tvguide.R
-import com.music4music.tvguide.domain.model.ChannelBundle
 import com.music4music.tvguide.ui.theme.AccentRed
 import com.music4music.tvguide.ui.theme.DarkBackground
 import com.music4music.tvguide.ui.theme.DarkSurface
@@ -95,7 +94,6 @@ fun SettingsScreen(
     val activity = remember(context) { context.findActivity() }
 
     val selectedPackage by viewModel.selectedPackage.collectAsStateWithLifecycle()
-    val selectedBundle by viewModel.selectedBundle.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsStateWithLifecycle()
     val notificationSound by viewModel.notificationSound.collectAsStateWithLifecycle()
@@ -344,48 +342,6 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = stringResource(R.string.settings_bundle_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.settings_bundle_explanation),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ChannelBundle.entries.forEach { bundle ->
-                            FilterChip(
-                                selected = selectedBundle == bundle.id,
-                                onClick = { viewModel.selectBundle(bundle.id) },
-                                label = { Text(text = stringResource(bundle.nameRes)) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
                         text = stringResource(R.string.package_selection),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
@@ -608,6 +564,7 @@ fun SettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
+                            "popular" to stringResource(R.string.channel_sort_popular),
                             "number" to stringResource(R.string.channel_sort_number),
                             "name" to stringResource(R.string.channel_sort_name),
                             "favorites_first" to stringResource(R.string.channel_sort_favorites_first)

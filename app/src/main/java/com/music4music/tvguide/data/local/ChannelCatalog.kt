@@ -1,7 +1,5 @@
 package com.music4music.tvguide.data.local
 
-import com.music4music.tvguide.domain.model.ChannelBundle
-
 object ChannelCatalog {
 
     private val tntChannelMap = mapOf(
@@ -86,7 +84,46 @@ object ChannelCatalog {
         "France24.fr" to "https://www.programme-tv.net/imgre/fit/~2~channel~afbbeba076c073d9.png/480x480/quality/100/france-24.png"
     )
 
-    private val tntIds = tntChannelMap.keys
+    private val popularityRankMap = mapOf(
+        "TF1.fr" to 1,
+        "France2.fr" to 2,
+        "France3.fr" to 3,
+        "France4.fr" to 4,
+        "France5.fr" to 5,
+        "M6.fr" to 6,
+        "Arte.fr" to 7,
+        "TV5Monde.fr" to 8,
+        "TV5MondeEurope.fr" to 8,
+        "TV5MondeFBS.fr" to 8,
+        "TV5MondeOrient.fr" to 8,
+        "TMC.fr" to 9,
+        "W9.fr" to 10,
+        "TFX.fr" to 11,
+        "NT1.fr" to 11,
+        "6ter.fr" to 12,
+        "Gulli.fr" to 13,
+        "T18.fr" to 14,
+        "NOVO19.fr" to 15,
+        "CStar.fr" to 16,
+        "D17.fr" to 16,
+        "RMCDecouverte.fr" to 17,
+        "RMCStory.fr" to 18,
+        "Numero23.fr" to 18,
+        "RMCLife.fr" to 19,
+        "Cherie25.fr" to 19,
+        "TF1SeriesFilms.fr" to 20,
+        "HD1.fr" to 20,
+        "LEquipe.fr" to 21,
+        "LEquipe21.fr" to 21,
+        "France24.fr" to 22,
+        "FranceInfo.fr" to 23,
+        "CNews.fr" to 24,
+        "iTele.fr" to 24,
+        "BFMTV.fr" to 25,
+        "LCI.fr" to 26,
+        "LCP.fr" to 27,
+        "LaChaineParlementaire.fr" to 27
+    )
 
     fun getChannelNumber(channelId: String): Int {
         val direct = tntChannelMap[channelId]
@@ -95,6 +132,15 @@ object ChannelCatalog {
         return tntChannelMap.entries.firstOrNull {
             normalizeId(it.key) == normalized
         }?.value ?: 0
+    }
+
+    fun getPopularityRank(channelId: String): Int {
+        val direct = popularityRankMap[channelId]
+        if (direct != null) return direct
+        val normalized = normalizeId(channelId)
+        return popularityRankMap.entries.firstOrNull {
+            normalizeId(it.key) == normalized
+        }?.value ?: Int.MAX_VALUE
     }
 
     fun getLogoUrl(channelId: String): String? {
@@ -108,28 +154,5 @@ object ChannelCatalog {
 
     private fun normalizeId(id: String): String {
         return id.trim().lowercase().removeSuffix(".fr").replace("[^a-z0-9]".toRegex(), "")
-    }
-
-    fun isChannelInBundle(channelId: String, bundle: ChannelBundle): Boolean {
-        return when (bundle) {
-            ChannelBundle.ALL -> true
-            ChannelBundle.TNT -> tntIds.contains(channelId) || (getChannelNumber(channelId) in 1..27)
-            ChannelBundle.CANAL_PLUS -> {
-                tntIds.contains(channelId) || channelId.contains("canal", ignoreCase = true) || (getChannelNumber(channelId) in 31..34)
-            }
-            ChannelBundle.ORANGE -> {
-                tntIds.contains(channelId) || channelId.contains("ocs", ignoreCase = true) || channelId.contains("orange", ignoreCase = true)
-            }
-            ChannelBundle.FREE -> {
-                tntIds.contains(channelId) || channelId.contains("free", ignoreCase = true) || channelId.contains("rtl9", ignoreCase = true)
-            }
-            ChannelBundle.SFR -> {
-                tntIds.contains(channelId) || channelId.contains("sfr", ignoreCase = true) || channelId.contains("rmc", ignoreCase = true)
-            }
-            ChannelBundle.BOUYGUES -> {
-                tntIds.contains(channelId) || channelId.contains("bbox", ignoreCase = true)
-            }
-            ChannelBundle.OTHER -> !tntIds.contains(channelId)
-        }
     }
 }
