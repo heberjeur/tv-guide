@@ -93,7 +93,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
 
-    val selectedPackage by viewModel.selectedPackage.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsStateWithLifecycle()
     val notificationSound by viewModel.notificationSound.collectAsStateWithLifecycle()
@@ -113,7 +112,6 @@ fun SettingsScreen(
     val favoriteChannels by viewModel.favoriteChannels.collectAsStateWithLifecycle()
     val hiddenChannels by viewModel.hiddenChannels.collectAsStateWithLifecycle()
     val retentionDays by viewModel.retentionDays.collectAsStateWithLifecycle()
-    val imageDownloadPolicy by viewModel.imageDownloadPolicy.collectAsStateWithLifecycle()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
     val highlightAccessibility by viewModel.highlightAccessibility.collectAsStateWithLifecycle()
     val allChannels by viewModel.allChannels.collectAsStateWithLifecycle()
@@ -336,52 +334,6 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.package_selection),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.settings_package_explanation),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            "community_enriched" to stringResource(R.string.package_community_enriched),
-                            "terrestrial" to stringResource(R.string.package_terrestrial),
-                            "extended" to stringResource(R.string.package_extended),
-                            "all_channels" to stringResource(R.string.package_all_channels)
-                        ).forEach { (id, label) ->
-                            FilterChip(
-                                selected = selectedPackage == id,
-                                onClick = { viewModel.selectPackage(id) },
-                                label = { Text(text = label) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                        }
-                    }
-                }
-            }
 
             Card(
                 shape = RoundedCornerShape(12.dp),
@@ -965,39 +917,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.settings_image_download_policy),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = TextPrimary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            "always" to stringResource(R.string.image_policy_always),
-                            "wifi_only" to stringResource(R.string.image_policy_wifi_only),
-                            "never" to stringResource(R.string.image_policy_never)
-                        ).forEach { (policy, label) ->
-                            FilterChip(
-                                selected = imageDownloadPolicy == policy,
-                                onClick = { viewModel.setImageDownloadPolicy(policy) },
-                                label = { Text(text = label) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AccentRed,
-                                    selectedLabelColor = TextPrimary,
-                                    containerColor = DarkSurfaceVariant,
-                                    labelColor = TextSecondary
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(

@@ -69,11 +69,6 @@
     <string name="label_season_episode_short">S%1$d • Ép. %2$d</string>
 
     <string name="channel_selection">Sélectionner une chaîne</string>
-    <string name="package_selection">Bouquet TV</string>
-    <string name="package_community_enriched">TNT+ (Recommandé)</string>
-    <string name="package_terrestrial">TNT Gratuite</string>
-    <string name="package_extended">Étendu</string>
-    <string name="package_all_channels">Toutes les chaînes</string>
     <string name="action_refresh">Actualiser</string>
     <string name="action_search">Rechercher</string>
     <string name="action_filter">Filtrer</string>
@@ -136,7 +131,6 @@
     <string name="settings_clear_cache">Vider le cache</string>
     <string name="settings_cache_size">Taille actuelle du cache : %1$s</string>
 
-    <string name="settings_package_explanation">Sélectionne la source du fichier XMLTV téléchargée pour le mode hors-ligne.</string>
 
     <string name="settings_theme_title">Thème et apparence</string>
     <string name="theme_dark">Sombre</string>
@@ -168,10 +162,7 @@
     <string name="retention_3_days">3 jours</string>
     <string name="retention_7_days">7 jours</string>
     <string name="retention_14_days">14 jours</string>
-    <string name="settings_image_download_policy">Téléchargement des images</string>
-    <string name="image_policy_always">Toujours</string>
-    <string name="image_policy_wifi_only">Wi-Fi uniquement</string>
-    <string name="image_policy_never">Désactivé</string>
+
 
     <string name="settings_vibration_enable">Vibrer lors du rappel</string>
     <string name="settings_custom_datetime_title">Date et heure du rappel</string>

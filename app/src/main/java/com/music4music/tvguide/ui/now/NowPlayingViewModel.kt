@@ -157,7 +157,7 @@ class NowPlayingViewModel @Inject constructor(
                         .thenBy { it.startTimestamp }
                 )
                 "favorites", "favorites_first" -> distinctList.sortedWith(
-                    compareByDescending<Program> { prefs.favoriteChannels.contains(it.channelId) }
+                    compareByDescending<Program> { ChannelCatalog.isFavorite(it.channelId, prefs.favoriteChannels) }
                         .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
                         .thenBy { it.startTimestamp }
                 )
@@ -206,9 +206,7 @@ class NowPlayingViewModel @Inject constructor(
     fun refresh(force: Boolean = true) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true, errorMessage = null)
-            val packageId = userPreferences.selectedPackage.first()
-            val channelPackage = ChannelPackage.fromId(packageId)
-            val result = syncEpgUseCase(channelPackage, forceRefresh = force)
+            val result = syncEpgUseCase(ChannelPackage.COMMUNITY_ENRICHED, forceRefresh = force)
             _uiState.value = _uiState.value.copy(
                 isRefreshing = false,
                 errorMessage = result.exceptionOrNull()?.localizedMessage

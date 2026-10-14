@@ -2,6 +2,7 @@ package com.music4music.tvguide.ui.categories
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.music4music.tvguide.data.local.ChannelCatalog
 import com.music4music.tvguide.data.local.prefs.UserPreferences
 import com.music4music.tvguide.domain.model.Channel
 import com.music4music.tvguide.domain.model.ChannelPackage
@@ -43,35 +44,57 @@ class CategoryExploreViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val rawChannels: StateFlow<List<Channel>> = userPreferences.selectedPackage
-        .flatMapLatest { packageId ->
-            getChannelsUseCase(ChannelPackage.fromId(packageId))
-        }
+    private val rawChannels: StateFlow<List<Channel>> = getChannelsUseCase(ChannelPackage.COMMUNITY_ENRICHED)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val channels: StateFlow<List<Channel>> = combine(
         rawChannels,
-        userPreferences.hiddenChannels
-    ) { list, hidden ->
-        list.filter { channel ->
+        userPreferences.hiddenChannels,
+        userPreferences.favoriteChannels,
+        userPreferences.channelSortOrder
+    ) { list, hidden, favorites, sortOrder ->
+        val filtered = list.filter { channel ->
             !hidden.contains(channel.id)
-        }.sortedWith(
-            compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
-                .thenBy { it.channelNumber }
-                .thenBy { it.displayName }
-        )
+        }.map { channel ->
+            val isFav = ChannelCatalog.isFavorite(channel.id, favorites) || channel.isFavorite
+            if (channel.isFavorite != isFav) channel.copy(isFavorite = isFav) else channel
+        }
+        when (sortOrder) {
+            "popular" -> filtered.sortedWith(
+                compareBy<Channel> { ChannelCatalog.getPopularityRank(it.id) }
+                    .thenBy { if (it.channelNumber > 0) 0 else 1 }
+                    .thenBy { it.channelNumber }
+                    .thenBy { it.displayName }
+            )
+            "favorites", "favorites_first" -> filtered.sortedWith(
+                compareByDescending<Channel> { it.isFavorite }
+                    .thenBy { if (it.channelNumber > 0) 0 else 1 }
+                    .thenBy { it.channelNumber }
+                    .thenBy { it.displayName }
+            )
+            "name" -> filtered.sortedWith(compareBy { it.displayName })
+            else -> filtered.sortedWith(
+                compareBy<Channel> { if (it.channelNumber > 0) 0 else 1 }
+                    .thenBy { it.channelNumber }
+                    .thenBy { it.displayName }
+            )
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private data class FilterPreferences(
         val hiddenChannels: Set<String>,
+        val favoriteChannels: Set<String>,
+        val channelSortOrder: String,
         val hideReruns: Boolean
     )
 
     private val filterPrefsFlow = combine(
         userPreferences.hiddenChannels,
+        userPreferences.favoriteChannels,
+        userPreferences.channelSortOrder,
         userPreferences.hideReruns
-    ) { hidden, hideReruns ->
-        FilterPreferences(hidden, hideReruns)
+    ) { hidden, favorites, sortOrder, hideReruns ->
+        FilterPreferences(hidden, favorites, sortOrder, hideReruns)
     }
 
     private data class ExploreFilter(
@@ -105,7 +128,7 @@ class CategoryExploreViewModel @Inject constructor(
                 null to null
             }
 
-            list.filter { program ->
+            val filtered = list.filter { program ->
                 val notHidden = !prefs.hiddenChannels.contains(program.channelId)
                 val notRerun = if (prefs.hideReruns) program.isUnreleased else true
                 val matchesChannel = filter.channelId == null || program.channelId == filter.channelId
@@ -118,6 +141,26 @@ class CategoryExploreViewModel @Inject constructor(
                         program.channelId.contains(filter.query, ignoreCase = true)
 
                 notHidden && notRerun && matchesChannel && matchesDate && matchesQuery
+            }
+            when (prefs.channelSortOrder) {
+                "popular" -> filtered.sortedWith(
+                    compareBy<Program> { ChannelCatalog.getPopularityRank(it.channelId) }
+                        .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                        .thenBy { it.startTimestamp }
+                )
+                "favorites", "favorites_first" -> filtered.sortedWith(
+                    compareByDescending<Program> { ChannelCatalog.isFavorite(it.channelId, prefs.favoriteChannels) }
+                        .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                        .thenBy { it.startTimestamp }
+                )
+                "name" -> filtered.sortedWith(
+                    compareBy<Program> { it.channelId }
+                        .thenBy { it.startTimestamp }
+                )
+                else -> filtered.sortedWith(
+                    compareBy<Program> { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                        .thenBy { it.startTimestamp }
+                )
             }
         }
     }.flatMapLatest { it }

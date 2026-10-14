@@ -45,9 +45,6 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    val selectedPackage: StateFlow<String> = userPreferences.selectedPackage
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "community_enriched")
-
 
     val appLanguage: StateFlow<String> = userPreferences.appLanguage
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "fr")
@@ -97,8 +94,6 @@ class SettingsViewModel @Inject constructor(
     val retentionDays: StateFlow<Int> = userPreferences.retentionDays
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 7)
 
-    val imageDownloadPolicy: StateFlow<String> = userPreferences.imageDownloadPolicy
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "wifi_only")
 
     val vibrationEnabled: StateFlow<Boolean> = userPreferences.vibrationEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -119,13 +114,6 @@ class SettingsViewModel @Inject constructor(
         updateCacheSize()
     }
 
-    fun selectPackage(packageId: String) {
-        viewModelScope.launch {
-            userPreferences.setSelectedPackage(packageId)
-            val channelPackage = ChannelPackage.fromId(packageId)
-            syncEpgUseCase(channelPackage, forceRefresh = true)
-        }
-    }
 
 
     fun setLanguage(langCode: String, activity: Activity?) {
@@ -216,9 +204,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _isSyncing.value = true
             try {
-                val packageId = userPreferences.selectedPackage.first()
-                val channelPackage = ChannelPackage.fromId(packageId)
-                syncEpgUseCase(channelPackage, forceRefresh = true)
+                syncEpgUseCase(ChannelPackage.COMMUNITY_ENRICHED, forceRefresh = true)
             } finally {
                 _isSyncing.value = false
             }
@@ -307,11 +293,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setImageDownloadPolicy(policy: String) {
-        viewModelScope.launch {
-            userPreferences.setImageDownloadPolicy(policy)
-        }
-    }
 
     fun setVibrationEnabled(enabled: Boolean) {
         viewModelScope.launch {

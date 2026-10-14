@@ -35,6 +35,7 @@ class TvGuideApp : Application(), Configuration.Provider, ImageLoaderFactory {
                     .maxSizeBytes(250L * 1024L * 1024L)
                     .build()
             }
+            .respectCacheHeaders(false)
             .crossfade(true)
             .build()
     }

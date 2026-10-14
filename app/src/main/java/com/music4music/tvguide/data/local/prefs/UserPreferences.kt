@@ -20,7 +20,6 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class UserPreferences @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val keyPackage = stringPreferencesKey("selected_package")
     private val keyNotificationsEnabled = booleanPreferencesKey("notifications_enabled")
     private val keyNotificationSound = stringPreferencesKey("notification_sound")
     private val keyReminderLeadTime = intPreferencesKey("reminder_lead_time")
@@ -38,13 +37,8 @@ class UserPreferences @Inject constructor(
     private val keyFavoriteChannels = androidx.datastore.preferences.core.stringSetPreferencesKey("favorite_channels")
     private val keyHiddenChannels = androidx.datastore.preferences.core.stringSetPreferencesKey("hidden_channels")
     private val keyRetentionDays = intPreferencesKey("retention_days")
-    private val keyImageDownloadPolicy = stringPreferencesKey("image_download_policy")
     private val keyVibrationEnabled = booleanPreferencesKey("vibration_enabled")
     private val keyHighlightAccessibility = booleanPreferencesKey("highlight_accessibility")
-
-    val selectedPackage: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[keyPackage] ?: "community_enriched"
-    }
 
     val appLanguage: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[keyAppLanguage] ?: "fr"
@@ -114,10 +108,6 @@ class UserPreferences @Inject constructor(
         preferences[keyRetentionDays] ?: 7
     }
 
-    val imageDownloadPolicy: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[keyImageDownloadPolicy] ?: "wifi_only"
-    }
-
     val vibrationEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[keyVibrationEnabled] ?: true
     }
@@ -126,11 +116,7 @@ class UserPreferences @Inject constructor(
         preferences[keyHighlightAccessibility] ?: true
     }
 
-    suspend fun setSelectedPackage(packageId: String) {
-        context.dataStore.edit { preferences ->
-            preferences[keyPackage] = packageId
-        }
-    }
+
 
     suspend fun setChannelGridMode(enabled: Boolean) {
         context.dataStore.edit { preferences ->
@@ -250,11 +236,6 @@ class UserPreferences @Inject constructor(
         }
     }
 
-    suspend fun setImageDownloadPolicy(policy: String) {
-        context.dataStore.edit { preferences ->
-            preferences[keyImageDownloadPolicy] = policy
-        }
-    }
 
     suspend fun setVibrationEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->

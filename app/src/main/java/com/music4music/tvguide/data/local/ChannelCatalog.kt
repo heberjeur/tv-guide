@@ -152,6 +152,17 @@ object ChannelCatalog {
         }?.value
     }
 
+    fun getAllLogoUrls(): List<String> {
+        return logoMap.values.distinct()
+    }
+
+    fun isFavorite(channelId: String, favoriteChannels: Set<String>): Boolean {
+        if (favoriteChannels.isEmpty()) return false
+        if (favoriteChannels.contains(channelId)) return true
+        val normalized = normalizeId(channelId)
+        return favoriteChannels.any { normalizeId(it) == normalized }
+    }
+
     private fun normalizeId(id: String): String {
         return id.trim().lowercase().removeSuffix(".fr").replace("[^a-z0-9]".toRegex(), "")
     }

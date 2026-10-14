@@ -4,6 +4,7 @@ import android.content.Context
 import coil.imageLoader
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import com.music4music.tvguide.data.local.ChannelCatalog
 import com.music4music.tvguide.data.connectivity.ConnectivityObserver
 import com.music4music.tvguide.data.local.db.ChannelDao
 import com.music4music.tvguide.data.local.db.ProgramDao
@@ -20,17 +21,20 @@ import com.music4music.tvguide.domain.model.SyncState
 import com.music4music.tvguide.domain.repository.EpgRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.IOException
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import com.music4music.tvguide.data.local.prefs.UserPreferences
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -158,15 +162,10 @@ class EpgRepositoryImpl @Inject constructor(
                 state = SyncState.DOWNLOADING
             )
 
-            val candidateUrls = if (channelPackage == ChannelPackage.COMMUNITY_ENRICHED) {
-                listOf(
-                    channelPackage.feedUrl,
-                    "https://raw.githubusercontent.com/heberjeur/tv-guide/gh-pages/epg_tnt.xml.gz",
-                    ChannelPackage.TERRESTRIAL.feedUrl
-                )
-            } else {
-                listOf(channelPackage.feedUrl)
-            }
+            val candidateUrls = listOf(
+                channelPackage.feedUrl,
+                "https://raw.githubusercontent.com/heberjeur/tv-guide/gh-pages/epg_tnt.xml.gz"
+            )
 
             var lastException: Exception? = null
             var syncSucceeded = false
@@ -204,6 +203,12 @@ class EpgRepositoryImpl @Inject constructor(
                         parser.parse(input, channelPackage.id) { channels, programs ->
                             if (channels.isNotEmpty()) {
                                 channelDao.insertChannels(channels)
+                                channels.forEach { c ->
+                                    val icon = c.iconUrl ?: ChannelCatalog.getLogoUrl(c.id)
+                                    if (!icon.isNullOrBlank() && !icon.startsWith("data:")) {
+                                        imageList.add(icon)
+                                    }
+                                }
                             }
                             if (programs.isNotEmpty()) {
                                 programDao.insertPrograms(programs)
@@ -238,6 +243,7 @@ class EpgRepositoryImpl @Inject constructor(
                         lastSyncTimestamp = now
                     )
 
+                    imageList.addAll(ChannelCatalog.getAllLogoUrls())
                     prefetchImages(imageList)
 
                     _syncProgress.value = SyncProgress(
@@ -280,6 +286,12 @@ class EpgRepositoryImpl @Inject constructor(
                 parser.parse(input, channelPackage.id) { channels, programs ->
                     if (channels.isNotEmpty()) {
                         channelDao.insertChannels(channels)
+                        channels.forEach { c ->
+                            val icon = c.iconUrl ?: ChannelCatalog.getLogoUrl(c.id)
+                            if (!icon.isNullOrBlank() && !icon.startsWith("data:")) {
+                                imageList.add(icon)
+                            }
+                        }
                     }
                     if (programs.isNotEmpty()) {
                         programDao.insertPrograms(programs)
@@ -305,31 +317,36 @@ class EpgRepositoryImpl @Inject constructor(
                 )
             )
 
+            imageList.addAll(ChannelCatalog.getAllLogoUrls())
             prefetchImages(imageList)
         } catch (_: Exception) {
         }
     }
 
     private suspend fun prefetchImages(urls: List<String>) {
-        val policy = userPreferences.imageDownloadPolicy.first()
-        if (policy == "never") return
-        if (policy == "wifi_only" && !isWifiConnected()) return
-
+        if (urls.isEmpty()) return
+        val distinctUrls = urls.filter { it.isNotBlank() && !it.startsWith("data:") }.distinct()
         val loader = context.imageLoader
-        urls.distinct().take(400).forEach { url ->
-            val request = ImageRequest.Builder(context)
-                .data(url)
-                .diskCachePolicy(CachePolicy.ENABLED)
-                .memoryCachePolicy(CachePolicy.ENABLED)
-                .build()
-            loader.enqueue(request)
-        }
-    }
 
-    private fun isWifiConnected(): Boolean {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
-        val activeNetwork = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
-        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        withContext(Dispatchers.IO) {
+            val semaphore = Semaphore(10)
+            coroutineScope {
+                distinctUrls.map { url ->
+                    launch {
+                        semaphore.withPermit {
+                            try {
+                                val request = ImageRequest.Builder(context)
+                                    .data(url)
+                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                    .memoryCachePolicy(CachePolicy.ENABLED)
+                                    .build()
+                                loader.execute(request)
+                            } catch (_: Exception) {
+                            }
+                        }
+                    }
+                }.joinAll()
+            }
+        }
     }
 }

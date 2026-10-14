@@ -40,10 +40,7 @@ class GuideViewModel @Inject constructor(
     private val _channelSearchQuery = MutableStateFlow("")
     val channelSearchQuery: StateFlow<String> = _channelSearchQuery.asStateFlow()
 
-    private val rawChannels: StateFlow<List<Channel>> = userPreferences.selectedPackage
-        .flatMapLatest { packageId ->
-            getChannelsUseCase(ChannelPackage.fromId(packageId))
-        }
+    private val rawChannels: StateFlow<List<Channel>> = getChannelsUseCase(ChannelPackage.COMMUNITY_ENRICHED)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private data class ChannelPreferences(
@@ -72,7 +69,7 @@ class GuideViewModel @Inject constructor(
                 (channel.channelNumber > 0 && channel.channelNumber.toString() == query.trim())
             notHidden && matchesQuery
         }.map { channel ->
-            val isFav = prefs.favoriteChannels.contains(channel.id) || channel.isFavorite
+            val isFav = com.music4music.tvguide.data.local.ChannelCatalog.isFavorite(channel.id, prefs.favoriteChannels) || channel.isFavorite
             if (channel.isFavorite != isFav) channel.copy(isFavorite = isFav) else channel
         }
 
