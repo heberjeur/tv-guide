@@ -204,7 +204,7 @@ class EpgRepositoryImpl @Inject constructor(
                             if (channels.isNotEmpty()) {
                                 channelDao.insertChannels(channels)
                                 channels.forEach { c ->
-                                    val icon = c.iconUrl ?: ChannelCatalog.getLogoUrl(c.id)
+                                    val icon = ChannelCatalog.getLogoUrl(c.id) ?: c.iconUrl
                                     if (!icon.isNullOrBlank() && !icon.startsWith("data:")) {
                                         imageList.add(icon)
                                     }
@@ -287,7 +287,7 @@ class EpgRepositoryImpl @Inject constructor(
                     if (channels.isNotEmpty()) {
                         channelDao.insertChannels(channels)
                         channels.forEach { c ->
-                            val icon = c.iconUrl ?: ChannelCatalog.getLogoUrl(c.id)
+                            val icon = ChannelCatalog.getLogoUrl(c.id) ?: c.iconUrl
                             if (!icon.isNullOrBlank() && !icon.startsWith("data:")) {
                                 imageList.add(icon)
                             }
