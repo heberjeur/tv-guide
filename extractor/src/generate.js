@@ -14,7 +14,7 @@ const CHANNELS = require('./channels.json');
 const OUTPUT_DIR = path.resolve(__dirname, '../output');
 const OUTPUT_XML = path.join(OUTPUT_DIR, 'epg_tnt.xml');
 const OUTPUT_GZ = path.join(OUTPUT_DIR, 'epg_tnt.xml.gz');
-const DAYS_TO_FETCH = 13;
+const DAYS_TO_FETCH = 11;
 
 const HTTP_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
@@ -44,6 +44,18 @@ function escapeXml(unsafe) {
 
 function formatXmltvDate(date) {
   return dayjs(date).tz('Europe/Paris').format('YYYYMMDDHHmmss ZZ');
+}
+
+function parseXmltvDate(dateStr) {
+  if (!dateStr || dateStr.length < 14) return null;
+  const raw = dateStr.trim();
+  const year = parseInt(raw.substring(0, 4), 10);
+  const month = parseInt(raw.substring(4, 6), 10) - 1;
+  const day = parseInt(raw.substring(6, 8), 10);
+  const hour = parseInt(raw.substring(8, 10), 10);
+  const minute = parseInt(raw.substring(10, 12), 10);
+  const second = parseInt(raw.substring(12, 14), 10);
+  return dayjs().tz('Europe/Paris').year(year).month(month).date(day).hour(hour).minute(minute).second(second);
 }
 
 function extractImageSrc($el) {
@@ -84,6 +96,7 @@ function extractImageSrc($el) {
 async function loadXmltvReference() {
   const timeMap = new Map();
   const titleMap = new Map();
+  const channelProgramsMap = new Map();
 
   const resolveChannelMap = ($root) => {
     const map = new Map();
@@ -102,14 +115,24 @@ async function loadXmltvReference() {
     return map;
   };
 
-  const registerEntry = (channel, start, desc, subTitle, title, rating, category, credits, channelMap) => {
-    if (!channel || !start || !desc || desc.length <= 5 || /^\d{1,2}[h:]\d{2}$/i.test(desc)) return;
+  const registerEntry = (channel, start, stop, desc, subTitle, title, rating, category, credits, season, episode, year, seriesYear, country, icon, channelMap) => {
+    if (!channel || !start || !title) return;
     const entry = {
-      desc,
+      channelId: channel,
+      title,
       subTitle: subTitle || null,
+      desc: desc || null,
       category: category || null,
       rating: rating || null,
-      credits
+      credits,
+      season,
+      episode,
+      year,
+      seriesYear,
+      country,
+      icon,
+      start: parseXmltvDate(start),
+      stop: parseXmltvDate(stop)
     };
 
     const targetChannels = [channel];
@@ -117,15 +140,25 @@ async function loadXmltvReference() {
     if (mapped && mapped !== channel) targetChannels.push(mapped);
 
     for (const ch of targetChannels) {
-      const timeKey = `${ch}_${start.substring(0, 12)}`;
-      timeMap.set(timeKey, entry);
+      if (entry.desc && entry.desc.length > 5) {
+        const timeKey = `${ch}_${start.substring(0, 12)}`;
+        timeMap.set(timeKey, entry);
 
-      const dayKey = `${ch}_${start.substring(0, 8)}_${cleanTitle(title)}`;
-      titleMap.set(dayKey, entry);
+        const dayKey = `${ch}_${start.substring(0, 8)}_${cleanTitle(title)}`;
+        titleMap.set(dayKey, entry);
 
-      const generalKey = `${ch}_${cleanTitle(title)}`;
-      if (!titleMap.has(generalKey)) {
-        titleMap.set(generalKey, entry);
+        const generalKey = `${ch}_${cleanTitle(title)}`;
+        if (!titleMap.has(generalKey)) {
+          titleMap.set(generalKey, entry);
+        }
+      }
+
+      if (entry.start) {
+        const progDayKey = `${ch}_${start.substring(0, 8)}`;
+        if (!channelProgramsMap.has(progDayKey)) {
+          channelProgramsMap.set(progDayKey, []);
+        }
+        channelProgramsMap.get(progDayKey).push({ ...entry, channelId: ch });
       }
     }
   };
@@ -143,17 +176,34 @@ async function loadXmltvReference() {
     $xml('programme').each((_, el) => {
       const channel = $xml(el).attr('channel');
       const start = $xml(el).attr('start');
+      const stop = $xml(el).attr('stop');
       const desc = $xml(el).find('desc').text().trim();
       const subTitle = $xml(el).find('sub-title').text().trim();
       const title = $xml(el).find('title').text().trim();
       const rating = $xml(el).find('rating value').text().trim();
       const category = $xml(el).find('category').text().trim();
+      const dateText = $xml(el).find('date').text().trim();
+      const origDateText = $xml(el).find('orig-date').text().trim();
+      const country = $xml(el).find('country').text().trim() || null;
+      const icon = $xml(el).find('icon').attr('src') || null;
+
+      const year = dateText ? parseInt(dateText.substring(0, 4), 10) : null;
+      const seriesYear = origDateText ? parseInt(origDateText.substring(0, 4), 10) : null;
+
+      let season = null;
+      let episode = null;
+      const epNumText = $xml(el).find('episode-num[system="xmltv_ns"]').text().trim();
+      if (epNumText) {
+        const parts = epNumText.split('.');
+        if (parts[0]) season = parseInt(parts[0], 10) + 1;
+        if (parts[1]) episode = parseInt(parts[1], 10) + 1;
+      }
 
       const presenters = $xml(el).find('credits presenter').map((_, p) => $xml(p).text().trim()).get();
       const actors = $xml(el).find('credits actor').map((_, a) => $xml(a).text().trim()).get();
       const directors = $xml(el).find('credits director').map((_, d) => $xml(d).text().trim()).get();
 
-      registerEntry(channel, start, desc, subTitle, title, rating, category, { presenters, actors, directors }, channelMap);
+      registerEntry(channel, start, stop, desc, subTitle, title, rating, category, { presenters, actors, directors }, season, episode, year, seriesYear, country, icon, channelMap);
     });
   } catch (err) {
     process.stderr.write(`Failed to load xmltv_tnt reference: ${err.message}\n`);
@@ -173,24 +223,41 @@ async function loadXmltvReference() {
       const channel = $xml(el).attr('channel');
       if (channelMap.has(channel)) {
         const start = $xml(el).attr('start');
+        const stop = $xml(el).attr('stop');
         const desc = $xml(el).find('desc').text().trim();
         const subTitle = $xml(el).find('sub-title').text().trim();
         const title = $xml(el).find('title').text().trim();
         const rating = $xml(el).find('rating value').text().trim();
         const category = $xml(el).find('category').text().trim();
+        const dateText = $xml(el).find('date').text().trim();
+        const origDateText = $xml(el).find('orig-date').text().trim();
+        const country = $xml(el).find('country').text().trim() || null;
+        const icon = $xml(el).find('icon').attr('src') || null;
+
+        const year = dateText ? parseInt(dateText.substring(0, 4), 10) : null;
+        const seriesYear = origDateText ? parseInt(origDateText.substring(0, 4), 10) : null;
+
+        let season = null;
+        let episode = null;
+        const epNumText = $xml(el).find('episode-num[system="xmltv_ns"]').text().trim();
+        if (epNumText) {
+          const parts = epNumText.split('.');
+          if (parts[0]) season = parseInt(parts[0], 10) + 1;
+          if (parts[1]) episode = parseInt(parts[1], 10) + 1;
+        }
 
         const presenters = $xml(el).find('credits presenter').map((_, p) => $xml(p).text().trim()).get();
         const actors = $xml(el).find('credits actor').map((_, a) => $xml(a).text().trim()).get();
         const directors = $xml(el).find('credits director').map((_, d) => $xml(d).text().trim()).get();
 
-        registerEntry(channel, start, desc, subTitle, title, rating, category, { presenters, actors, directors }, channelMap);
+        registerEntry(channel, start, stop, desc, subTitle, title, rating, category, { presenters, actors, directors }, season, episode, year, seriesYear, country, icon, channelMap);
       }
     });
   } catch (err) {
     process.stderr.write(`Failed to load extended xmltv reference: ${err.message}\n`);
   }
 
-  return { timeMap, titleMap };
+  return { timeMap, titleMap, channelProgramsMap };
 }
 
 async function fetchDetailPageData(link) {
@@ -200,15 +267,18 @@ async function fetchDetailPageData(link) {
 
   const fullUrl = `https://www.programme-tv.net${cleanLink}`;
   try {
-    const res = await axios.get(fullUrl, { headers: HTTP_HEADERS, timeout: 6000 });
+    const res = await axios.get(fullUrl, { headers: HTTP_HEADERS, timeout: 8000 });
     const $page = cheerio.load(res.data);
     let desc = null;
     let season = null;
     let format = null;
     let genre = null;
     let year = null;
+    let seriesYear = null;
     let country = null;
     let episodeNumber = null;
+
+    const anchor = link.includes('#') ? link.split('#')[1].split('-')[0] : '';
 
     $page('script[type="application/ld+json"]').each((_, s) => {
       try {
@@ -224,11 +294,18 @@ async function fetchDetailPageData(link) {
           if (matchY) year = parseInt(matchY[1], 10);
         }
         if (json.episode && Array.isArray(json.episode)) {
-          const anchor = link.includes('#') ? link.split('#')[1].split('-')[0] : '';
-          const ep = json.episode.find(e => anchor && e.url && e.url.includes(anchor));
-          if (ep) {
-            if (ep.description && ep.description.length > 20) desc = ep.description;
-            if (ep.episodeNumber) episodeNumber = parseInt(ep.episodeNumber, 10);
+          let epIdx = -1;
+          for (let i = 0; i < json.episode.length; i++) {
+            const e = json.episode[i];
+            if (anchor && e.url && e.url.includes(anchor)) {
+              epIdx = i;
+              if (e.description && e.description.length > 20) desc = e.description;
+              if (e.episodeNumber) episodeNumber = parseInt(e.episodeNumber, 10);
+              break;
+            }
+          }
+          if (episodeNumber == null && epIdx >= 0) {
+            episodeNumber = epIdx + 1;
           }
         }
       } catch {}
@@ -271,11 +348,28 @@ async function fetchDetailPageData(link) {
       }
     });
 
-    let seriesYear = null;
-    if (cleanLink.includes('secrets-dhistoire')) {
-      seriesYear = 2015;
-      if (!genre) genre = 'Magazine historique';
-      if (!format) format = 'Culture Infos';
+    if (cleanLink.includes('/saisons/')) {
+      const parentSeriesLink = cleanLink.replace(/\/saisons\/\d+.*$/, '/');
+      try {
+        const pRes = await axios.get(`https://www.programme-tv.net${parentSeriesLink}`, {
+          headers: HTTP_HEADERS,
+          timeout: 6000
+        });
+        const $pPage = cheerio.load(pRes.data);
+        $pPage('.overview-stickerListItem').each((_, li) => {
+          const text = $pPage(li).text().trim();
+          if (text.includes('Sortie :') && !seriesYear) {
+            const m = text.match(/(\d{4})/);
+            if (m) seriesYear = parseInt(m[1], 10);
+          }
+          if (text.includes('Genre :') && !genre) {
+            genre = text.replace('Genre :', '').trim();
+          }
+          if (text.includes('Format :') && !format) {
+            format = text.replace('Format :', '').trim();
+          }
+        });
+      } catch {}
     }
 
     const result = { desc, season, format, genre, year, seriesYear, country, episodeNumber };
@@ -287,15 +381,35 @@ async function fetchDetailPageData(link) {
   }
 }
 
+async function fetchWithRetry(url, options, maxRetries = 2) {
+  let attempt = 0;
+  while (attempt <= maxRetries) {
+    try {
+      return await axios.get(url, options);
+    } catch (err) {
+      attempt++;
+      if (attempt > maxRetries) throw err;
+      await new Promise(r => setTimeout(r, 1000 * attempt));
+    }
+  }
+}
+
 async function fetchChannelSchedule(channel, date, refData) {
   const formattedDate = date.format('YYYY-MM-DD');
+  const dateKey8 = date.format('YYYYMMDD');
+  const fallbackPrograms = refData.channelProgramsMap.get(`${channel.id}_${dateKey8}`) || [];
+
   const url = `https://www.programme-tv.net/programme/chaine/${formattedDate}/programme-${channel.siteId}.html`;
   try {
-    const response = await axios.get(url, { headers: HTTP_HEADERS, timeout: 15000 });
-    return await parseHtmlSchedule(channel, response.data, date, refData);
+    const response = await fetchWithRetry(url, { headers: HTTP_HEADERS, timeout: 15000 });
+    const programs = await parseHtmlSchedule(channel, response.data, date, refData);
+    if (programs.length < 3 && fallbackPrograms.length > 0) {
+      return fallbackPrograms;
+    }
+    return programs;
   } catch (err) {
-    process.stderr.write(`Failed to fetch ${channel.id} for ${formattedDate}: ${err.message}\n`);
-    return [];
+    process.stderr.write(`Failed to fetch ${channel.id} for ${formattedDate}: ${err.message}. Using fallback.\n`);
+    return fallbackPrograms;
   }
 }
 
@@ -341,6 +455,11 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
     let matchedCategory = item.category;
     let matchedRating = null;
     let matchedCredits = null;
+    let matchedSeason = null;
+    let matchedEpisode = null;
+    let matchedYear = null;
+    let matchedSeriesYear = null;
+    let matchedCountry = null;
 
     const timeKey = `${channel.id}_${item.startTime.format('YYYYMMDDHHmm')}`;
     let refEntry = refData.timeMap.get(timeKey);
@@ -372,6 +491,11 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       if (item.category === 'General' && refEntry.category) matchedCategory = refEntry.category;
       matchedRating = refEntry.rating;
       matchedCredits = refEntry.credits;
+      matchedSeason = refEntry.season;
+      matchedEpisode = refEntry.episode;
+      matchedYear = refEntry.year;
+      matchedSeriesYear = refEntry.seriesYear;
+      matchedCountry = refEntry.country;
     }
 
     let detailData = null;
@@ -398,11 +522,11 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       category: matchedCategory,
       format: detailData ? detailData.format : null,
       genre: detailData ? detailData.genre : null,
-      year: detailData ? detailData.year : null,
-      seriesYear: detailData ? detailData.seriesYear : null,
-      country: detailData ? detailData.country : null,
-      season: detailData ? detailData.season : null,
-      episode: detailData ? detailData.episodeNumber : null,
+      year: detailData && detailData.year ? detailData.year : matchedYear,
+      seriesYear: detailData && detailData.seriesYear ? detailData.seriesYear : matchedSeriesYear,
+      country: detailData && detailData.country ? detailData.country : matchedCountry,
+      season: detailData && detailData.season ? detailData.season : matchedSeason,
+      episode: detailData && detailData.episodeNumber ? detailData.episodeNumber : matchedEpisode,
       start: item.startTime,
       stop: item.startTime.add(60, 'minute'),
       image: item.imageSrc,
@@ -504,7 +628,7 @@ async function main() {
 
   process.stdout.write('Loading reference EPG data...\n');
   const refData = await loadXmltvReference();
-  process.stdout.write(`Indexed ${refData.timeMap.size} reference descriptions.\n`);
+  process.stdout.write(`Indexed ${refData.timeMap.size} reference descriptions and ${refData.channelProgramsMap.size} channel-day blocks.\n`);
 
   const today = dayjs().tz('Europe/Paris');
   const allPrograms = [];

@@ -53,11 +53,18 @@
 
     <string name="section_information">Informations</string>
     <string name="label_season">Saison</string>
+    <string name="label_season_value">Saison %1$d</string>
+    <string name="label_episode_value">Épisode %1$d</string>
+    <string name="label_episode_with_title">Épisode %1$d : %2$s</string>
+    <string name="label_season_with_title">Saison %1$d : %2$s</string>
     <string name="label_format">Format</string>
     <string name="label_category">Genre</string>
     <string name="label_release_year">Sortie</string>
+    <string name="label_release_year_combined">%1$d (Série : %2$d)</string>
+    <string name="label_series_year_value">Série : %1$d</string>
     <string name="label_country">Pays</string>
     <string name="label_not_specified">Non spécifié</string>
+    <string name="default_country">France</string>
     <string name="section_synopsis">Synopsis</string>
     <string name="section_where_to_watch">Où regarder</string>
     <string name="broadcast_on_channel">Diffusé sur %1$s le %2$s de %3$s à %4$s.</string>
@@ -182,4 +189,8 @@
     <string name="badge_subtitles">ST</string>
     <string name="badge_hd">HD</string>
     <string name="badge_unreleased">Inédit</string>
+    <string name="filter_today">Aujourd\'hui</string>
+    <string name="filter_tomorrow">Demain</string>
+    <string name="filter_today_prefix">Aujourd\'hui • %1$s</string>
+    <string name="filter_tomorrow_prefix">Demain • %1$s</string>
 </resources>

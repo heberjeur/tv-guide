@@ -99,7 +99,7 @@ fun GuideScreen(
     val today = remember { LocalDate.now(parisZone) }
     val tomorrow = remember { today.plusDays(1) }
     val availableDates = remember {
-        (0..13).map { today.plusDays(it.toLong()) }
+        (0..10).map { today.plusDays(it.toLong()) }
     }
 
     val channelNameMap = remember(channels) {
@@ -252,8 +252,8 @@ fun GuideScreen(
                     key = { it.toString() }
                 ) { date ->
                     val label = when (date) {
-                        today -> "Aujourd'hui"
-                        tomorrow -> "Demain"
+                        today -> stringResource(R.string.filter_today)
+                        tomorrow -> stringResource(R.string.filter_tomorrow)
                         else -> date.format(dayChipFormatter)
                     }
                     FilterChip(
@@ -348,7 +348,7 @@ fun GuideScreen(
                     }
                 }
             } else {
-                val dayHeaderFormatter = remember { DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.FRENCH) }
+                val dayHeaderFormatter = remember { DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault()) }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
@@ -360,10 +360,11 @@ fun GuideScreen(
                         }
                         grouped.forEach { (date, datePrograms) ->
                             item(key = "header_$date") {
+                                val formattedDate = date.format(dayHeaderFormatter).replaceFirstChar { it.uppercase() }
                                 val headerTitle = when (date) {
-                                    today -> "Aujourd'hui • " + date.format(dayHeaderFormatter).replaceFirstChar { it.uppercase() }
-                                    tomorrow -> "Demain • " + date.format(dayHeaderFormatter).replaceFirstChar { it.uppercase() }
-                                    else -> date.format(dayHeaderFormatter).replaceFirstChar { it.uppercase() }
+                                    today -> stringResource(R.string.filter_today_prefix, formattedDate)
+                                    tomorrow -> stringResource(R.string.filter_tomorrow_prefix, formattedDate)
+                                    else -> formattedDate
                                 }
                                 Text(
                                     text = headerTitle,

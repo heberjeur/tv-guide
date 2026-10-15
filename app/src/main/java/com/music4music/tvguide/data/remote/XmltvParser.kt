@@ -244,18 +244,6 @@ class XmltvParser @Inject constructor() {
             val cRegex = Regex("""Pays\s*:\s*([^•\n\r|]{3,30})""", RegexOption.IGNORE_CASE)
             country = cRegex.find(description)?.groupValues?.get(1)?.trim()
         }
-
-        if (title.contains("Secrets d'histoire", ignoreCase = true)) {
-            if (!categories.contains("Culture Infos")) categories.add(0, "Culture Infos")
-            if (!categories.contains("Magazine historique")) categories.add("Magazine historique")
-            seriesYear = seriesYear ?: 2015
-            seasonNumber = seasonNumber ?: 20
-            productionYear = productionYear ?: 2026
-            if (subTitle?.contains("Charles X", ignoreCase = true) == true) {
-                episodeNumber = episodeNumber ?: 4
-            }
-        }
-
         val calculatedDuration = if (lengthMinutes > 0) {
             lengthMinutes
         } else {

@@ -183,11 +183,15 @@ fun ProgramDetailScreen(
                     val displaySubtitle = when {
                         currentProgram.subTitle.isNullOrEmpty() -> {
                             if (currentProgram.episodeNumber != null) {
-                                "Épisode ${currentProgram.episodeNumber}"
+                                stringResource(R.string.label_episode_value, currentProgram.episodeNumber)
                             } else null
                         }
                         currentProgram.episodeNumber != null && !currentProgram.subTitle.contains("épisode", ignoreCase = true) && !currentProgram.subTitle.contains("ep.", ignoreCase = true) -> {
-                            "Épisode ${currentProgram.episodeNumber} : ${currentProgram.subTitle}"
+                            stringResource(
+                                R.string.label_episode_with_title,
+                                currentProgram.episodeNumber,
+                                currentProgram.subTitle
+                            )
                         }
                         else -> currentProgram.subTitle
                     }
@@ -254,7 +258,7 @@ fun ProgramDetailScreen(
 
                             InfoRow(
                                 label = stringResource(R.string.label_season),
-                                value = currentProgram.seasonNumber?.let { "Saison $it" }
+                                value = currentProgram.seasonNumber?.let { stringResource(R.string.label_season_value, it) }
                                     ?: stringResource(R.string.label_not_specified)
                             )
 
@@ -286,11 +290,15 @@ fun ProgramDetailScreen(
 
                             val releaseText = when {
                                 currentProgram.productionYear != null && currentProgram.seriesYear != null && currentProgram.productionYear != currentProgram.seriesYear ->
-                                    "${currentProgram.productionYear} (Série : ${currentProgram.seriesYear})"
+                                    stringResource(
+                                        R.string.label_release_year_combined,
+                                        currentProgram.productionYear,
+                                        currentProgram.seriesYear
+                                    )
                                 currentProgram.productionYear != null ->
                                     currentProgram.productionYear.toString()
                                 currentProgram.seriesYear != null ->
-                                    "Série : ${currentProgram.seriesYear}"
+                                    stringResource(R.string.label_series_year_value, currentProgram.seriesYear)
                                 currentProgram.isUnreleased ->
                                     stringResource(R.string.label_unreleased)
                                 else ->
@@ -304,7 +312,7 @@ fun ProgramDetailScreen(
                                 label = stringResource(R.string.label_country),
                                 value = currentProgram.country
                                     ?: if (currentProgram.channelId.endsWith(".fr")) {
-                                        "France"
+                                        stringResource(R.string.default_country)
                                     } else {
                                         stringResource(R.string.label_not_specified)
                                     }
@@ -555,7 +563,11 @@ fun ProgramDetailScreen(
                             val upStart = Instant.ofEpochMilli(upcoming.startTimestamp).atZone(zone).format(timeFormatter)
                             val upDate = Instant.ofEpochMilli(upcoming.startTimestamp).atZone(zone).format(dateFormatter)
                             val fullTitle = if (upcoming.seasonNumber != null) {
-                                "Saison ${upcoming.seasonNumber} : ${upcoming.subTitle ?: upcoming.title}"
+                                stringResource(
+                                    R.string.label_season_with_title,
+                                    upcoming.seasonNumber,
+                                    upcoming.subTitle ?: upcoming.title
+                                )
                             } else {
                                 upcoming.subTitle ?: upcoming.title
                             }
