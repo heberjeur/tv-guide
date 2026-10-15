@@ -271,7 +271,14 @@ async function fetchDetailPageData(link) {
       }
     });
 
-    const result = { desc, season, format, genre, year, country, episodeNumber };
+    let seriesYear = null;
+    if (cleanLink.includes('secrets-dhistoire')) {
+      seriesYear = 2015;
+      if (!genre) genre = 'Magazine historique';
+      if (!format) format = 'Culture Infos';
+    }
+
+    const result = { desc, season, format, genre, year, seriesYear, country, episodeNumber };
     detailCache.set(cleanLink, result);
     return result;
   } catch {
@@ -392,6 +399,7 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       format: detailData ? detailData.format : null,
       genre: detailData ? detailData.genre : null,
       year: detailData ? detailData.year : null,
+      seriesYear: detailData ? detailData.seriesYear : null,
       country: detailData ? detailData.country : null,
       season: detailData ? detailData.season : null,
       episode: detailData ? detailData.episodeNumber : null,
@@ -437,6 +445,9 @@ function buildXml(channels, programs) {
     }
     if (program.year) {
       xml += `    <date>${escapeXml(String(program.year))}</date>\n`;
+    }
+    if (program.seriesYear) {
+      xml += `    <orig-date>${escapeXml(String(program.seriesYear))}</orig-date>\n`;
     }
     if (program.country) {
       xml += `    <country lang="fr">${escapeXml(program.country)}</country>\n`;
@@ -528,6 +539,11 @@ async function main() {
 
   const gzippedContent = zlib.gzipSync(Buffer.from(xmlContent, 'utf-8'), { level: 9 });
   fs.writeFileSync(OUTPUT_GZ, gzippedContent);
+
+  const assetGz = path.resolve(__dirname, '../../app/src/main/assets/epg_tnt.xml.gz');
+  if (fs.existsSync(path.dirname(assetGz))) {
+    fs.writeFileSync(assetGz, gzippedContent);
+  }
 
   process.stdout.write(`Successfully generated ${allPrograms.length} TNT+ programs in ${OUTPUT_XML} and ${OUTPUT_GZ}\n`);
 }

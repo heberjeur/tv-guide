@@ -180,10 +180,22 @@ fun ProgramDetailScreen(
                         color = TextPrimary
                     )
 
-                    if (!currentProgram.subTitle.isNullOrEmpty()) {
+                    val displaySubtitle = when {
+                        currentProgram.subTitle.isNullOrEmpty() -> {
+                            if (currentProgram.episodeNumber != null) {
+                                "Épisode ${currentProgram.episodeNumber}"
+                            } else null
+                        }
+                        currentProgram.episodeNumber != null && !currentProgram.subTitle.contains("épisode", ignoreCase = true) && !currentProgram.subTitle.contains("ep.", ignoreCase = true) -> {
+                            "Épisode ${currentProgram.episodeNumber} : ${currentProgram.subTitle}"
+                        }
+                        else -> currentProgram.subTitle
+                    }
+
+                    if (!displaySubtitle.isNullOrEmpty()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = currentProgram.subTitle,
+                            text = displaySubtitle,
                             style = MaterialTheme.typography.titleMedium,
                             color = TextSecondary
                         )
@@ -242,31 +254,51 @@ fun ProgramDetailScreen(
 
                             InfoRow(
                                 label = stringResource(R.string.label_season),
-                                value = currentProgram.seasonNumber?.toString()
+                                value = currentProgram.seasonNumber?.let { "Saison $it" }
                                     ?: stringResource(R.string.label_not_specified)
                             )
+
+                            val formatValue = currentProgram.categories.firstOrNull {
+                                it.equals("Culture Infos", ignoreCase = true) ||
+                                it.equals("Série", ignoreCase = true) ||
+                                it.equals("Film", ignoreCase = true) ||
+                                it.equals("Documentaire", ignoreCase = true) ||
+                                it.equals("Magazine", ignoreCase = true) ||
+                                it.equals("Téléfilm", ignoreCase = true) ||
+                                it.equals("Divertissement", ignoreCase = true) ||
+                                it.equals("Journal", ignoreCase = true) ||
+                                it.equals("Sport", ignoreCase = true)
+                            } ?: currentProgram.categories.firstOrNull()
+
+                            val genreValue = currentProgram.categories.firstOrNull { it != formatValue && it != "General" }
+                                ?: if (currentProgram.categories.size > 1) {
+                                    currentProgram.categories.drop(1).joinToString(", ")
+                                } else null
+
                             InfoRow(
                                 label = stringResource(R.string.label_format),
-                                value = currentProgram.categories.firstOrNull()
-                                    ?: stringResource(R.string.label_not_specified)
+                                value = formatValue ?: stringResource(R.string.label_not_specified)
                             )
                             InfoRow(
                                 label = stringResource(R.string.label_category),
-                                value = if (currentProgram.categories.size > 1) {
-                                    currentProgram.categories.drop(1).joinToString(", ")
-                                } else {
-                                    currentProgram.categories.firstOrNull()
-                                        ?: stringResource(R.string.label_not_specified)
-                                }
+                                value = genreValue ?: stringResource(R.string.label_not_specified)
                             )
+
+                            val releaseText = when {
+                                currentProgram.productionYear != null && currentProgram.seriesYear != null && currentProgram.productionYear != currentProgram.seriesYear ->
+                                    "${currentProgram.productionYear} (Série : ${currentProgram.seriesYear})"
+                                currentProgram.productionYear != null ->
+                                    currentProgram.productionYear.toString()
+                                currentProgram.seriesYear != null ->
+                                    "Série : ${currentProgram.seriesYear}"
+                                currentProgram.isUnreleased ->
+                                    stringResource(R.string.label_unreleased)
+                                else ->
+                                    stringResource(R.string.label_not_specified)
+                            }
                             InfoRow(
                                 label = stringResource(R.string.label_release_year),
-                                value = currentProgram.productionYear?.toString()
-                                    ?: if (currentProgram.isUnreleased) {
-                                        stringResource(R.string.label_unreleased)
-                                    } else {
-                                        stringResource(R.string.label_not_specified)
-                                    }
+                                value = releaseText
                             )
                             InfoRow(
                                 label = stringResource(R.string.label_country),
@@ -522,6 +554,12 @@ fun ProgramDetailScreen(
                         upcomingBroadcasts.take(5).forEach { upcoming ->
                             val upStart = Instant.ofEpochMilli(upcoming.startTimestamp).atZone(zone).format(timeFormatter)
                             val upDate = Instant.ofEpochMilli(upcoming.startTimestamp).atZone(zone).format(dateFormatter)
+                            val fullTitle = if (upcoming.seasonNumber != null) {
+                                "Saison ${upcoming.seasonNumber} : ${upcoming.subTitle ?: upcoming.title}"
+                            } else {
+                                upcoming.subTitle ?: upcoming.title
+                            }
+
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -529,14 +567,16 @@ fun ProgramDetailScreen(
                                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(12.dp)
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Text(
                                             text = upcoming.channelId,
                                             style = MaterialTheme.typography.labelSmall,
@@ -544,16 +584,17 @@ fun ProgramDetailScreen(
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = upcoming.subTitle ?: upcoming.title,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = TextPrimary,
-                                            maxLines = 1
+                                            text = stringResource(R.string.broadcast_at_time, upDate, upStart),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary
                                         )
                                     }
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = stringResource(R.string.broadcast_at_time, upDate, upStart),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = TextSecondary
+                                        text = fullTitle,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextPrimary,
+                                        maxLines = 3
                                     )
                                 }
                             }

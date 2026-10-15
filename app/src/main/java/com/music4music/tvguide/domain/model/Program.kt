@@ -21,6 +21,7 @@ data class Program(
     val isHd: Boolean = false,
     val durationMinutes: Int = 0,
     val productionYear: Int? = null,
+    val seriesYear: Int? = null,
     val country: String? = null
 ) {
     val isNowPlaying: Boolean

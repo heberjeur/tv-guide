@@ -33,6 +33,7 @@ fun ProgramEntity.toDomain(): Program {
         isHd = isHd,
         durationMinutes = durationMinutes,
         productionYear = productionYear,
+        seriesYear = seriesYear,
         country = country
     )
 }
@@ -64,6 +65,7 @@ fun Program.toEntity(): ProgramEntity {
         isHd = isHd,
         durationMinutes = durationMinutes,
         productionYear = productionYear,
+        seriesYear = seriesYear,
         country = country
     )
 }

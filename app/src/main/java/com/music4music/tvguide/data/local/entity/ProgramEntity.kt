@@ -40,5 +40,6 @@ data class ProgramEntity(
     val isHd: Boolean,
     val durationMinutes: Int,
     val productionYear: Int? = null,
+    val seriesYear: Int? = null,
     val country: String? = null
 )
