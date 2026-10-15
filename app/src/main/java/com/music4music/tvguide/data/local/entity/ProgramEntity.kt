@@ -38,5 +38,7 @@ data class ProgramEntity(
     val isUnreleased: Boolean,
     val hasSubtitles: Boolean,
     val isHd: Boolean,
-    val durationMinutes: Int
+    val durationMinutes: Int,
+    val productionYear: Int? = null,
+    val country: String? = null
 )

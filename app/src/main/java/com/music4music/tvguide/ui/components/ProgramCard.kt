@@ -174,7 +174,7 @@ fun ProgramCard(
                             }
                             if (program.durationMinutes > 0) {
                                 Text(
-                                    text = stringResource(R.string.label_duration_minutes, program.durationMinutes),
+                                    text = program.formattedDuration,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextSecondary
                                 )

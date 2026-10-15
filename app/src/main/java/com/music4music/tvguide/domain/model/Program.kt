@@ -19,7 +19,9 @@ data class Program(
     val isUnreleased: Boolean = false,
     val hasSubtitles: Boolean = false,
     val isHd: Boolean = false,
-    val durationMinutes: Int = 0
+    val durationMinutes: Int = 0,
+    val productionYear: Int? = null,
+    val country: String? = null
 ) {
     val isNowPlaying: Boolean
         get() {
@@ -36,4 +38,18 @@ data class Program(
             if (total <= 0) return 0f
             return (now - startTimestamp).toFloat() / total.toFloat()
         }
+
+    val formattedDuration: String
+        get() = formatDuration(durationMinutes)
+}
+
+fun formatDuration(minutes: Int): String {
+    if (minutes <= 0) return ""
+    val hours = minutes / 60
+    val remainingMinutes = minutes % 60
+    return when {
+        hours > 0 && remainingMinutes > 0 -> "$hours h $remainingMinutes min"
+        hours > 0 -> "$hours h"
+        else -> "$remainingMinutes min"
+    }
 }

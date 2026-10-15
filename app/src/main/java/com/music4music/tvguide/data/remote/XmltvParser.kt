@@ -148,6 +148,8 @@ class XmltvParser @Inject constructor() {
         var hasSubtitles = false
         var isHd = false
         var lengthMinutes = 0
+        var productionYear: Int? = null
+        var country: String? = null
 
         while (parser.next() != XmlPullParser.END_TAG || parser.name != XML_TAG_PROGRAM) {
             if (parser.eventType != XmlPullParser.START_TAG) continue
@@ -157,6 +159,13 @@ class XmltvParser @Inject constructor() {
                 "sub-title" -> subTitle = readText(parser)
                 "desc" -> description = readText(parser)
                 "category" -> categories.add(readText(parser))
+                "date" -> {
+                    val text = readText(parser).trim()
+                    productionYear = text.take(4).toIntOrNull()
+                }
+                "country" -> {
+                    country = readText(parser).trim()
+                }
                 "length" -> {
                     val text = readText(parser)
                     lengthMinutes = text.toIntOrNull() ?: 0
@@ -203,6 +212,24 @@ class XmltvParser @Inject constructor() {
             }
         }
 
+        if (seasonNumber == null) {
+            val sRegex = Regex("""Saisons?\s*(\d+)""", RegexOption.IGNORE_CASE)
+            seasonNumber = sRegex.find(subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+                ?: sRegex.find(title)?.groupValues?.get(1)?.toIntOrNull()
+                ?: sRegex.find(description)?.groupValues?.get(1)?.toIntOrNull()
+        }
+        if (productionYear == null) {
+            val yRegex = Regex("""(?:Sortie|Année)\s*:\s*(\d{4})""", RegexOption.IGNORE_CASE)
+            val pRegex = Regex("""\((\d{4})\)""")
+            productionYear = yRegex.find(description)?.groupValues?.get(1)?.toIntOrNull()
+                ?: pRegex.find(title)?.groupValues?.get(1)?.toIntOrNull()
+                ?: pRegex.find(subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+        }
+        if (country == null) {
+            val cRegex = Regex("""Pays\s*:\s*([^•\n\r|]{3,30})""", RegexOption.IGNORE_CASE)
+            country = cRegex.find(description)?.groupValues?.get(1)?.trim()
+        }
+
         val calculatedDuration = if (lengthMinutes > 0) {
             lengthMinutes
         } else {
@@ -232,7 +259,9 @@ class XmltvParser @Inject constructor() {
             isUnreleased = isUnreleased,
             hasSubtitles = hasSubtitles,
             isHd = isHd,
-            durationMinutes = calculatedDuration
+            durationMinutes = calculatedDuration,
+            productionYear = productionYear,
+            country = country
         )
     }
 

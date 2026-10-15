@@ -105,67 +105,89 @@ class NowPlayingViewModel @Inject constructor(
     }.flatMapLatest { (period, part, query, prefs) ->
         val zone = ZoneId.of("Europe/Paris")
         val today = LocalDate.now(zone)
+        val now = System.currentTimeMillis()
 
-        val flow: Flow<List<Program>> = when (period) {
-            BroadcastPeriod.NOW -> getNowPlayingUseCase()
+        val (targetTime, startTime, endTime) = when (period) {
+            BroadcastPeriod.NOW -> {
+                Triple(
+                    now,
+                    now - 4 * 3600 * 1000L,
+                    now + 4 * 3600 * 1000L
+                )
+            }
             BroadcastPeriod.TONIGHT -> {
-                val (startTime, endTime) = if (part == EveningPart.PART_1) {
-                    val s = today.atTime(20, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = today.atTime(22, 30).atZone(zone).toInstant().toEpochMilli()
-                    Pair(s, e)
+                if (part == EveningPart.PART_1) {
+                    val target = today.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
+                    val s = today.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
+                    val e = today.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    Triple(target, s, e)
                 } else {
-                    val s = today.atTime(22, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = today.plusDays(1).atTime(1, 0).atZone(zone).toInstant().toEpochMilli()
-                    Pair(s, e)
+                    val target = today.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
+                    val s = today.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
+                    val e = today.plusDays(1).atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
+                    Triple(target, s, e)
                 }
-                epgRepository.getProgramsByTimeRange(startTime, endTime)
             }
             BroadcastPeriod.YESTERDAY -> {
                 val yesterday = today.minusDays(1)
-                val (startTime, endTime) = if (part == EveningPart.PART_1) {
-                    val s = yesterday.atTime(20, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = yesterday.atTime(22, 30).atZone(zone).toInstant().toEpochMilli()
-                    Pair(s, e)
+                if (part == EveningPart.PART_1) {
+                    val target = yesterday.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
+                    val s = yesterday.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
+                    val e = yesterday.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    Triple(target, s, e)
                 } else {
-                    val s = yesterday.atTime(22, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = today.atTime(1, 0).atZone(zone).toInstant().toEpochMilli()
-                    Pair(s, e)
+                    val target = yesterday.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
+                    val s = yesterday.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
+                    val e = today.atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
+                    Triple(target, s, e)
                 }
-                epgRepository.getProgramsByTimeRange(startTime, endTime)
             }
         }
 
-        flow.map { list ->
-            val filtered = list.filter { program ->
-                val notHidden = !prefs.hiddenChannels.contains(program.channelId)
+        epgRepository.getProgramsByTimeRange(startTime, endTime).map { list ->
+            val progsByChannel = list.groupBy { it.channelId }
+            val selectedPrograms = ChannelCatalog.tntChannelIds.mapNotNull { channelId ->
+                val channelProgs = progsByChannel[channelId] ?: progsByChannel.entries.firstOrNull {
+                    ChannelCatalog.normalizeId(it.key) == ChannelCatalog.normalizeId(channelId)
+                }?.value
+                if (channelProgs.isNullOrEmpty()) return@mapNotNull null
+
+                val overlapping = channelProgs.filter { targetTime in it.startTimestamp until it.stopTimestamp }
+                if (overlapping.isNotEmpty()) {
+                    overlapping.maxByOrNull { it.stopTimestamp - it.startTimestamp }
+                } else {
+                    channelProgs.minByOrNull { kotlin.math.abs(it.startTimestamp - targetTime) }
+                }
+            }
+
+            val filtered = selectedPrograms.filter { program ->
+                val notHidden = !prefs.hiddenChannels.any {
+                    ChannelCatalog.normalizeId(it) == ChannelCatalog.normalizeId(program.channelId)
+                }
                 val notRerun = if (prefs.hideReruns) program.isUnreleased else true
                 val matchesQuery = query.isBlank() ||
                         program.title.contains(query, ignoreCase = true) ||
                         program.categories.any { cat -> cat.contains(query, ignoreCase = true) } ||
-                        program.channelId.contains(query, ignoreCase = true)
+                        ChannelCatalog.getDisplayName(program.channelId).contains(query, ignoreCase = true)
                 notHidden && notRerun && matchesQuery
             }
-            val distinctList = if (period == BroadcastPeriod.NOW) {
-                filtered.distinctBy { it.channelId }
-            } else {
-                filtered
-            }
+
             when (prefs.sortOrder) {
-                "popular" -> distinctList.sortedWith(
+                "popular" -> filtered.sortedWith(
                     compareBy<Program> { ChannelCatalog.getPopularityRank(it.channelId) }
                         .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
                         .thenBy { it.startTimestamp }
                 )
-                "favorites", "favorites_first" -> distinctList.sortedWith(
+                "favorites", "favorites_first" -> filtered.sortedWith(
                     compareByDescending<Program> { ChannelCatalog.isFavorite(it.channelId, prefs.favoriteChannels) }
                         .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
                         .thenBy { it.startTimestamp }
                 )
-                "name" -> distinctList.sortedWith(
-                    compareBy<Program> { it.channelId }
+                "name" -> filtered.sortedWith(
+                    compareBy<Program> { ChannelCatalog.getDisplayName(it.channelId) }
                         .thenBy { it.startTimestamp }
                 )
-                else -> distinctList.sortedWith(
+                else -> filtered.sortedWith(
                     compareBy<Program> { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
                         .thenBy { it.startTimestamp }
                 )

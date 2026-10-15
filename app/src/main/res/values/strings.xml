@@ -12,10 +12,10 @@
     <string name="period_now">Now</string>
     <string name="period_tonight">Tonight</string>
     <string name="period_yesterday">Yesterday</string>
-    <string name="period_tonight_part_1">Part 1 (9 PM)</string>
-    <string name="period_tonight_part_2">Part 2 (10:45 PM)</string>
-    <string name="period_yesterday_part_1">Part 1 (9 PM)</string>
-    <string name="period_yesterday_part_2">Part 2 (10:45 PM)</string>
+    <string name="period_tonight_part_1">Part 1</string>
+    <string name="period_tonight_part_2">Part 2</string>
+    <string name="period_yesterday_part_1">Part 1</string>
+    <string name="period_yesterday_part_2">Part 2</string>
 
 
     <string name="category_movies">Movies</string>

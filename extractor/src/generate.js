@@ -193,7 +193,7 @@ async function loadXmltvReference() {
   return { timeMap, titleMap };
 }
 
-async function fetchDetailDescription(link) {
+async function fetchDetailPageData(link) {
   if (!link || !link.startsWith('/programme/')) return null;
   const cleanLink = link.split('#')[0];
   if (detailCache.has(cleanLink)) return detailCache.get(cleanLink);
@@ -203,6 +203,12 @@ async function fetchDetailDescription(link) {
     const res = await axios.get(fullUrl, { headers: HTTP_HEADERS, timeout: 6000 });
     const $page = cheerio.load(res.data);
     let desc = null;
+    let season = null;
+    let format = null;
+    let genre = null;
+    let year = null;
+    let country = null;
+    let episodeNumber = null;
 
     $page('script[type="application/ld+json"]').each((_, s) => {
       try {
@@ -210,11 +216,19 @@ async function fetchDetailDescription(link) {
         if (json.description && json.description.length > 20) {
           desc = json.description;
         }
+        if (json.seasonNumber) {
+          season = parseInt(json.seasonNumber, 10);
+        }
+        if (json.datePublished) {
+          const matchY = String(json.datePublished).match(/(\d{4})/);
+          if (matchY) year = parseInt(matchY[1], 10);
+        }
         if (json.episode && Array.isArray(json.episode)) {
           const anchor = link.includes('#') ? link.split('#')[1].split('-')[0] : '';
           const ep = json.episode.find(e => anchor && e.url && e.url.includes(anchor));
-          if (ep && ep.description && ep.description.length > 20) {
-            desc = ep.description;
+          if (ep) {
+            if (ep.description && ep.description.length > 20) desc = ep.description;
+            if (ep.episodeNumber) episodeNumber = parseInt(ep.episodeNumber, 10);
           }
         }
       } catch {}
@@ -234,8 +248,32 @@ async function fetchDetailDescription(link) {
       }
     }
 
-    detailCache.set(cleanLink, desc);
-    return desc;
+    const overviewTitle = $page('.overview-title').text().trim();
+    const seasonMatch = overviewTitle.match(/Saison\s*(\d+)/i) || cleanLink.match(/saisons\/(\d+)/i);
+    if (!season && seasonMatch) {
+      season = parseInt(seasonMatch[1], 10);
+    }
+
+    $page('.overview-stickerListItem').each((_, li) => {
+      const text = $page(li).text().trim();
+      if (text.includes('Format :') && !format) {
+        format = text.replace('Format :', '').trim();
+      }
+      if (text.includes('Genre :') && !genre) {
+        genre = text.replace('Genre :', '').trim();
+      }
+      if (text.includes('Sortie :') && !year) {
+        const matchY = text.match(/(\d{4})/);
+        if (matchY) year = parseInt(matchY[1], 10);
+      }
+      if (text.includes('Pays :') && !country) {
+        country = text.replace('Pays :', '').trim();
+      }
+    });
+
+    const result = { desc, season, format, genre, year, country, episodeNumber };
+    detailCache.set(cleanLink, result);
+    return result;
   } catch {
     detailCache.set(cleanLink, null);
     return null;
@@ -329,15 +367,19 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       matchedCredits = refEntry.credits;
     }
 
+    let detailData = null;
     if (item.hours >= 20 && item.hours <= 23 && item.link) {
-      const detailDesc = await fetchDetailDescription(item.link);
-      if (detailDesc && detailDesc.length > 30) {
-        matchedDesc = detailDesc;
+      detailData = await fetchDetailPageData(item.link);
+      if (detailData && detailData.desc && detailData.desc.length > 30) {
+        matchedDesc = detailData.desc;
       }
-    } else if (!matchedDesc && item.link) {
-      const detailDesc = await fetchDetailDescription(item.link);
-      if (detailDesc && detailDesc.length > 20) {
-        matchedDesc = detailDesc;
+    } else if (item.link) {
+      const clean = item.link.split('#')[0];
+      if (!matchedDesc || clean.includes('/saisons/') || clean.includes('/cinema/')) {
+        detailData = await fetchDetailPageData(item.link);
+        if (detailData && detailData.desc && detailData.desc.length > 20) {
+          matchedDesc = detailData.desc;
+        }
       }
     }
 
@@ -347,6 +389,12 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       subTitle: matchedSubtitle,
       desc: matchedDesc,
       category: matchedCategory,
+      format: detailData ? detailData.format : null,
+      genre: detailData ? detailData.genre : null,
+      year: detailData ? detailData.year : null,
+      country: detailData ? detailData.country : null,
+      season: detailData ? detailData.season : null,
+      episode: detailData ? detailData.episodeNumber : null,
       start: item.startTime,
       stop: item.startTime.add(60, 'minute'),
       image: item.imageSrc,
@@ -387,8 +435,24 @@ function buildXml(channels, programs) {
     if (program.desc) {
       xml += `    <desc lang="fr">${escapeXml(program.desc)}</desc>\n`;
     }
-    if (program.category) {
-      xml += `    <category lang="fr">${escapeXml(program.category)}</category>\n`;
+    if (program.year) {
+      xml += `    <date>${escapeXml(String(program.year))}</date>\n`;
+    }
+    if (program.country) {
+      xml += `    <country lang="fr">${escapeXml(program.country)}</country>\n`;
+    }
+    if (program.season != null || program.episode != null) {
+      const s = program.season != null ? (program.season - 1) : '';
+      const e = program.episode != null ? (program.episode - 1) : '';
+      xml += `    <episode-num system="xmltv_ns">${s}.${e}.</episode-num>\n`;
+    }
+    const categories = [];
+    if (program.category && program.category !== 'General') categories.push(program.category);
+    if (program.format && !categories.includes(program.format)) categories.push(program.format);
+    if (program.genre && !categories.includes(program.genre)) categories.push(program.genre);
+    if (categories.length === 0) categories.push('General');
+    for (const cat of categories) {
+      xml += `    <category lang="fr">${escapeXml(cat)}</category>\n`;
     }
     if (program.image) {
       xml += `    <icon src="${escapeXml(program.image)}" />\n`;
@@ -444,6 +508,12 @@ async function main() {
           const targetDate = today.add(dayOffset, 'day');
           const programs = await fetchChannelSchedule(channel, targetDate, refData);
           channelPrograms.push(...programs);
+        }
+        channelPrograms.sort((a, b) => a.start.valueOf() - b.start.valueOf());
+        for (let j = 0; j < channelPrograms.length - 1; j++) {
+          if (channelPrograms[j + 1].start.isAfter(channelPrograms[j].start)) {
+            channelPrograms[j].stop = channelPrograms[j + 1].start;
+          }
         }
         return channelPrograms;
       })

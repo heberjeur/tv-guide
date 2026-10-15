@@ -31,7 +31,9 @@ fun ProgramEntity.toDomain(): Program {
         isUnreleased = isUnreleased,
         hasSubtitles = hasSubtitles,
         isHd = isHd,
-        durationMinutes = durationMinutes
+        durationMinutes = durationMinutes,
+        productionYear = productionYear,
+        country = country
     )
 }
 
@@ -60,6 +62,8 @@ fun Program.toEntity(): ProgramEntity {
         isUnreleased = isUnreleased,
         hasSubtitles = hasSubtitles,
         isHd = isHd,
-        durationMinutes = durationMinutes
+        durationMinutes = durationMinutes,
+        productionYear = productionYear,
+        country = country
     )
 }

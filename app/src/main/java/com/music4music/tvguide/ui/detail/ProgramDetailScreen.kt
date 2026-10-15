@@ -165,7 +165,7 @@ fun ProgramDetailScreen(
 
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "${currentProgram.channelId}  •  $startTime - $stopTime  •  ${currentProgram.durationMinutes} min",
+                        text = "${currentProgram.channelId}  •  $startTime - $stopTime  •  ${currentProgram.formattedDuration}",
                         style = MaterialTheme.typography.labelMedium,
                         color = AccentRed,
                         fontWeight = FontWeight.Bold
@@ -252,25 +252,30 @@ fun ProgramDetailScreen(
                             )
                             InfoRow(
                                 label = stringResource(R.string.label_category),
-                                value = currentProgram.categories.getOrNull(1)
-                                    ?: currentProgram.categories.firstOrNull()
-                                    ?: stringResource(R.string.label_not_specified)
+                                value = if (currentProgram.categories.size > 1) {
+                                    currentProgram.categories.drop(1).joinToString(", ")
+                                } else {
+                                    currentProgram.categories.firstOrNull()
+                                        ?: stringResource(R.string.label_not_specified)
+                                }
                             )
                             InfoRow(
                                 label = stringResource(R.string.label_release_year),
-                                value = if (currentProgram.isUnreleased) {
-                                    stringResource(R.string.label_unreleased)
-                                } else {
-                                    stringResource(R.string.label_not_specified)
-                                }
+                                value = currentProgram.productionYear?.toString()
+                                    ?: if (currentProgram.isUnreleased) {
+                                        stringResource(R.string.label_unreleased)
+                                    } else {
+                                        stringResource(R.string.label_not_specified)
+                                    }
                             )
                             InfoRow(
                                 label = stringResource(R.string.label_country),
-                                value = if (currentProgram.channelId.endsWith(".fr")) {
-                                    "France"
-                                } else {
-                                    stringResource(R.string.label_not_specified)
-                                }
+                                value = currentProgram.country
+                                    ?: if (currentProgram.channelId.endsWith(".fr")) {
+                                        "France"
+                                    } else {
+                                        stringResource(R.string.label_not_specified)
+                                    }
                             )
                         }
                     }
