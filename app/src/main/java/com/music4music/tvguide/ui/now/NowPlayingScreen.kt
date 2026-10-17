@@ -59,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music4music.tvguide.R
@@ -270,8 +271,8 @@ fun NowPlayingScreen(
                         Text(
                             text = stringResource(R.string.period_yesterday),
                             color = if (selectedPeriod == BroadcastPeriod.YESTERDAY) AccentRed else TextSecondary,
-                            fontWeight = if (selectedPeriod == BroadcastPeriod.YESTERDAY) FontWeight.Bold else FontWeight.Normal,
-                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.YESTERDAY) FontWeight.Bold else FontWeight.Medium,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
                             maxLines = 1,
                             softWrap = false,
                             overflow = TextOverflow.Ellipsis
@@ -291,8 +292,8 @@ fun NowPlayingScreen(
                         Text(
                             text = stringResource(R.string.period_now),
                             color = if (selectedPeriod == BroadcastPeriod.NOW) AccentRed else TextSecondary,
-                            fontWeight = if (selectedPeriod == BroadcastPeriod.NOW) FontWeight.Bold else FontWeight.Normal,
-                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.NOW) FontWeight.Bold else FontWeight.Medium,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
                             maxLines = 1,
                             softWrap = false,
                             overflow = TextOverflow.Ellipsis
@@ -312,8 +313,8 @@ fun NowPlayingScreen(
                         Text(
                             text = stringResource(R.string.period_tonight),
                             color = if (selectedPeriod == BroadcastPeriod.TONIGHT) AccentRed else TextSecondary,
-                            fontWeight = if (selectedPeriod == BroadcastPeriod.TONIGHT) FontWeight.Bold else FontWeight.Normal,
-                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.TONIGHT) FontWeight.Bold else FontWeight.Medium,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
                             maxLines = 1,
                             softWrap = false,
                             overflow = TextOverflow.Ellipsis
@@ -333,8 +334,8 @@ fun NowPlayingScreen(
                         Text(
                             text = stringResource(R.string.period_tomorrow),
                             color = if (selectedPeriod == BroadcastPeriod.TOMORROW) AccentRed else TextSecondary,
-                            fontWeight = if (selectedPeriod == BroadcastPeriod.TOMORROW) FontWeight.Bold else FontWeight.Normal,
-                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.TOMORROW) FontWeight.Bold else FontWeight.Medium,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
                             maxLines = 1,
                             softWrap = false,
                             overflow = TextOverflow.Ellipsis

@@ -13,12 +13,15 @@ import com.music4music.tvguide.domain.usecase.GetChannelsUseCase
 import com.music4music.tvguide.domain.usecase.SyncEpgUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -154,6 +157,13 @@ class GuideViewModel @Inject constructor(
         GuideFilter(category, subCategory, date, channelId)
     }
 
+    private val currentTimeFlow: Flow<Long> = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(10_000L)
+        }
+    }
+
     val programs: StateFlow<List<Program>> = guideFilterFlow.flatMapLatest { filter ->
         val zone = ZoneId.of("Europe/Paris")
         val (dayStart, dayEnd) = if (filter.date != null) {
@@ -166,8 +176,12 @@ class GuideViewModel @Inject constructor(
         val keyword = filter.subCategory ?: filter.category?.searchKeyword ?: ""
         epgRepository.getFilteredPrograms(keyword, filter.channelId, dayStart, dayEnd)
     }.combine(
-        combine(filterPrefsFlow, _searchQuery) { prefs, query -> prefs to query }
-    ) { list, (prefs, query) ->
+        currentTimeFlow
+    ) { list, currentTime ->
+        list to currentTime
+    }.combine(
+        combine(filterPrefsFlow, _searchQuery, _selectedDate) { prefs, query, date -> Triple(prefs, query, date) }
+    ) { (list, currentTime), (prefs, query, selectedDate) ->
         val filtered = list.filter { program ->
             val notHidden = !prefs.hiddenChannels.any {
                 ChannelCatalog.normalizeId(it) == ChannelCatalog.normalizeId(program.channelId)
@@ -177,7 +191,12 @@ class GuideViewModel @Inject constructor(
                     program.title.contains(query, ignoreCase = true) ||
                     program.description.contains(query, ignoreCase = true) ||
                     ChannelCatalog.getDisplayName(program.channelId).contains(query, ignoreCase = true)
-            notHidden && notRerun && matchesQuery
+            val isCurrentOrUpcoming = if (selectedDate == null) {
+                program.stopTimestamp > currentTime - 5 * 60 * 1000L
+            } else {
+                true
+            }
+            notHidden && notRerun && matchesQuery && isCurrentOrUpcoming
         }
         when (prefs.channelSortOrder) {
             "popular" -> filtered.sortedWith(

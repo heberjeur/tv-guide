@@ -13,6 +13,7 @@ import com.music4music.tvguide.domain.usecase.SyncEpgUseCase
 import com.music4music.tvguide.data.local.ChannelCatalog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -112,8 +114,70 @@ class NowPlayingViewModel @Inject constructor(
         FilterPrefs(hidden, favs, sort, reruns)
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val programs: StateFlow<List<Program>> = combine(
+    private val currentTimeFlow: Flow<Long> = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(5000L)
+        }
+    }
+
+    private val _manualRefreshTrigger = MutableStateFlow(0L)
+
+    private val rawProgramsFlow = combine(
+        _selectedPeriod,
+        _selectedEveningPart,
+        _manualRefreshTrigger
+    ) { period, part, _ ->
+        period to part
+    }.flatMapLatest { (period, part) ->
+        val zone = ZoneId.of("Europe/Paris")
+        val today = LocalDate.now(zone)
+        val now = System.currentTimeMillis()
+
+        val (startTime, endTime) = when (period) {
+            BroadcastPeriod.NOW -> {
+                (now - 4 * 3600 * 1000L) to (now + 8 * 3600 * 1000L)
+            }
+            BroadcastPeriod.TONIGHT -> {
+                if (part == EveningPart.PART_1) {
+                    val s = today.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
+                    val e = today.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    s to e
+                } else {
+                    val s = today.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
+                    val e = today.plusDays(1).atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
+                    s to e
+                }
+            }
+            BroadcastPeriod.YESTERDAY -> {
+                val yesterday = today.minusDays(1)
+                if (part == EveningPart.PART_1) {
+                    val s = yesterday.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
+                    val e = yesterday.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    s to e
+                } else {
+                    val s = yesterday.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
+                    val e = today.atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
+                    s to e
+                }
+            }
+            BroadcastPeriod.TOMORROW -> {
+                val tomorrow = today.plusDays(1)
+                if (part == EveningPart.PART_1) {
+                    val s = tomorrow.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
+                    val e = tomorrow.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    s to e
+                } else {
+                    val s = tomorrow.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
+                    val e = tomorrow.plusDays(1).atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
+                    s to e
+                }
+            }
+        }
+        epgRepository.getProgramsByTimeRange(startTime, endTime)
+    }
+
+    private val paramsFlow = combine(
         _selectedPeriod,
         _selectedEveningPart,
         _searchQuery,
@@ -121,113 +185,98 @@ class NowPlayingViewModel @Inject constructor(
         filterPrefsFlow
     ) { period, part, query, tag, prefs ->
         Params(period, part, query, tag, prefs)
-    }.flatMapLatest { (period, part, query, tag, prefs) ->
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val programs: StateFlow<List<Program>> = combine(
+        rawProgramsFlow,
+        currentTimeFlow,
+        paramsFlow
+    ) { rawList, currentTime, (period, part, query, tag, prefs) ->
         val zone = ZoneId.of("Europe/Paris")
         val today = LocalDate.now(zone)
-        val now = System.currentTimeMillis()
 
-        val (targetTime, startTime, endTime) = when (period) {
-            BroadcastPeriod.NOW -> {
-                Triple(
-                    now,
-                    now - 4 * 3600 * 1000L,
-                    now + 4 * 3600 * 1000L
-                )
-            }
+        val targetTime = when (period) {
+            BroadcastPeriod.NOW -> currentTime
             BroadcastPeriod.TONIGHT -> {
                 if (part == EveningPart.PART_1) {
-                    val target = today.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
-                    val s = today.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = today.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
-                    Triple(target, s, e)
+                    today.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
                 } else {
-                    val target = today.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
-                    val s = today.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
-                    val e = today.plusDays(1).atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
-                    Triple(target, s, e)
+                    today.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
                 }
             }
             BroadcastPeriod.YESTERDAY -> {
                 val yesterday = today.minusDays(1)
                 if (part == EveningPart.PART_1) {
-                    val target = yesterday.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
-                    val s = yesterday.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = yesterday.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
-                    Triple(target, s, e)
+                    yesterday.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
                 } else {
-                    val target = yesterday.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
-                    val s = yesterday.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
-                    val e = today.atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
-                    Triple(target, s, e)
+                    yesterday.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
                 }
             }
             BroadcastPeriod.TOMORROW -> {
                 val tomorrow = today.plusDays(1)
                 if (part == EveningPart.PART_1) {
-                    val target = tomorrow.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
-                    val s = tomorrow.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = tomorrow.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
-                    Triple(target, s, e)
+                    tomorrow.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
                 } else {
-                    val target = tomorrow.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
-                    val s = tomorrow.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
-                    val e = tomorrow.plusDays(1).atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
-                    Triple(target, s, e)
+                    tomorrow.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
                 }
             }
         }
 
-        epgRepository.getProgramsByTimeRange(startTime, endTime).map { list ->
-            val progsByChannel = list.groupBy { it.channelId }
-            val selectedPrograms = ChannelCatalog.tntChannelIds.mapNotNull { channelId ->
-                val channelProgs = progsByChannel[channelId] ?: progsByChannel.entries.firstOrNull {
-                    ChannelCatalog.normalizeId(it.key) == ChannelCatalog.normalizeId(channelId)
-                }?.value
-                if (channelProgs.isNullOrEmpty()) return@mapNotNull null
+        val progsByChannel = rawList.groupBy { it.channelId }
+        val selectedPrograms = ChannelCatalog.tntChannelIds.mapNotNull { channelId ->
+            val channelProgs = progsByChannel[channelId] ?: progsByChannel.entries.firstOrNull {
+                ChannelCatalog.normalizeId(it.key) == ChannelCatalog.normalizeId(channelId)
+            }?.value
+            if (channelProgs.isNullOrEmpty()) return@mapNotNull null
 
-                val overlapping = channelProgs.filter { targetTime in it.startTimestamp until it.stopTimestamp }
-                if (overlapping.isNotEmpty()) {
-                    overlapping.maxByOrNull { it.stopTimestamp - it.startTimestamp }
+            val overlapping = channelProgs.filter { targetTime in it.startTimestamp until it.stopTimestamp }
+            if (overlapping.isNotEmpty()) {
+                val meaningful = if (overlapping.size > 1 && overlapping.any { it.stopTimestamp - it.startTimestamp >= 5 * 60 * 1000L }) {
+                    overlapping.filter { it.stopTimestamp - it.startTimestamp >= 5 * 60 * 1000L }
                 } else {
-                    channelProgs.minByOrNull { kotlin.math.abs(it.startTimestamp - targetTime) }
+                    overlapping
                 }
+                meaningful.maxByOrNull { it.startTimestamp }
+            } else {
+                channelProgs.minByOrNull { kotlin.math.abs(it.startTimestamp - targetTime) }
             }
+        }
 
-            val filtered = selectedPrograms.filter { program ->
-                val notHidden = !prefs.hiddenChannels.any {
-                    ChannelCatalog.normalizeId(it) == ChannelCatalog.normalizeId(program.channelId)
-                }
-                val notRerun = if (prefs.hideReruns) program.isUnreleased else true
-                val matchesQuery = query.isBlank() ||
-                        program.title.contains(query, ignoreCase = true) ||
-                        program.categories.any { cat -> cat.contains(query, ignoreCase = true) } ||
-                        ChannelCatalog.getDisplayName(program.channelId).contains(query, ignoreCase = true)
-                val matchesTag = tag.isNullOrBlank() || program.categories.any { cat ->
-                    cat.contains(tag, ignoreCase = true) || tag.contains(cat, ignoreCase = true)
-                }
-                notHidden && notRerun && matchesQuery && matchesTag
+        val filtered = selectedPrograms.filter { program ->
+            val notHidden = !prefs.hiddenChannels.any {
+                ChannelCatalog.normalizeId(it) == ChannelCatalog.normalizeId(program.channelId)
             }
+            val notRerun = if (prefs.hideReruns) program.isUnreleased else true
+            val matchesQuery = query.isBlank() ||
+                    program.title.contains(query, ignoreCase = true) ||
+                    program.categories.any { cat -> cat.contains(query, ignoreCase = true) } ||
+                    ChannelCatalog.getDisplayName(program.channelId).contains(query, ignoreCase = true)
+            val matchesTag = tag.isNullOrBlank() || program.categories.any { cat ->
+                cat.contains(tag, ignoreCase = true) || tag.contains(cat, ignoreCase = true)
+            }
+            notHidden && notRerun && matchesQuery && matchesTag
+        }
 
-            when (prefs.sortOrder) {
-                "popular" -> filtered.sortedWith(
-                    compareBy<Program> { ChannelCatalog.getPopularityRank(it.channelId) }
-                        .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
-                        .thenBy { it.startTimestamp }
-                )
-                "favorites", "favorites_first" -> filtered.sortedWith(
-                    compareByDescending<Program> { ChannelCatalog.isFavorite(it.channelId, prefs.favoriteChannels) }
-                        .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
-                        .thenBy { it.startTimestamp }
-                )
-                "name" -> filtered.sortedWith(
-                    compareBy<Program> { ChannelCatalog.getDisplayName(it.channelId) }
-                        .thenBy { it.startTimestamp }
-                )
-                else -> filtered.sortedWith(
-                    compareBy<Program> { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
-                        .thenBy { it.startTimestamp }
-                )
-            }
+        when (prefs.sortOrder) {
+            "popular" -> filtered.sortedWith(
+                compareBy<Program> { ChannelCatalog.getPopularityRank(it.channelId) }
+                    .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                    .thenBy { it.startTimestamp }
+            )
+            "favorites", "favorites_first" -> filtered.sortedWith(
+                compareByDescending<Program> { ChannelCatalog.isFavorite(it.channelId, prefs.favoriteChannels) }
+                    .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                    .thenBy { it.startTimestamp }
+            )
+            "name" -> filtered.sortedWith(
+                compareBy<Program> { ChannelCatalog.getDisplayName(it.channelId) }
+                    .thenBy { it.startTimestamp }
+            )
+            else -> filtered.sortedWith(
+                compareBy<Program> { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                    .thenBy { it.startTimestamp }
+            )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -250,7 +299,11 @@ class NowPlayingViewModel @Inject constructor(
     }
 
     fun selectPeriod(period: BroadcastPeriod) {
-        _selectedPeriod.value = period
+        if (_selectedPeriod.value == period) {
+            _manualRefreshTrigger.value = System.currentTimeMillis()
+        } else {
+            _selectedPeriod.value = period
+        }
     }
 
     fun selectEveningPart(part: EveningPart) {
@@ -262,6 +315,7 @@ class NowPlayingViewModel @Inject constructor(
     }
 
     fun refresh(force: Boolean = true) {
+        _manualRefreshTrigger.value = System.currentTimeMillis()
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isRefreshing = true, errorMessage = null)
             val result = syncEpgUseCase(ChannelPackage.COMMUNITY_ENRICHED, forceRefresh = force)
