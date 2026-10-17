@@ -9,6 +9,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -108,6 +110,8 @@ fun GuideScreen(
     viewModel: GuideViewModel = hiltViewModel()
 ) {
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
+    val selectedSubCategory by viewModel.selectedSubCategory.collectAsStateWithLifecycle()
+    val availableSubCategories by viewModel.availableSubCategories.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val selectedChannelId by viewModel.selectedChannelId.collectAsStateWithLifecycle()
     val channels by viewModel.channels.collectAsStateWithLifecycle()
@@ -231,14 +235,15 @@ fun GuideScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val categoryLabel = when {
+                    selectedSubCategory != null -> "${selectedCategory?.let { stringResource(it.nameRes) } ?: ""}: $selectedSubCategory"
+                    selectedCategory != null -> stringResource(selectedCategory!!.nameRes)
+                    else -> stringResource(R.string.filter_categories_title)
+                }
                 FilterPill(
                     isSelected = selectedCategory != null,
                     icon = getCategoryIcon(selectedCategory),
-                    label = if (selectedCategory == null) {
-                        stringResource(R.string.filter_categories_title)
-                    } else {
-                        stringResource(selectedCategory!!.nameRes)
-                    },
+                    label = categoryLabel,
                     onClick = { showCategorySheet = true },
                     onClear = { viewModel.selectCategory(null) }
                 )
@@ -357,7 +362,10 @@ fun GuideScreen(
     if (showCategorySheet) {
         CategoryFilterBottomSheet(
             selectedCategory = selectedCategory,
+            selectedSubCategory = selectedSubCategory,
+            availableSubCategories = availableSubCategories,
             onCategorySelect = viewModel::selectCategory,
+            onSubCategorySelect = viewModel::selectSubCategory,
             onDismiss = { showCategorySheet = false }
         )
     }
@@ -464,11 +472,14 @@ private fun FilterPill(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun CategoryFilterBottomSheet(
     selectedCategory: TvCategory?,
+    selectedSubCategory: String?,
+    availableSubCategories: List<String>,
     onCategorySelect: (TvCategory?) -> Unit,
+    onSubCategorySelect: (String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -503,6 +514,7 @@ private fun CategoryFilterBottomSheet(
                     TextButton(
                         onClick = {
                             onCategorySelect(null)
+                            onSubCategorySelect(null)
                             scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
                         }
                     ) {
@@ -527,6 +539,7 @@ private fun CategoryFilterBottomSheet(
                         isSelected = selectedCategory == null,
                         onClick = {
                             onCategorySelect(null)
+                            onSubCategorySelect(null)
                             scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
                         }
                     )
@@ -536,10 +549,77 @@ private fun CategoryFilterBottomSheet(
                         category = category,
                         isSelected = selectedCategory == category,
                         onClick = {
-                            onCategorySelect(category)
-                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                            if (selectedCategory == category) {
+                                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                            } else {
+                                onCategorySelect(category)
+                                onSubCategorySelect(null)
+                            }
                         }
                     )
+                }
+            }
+
+            if (selectedCategory != null && availableSubCategories.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = stringResource(R.string.filter_subcategories_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = AccentRed,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
+
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val isAllSubSelected = selectedSubCategory == null
+                    Surface(
+                        onClick = {
+                            onSubCategorySelect(null)
+                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isAllSubSelected) AccentRed else MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(
+                            1.dp,
+                            if (isAllSubSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.filter_all_channels_short),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isAllSubSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isAllSubSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    availableSubCategories.forEach { subCat ->
+                        val isSubSelected = selectedSubCategory == subCat
+                        Surface(
+                            onClick = {
+                                onSubCategorySelect(subCat)
+                                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSubSelected) AccentRed else MaterialTheme.colorScheme.surfaceVariant,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSubSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                            )
+                        ) {
+                            Text(
+                                text = subCat,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSubSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSubSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

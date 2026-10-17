@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
@@ -34,6 +35,23 @@ class GuideViewModel @Inject constructor(
 
     private val _selectedCategory = MutableStateFlow<TvCategory?>(null)
     val selectedCategory: StateFlow<TvCategory?> = _selectedCategory.asStateFlow()
+
+    private val _selectedSubCategory = MutableStateFlow<String?>(null)
+    val selectedSubCategory: StateFlow<String?> = _selectedSubCategory.asStateFlow()
+
+    val availableSubCategories: StateFlow<List<String>> = _selectedCategory.flatMapLatest { cat ->
+        if (cat == null) flowOf(emptyList())
+        else epgRepository.getFilteredPrograms(cat.searchKeyword, null, 0L, 0L).map { list ->
+            list.flatMap { it.categories }
+                .filter { it.isNotBlank() && !it.equals(cat.searchKeyword, ignoreCase = true) && !it.equals("General", ignoreCase = true) }
+                .groupingBy { it }
+                .eachCount()
+                .toList()
+                .sortedByDescending { it.second }
+                .map { it.first }
+                .take(15)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)
     val selectedDate: StateFlow<LocalDate?> = _selectedDate.asStateFlow()
@@ -99,16 +117,18 @@ class GuideViewModel @Inject constructor(
 
     private data class GuideFilter(
         val category: TvCategory?,
+        val subCategory: String?,
         val date: LocalDate?,
         val channelId: String?
     )
 
     private val guideFilterFlow = combine(
         _selectedCategory,
+        _selectedSubCategory,
         _selectedDate,
         _selectedChannelId
-    ) { category, date, channelId ->
-        GuideFilter(category, date, channelId)
+    ) { category, subCategory, date, channelId ->
+        GuideFilter(category, subCategory, date, channelId)
     }
 
     val programs: StateFlow<List<Program>> = guideFilterFlow.flatMapLatest { filter ->
@@ -120,7 +140,7 @@ class GuideViewModel @Inject constructor(
         } else {
             0L to 0L
         }
-        val keyword = filter.category?.searchKeyword ?: ""
+        val keyword = filter.subCategory ?: filter.category?.searchKeyword ?: ""
         epgRepository.getFilteredPrograms(keyword, filter.channelId, dayStart, dayEnd)
     }.combine(
         combine(filterPrefsFlow, _searchQuery) { prefs, query -> prefs to query }
@@ -160,6 +180,11 @@ class GuideViewModel @Inject constructor(
 
     fun selectCategory(category: TvCategory?) {
         _selectedCategory.value = category
+        _selectedSubCategory.value = null
+    }
+
+    fun selectSubCategory(subCategory: String?) {
+        _selectedSubCategory.value = subCategory
     }
 
     fun selectDate(date: LocalDate?) {

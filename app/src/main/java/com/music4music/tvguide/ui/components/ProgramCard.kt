@@ -3,6 +3,8 @@ package com.music4music.tvguide.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,6 +49,7 @@ import java.time.format.DateTimeFormatter
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProgramCard(
     program: Program,
@@ -227,8 +230,11 @@ fun ProgramCard(
 
             if (program.categories.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    program.categories.take(2).forEach { category ->
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    program.categories.forEach { category ->
                         SuggestionChip(
                             onClick = {},
                             label = {

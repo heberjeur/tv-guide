@@ -542,6 +542,38 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
   return programs;
 }
 
+function resolveParentCategories(categoriesList, title = '', desc = '') {
+  const combined = [title, ...categoriesList, desc.substring(0, 100)].join(' ').toLowerCase();
+  const parents = [];
+
+  if (/s[ée]rie|feuilleton|soap|sitcom|telenovela|t[ée]l[ée]novela|mini[- ]s[ée]rie|fiction|policier|drame|thriller|science[- ]fiction|fantastique|com[ée]die dramatique|com[ée]die polici[èe]re/i.test(combined)) {
+    parents.push('Série');
+  }
+  if (/t[ée]l[ée]film|film|court[- ]m[ée]trage|long[- ]m[ée]trage|cin[ée]ma|biopic|western|drame psychologique|com[ée]die romantique/i.test(combined)) {
+    parents.push('Film');
+  }
+  if (/divertissement|magazine|jeu|talk[- ]show|t[ée]l[ée]r[ée]alit[ée]|vari[ée]t[ée]|humour|spectacle|gala|loto|culinaire|cuisine|gastronomie|t[ée]l[ée][- ]achat|mode|d[ée]co|relooking|sketch|stand[- ]up|cirque|magie|one[- ]man[- ]show|people|c[ée]r[ée]monie/i.test(combined)) {
+    parents.push('Divertissement');
+  }
+  if (/sport|football|foot|rugby|tennis|cyclisme|tour de france|basket|handball|volley|athl[ée]tisme|natation|boxe|mma|formule 1|f1|moto|automobile|courses? hippiques?|hippisme|golf|ski|omnisport/i.test(combined)) {
+    parents.push('Sport');
+  }
+  if (/info|journal|\bjt\b|m[ée]t[ée]o|d[ée]bat|[ée]dition sp[ée]ciale|actualit[ée]|politique|[ée]conomie|interview|culture infos|soci[ée]t[ée]|en direct/i.test(combined)) {
+    parents.push('Info');
+  }
+  if (/documentaire|docu|d[ée]couverte|reportage|enqu[êe]te|animalier|animaux|histoire|civilisation|nature|sciences?|g[ée]opolitique|voyage|faits divers/i.test(combined)) {
+    parents.push('Documentaire');
+  }
+  if (/jeunesse|animation|dessin anim[ée]|manga|anime|enfant|ado|junior|cartoon|pour enfants/i.test(combined)) {
+    parents.push('Jeunesse');
+  }
+  if (/musique|concert|clip|op[ée]ra|ballet|danse|chanson|vari[ée]t[ée]s? musicales?|pop|rock|jazz|live musical|festival/i.test(combined)) {
+    parents.push('Musique');
+  }
+
+  return parents;
+}
+
 function buildXml(channels, programs) {
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<!DOCTYPE tv SYSTEM "xmltv.dtd">\n';
@@ -585,6 +617,14 @@ function buildXml(channels, programs) {
     if (program.category && program.category !== 'General') categories.push(program.category);
     if (program.format && !categories.includes(program.format)) categories.push(program.format);
     if (program.genre && !categories.includes(program.genre)) categories.push(program.genre);
+
+    const parentCategories = resolveParentCategories(categories, program.title || '', program.desc || '');
+    for (const parent of parentCategories) {
+      if (!categories.includes(parent)) {
+        categories.unshift(parent);
+      }
+    }
+
     if (categories.length === 0) categories.push('General');
     for (const cat of categories) {
       xml += `    <category lang="fr">${escapeXml(cat)}</category>\n`;
