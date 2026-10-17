@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
+  push:
+    paths:
+      - 'extractor/**'
+      - '.github/workflows/epg_generator.yml'
+    branches:
+      - master
 
 permissions:
   contents: write
