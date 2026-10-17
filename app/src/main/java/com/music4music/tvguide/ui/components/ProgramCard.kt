@@ -1,5 +1,6 @@
 package com.music4music.tvguide.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -7,35 +8,38 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.music4music.tvguide.R
+import com.music4music.tvguide.data.local.ChannelCatalog
 import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.ui.theme.AccentRed
 import com.music4music.tvguide.ui.theme.DarkSurface
@@ -43,6 +47,7 @@ import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
 import com.music4music.tvguide.ui.theme.IndicatorGreen
 import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -61,7 +66,9 @@ fun ProgramCard(
     val zone = ZoneId.systemDefault()
     val startTime = Instant.ofEpochMilli(program.startTimestamp).atZone(zone).format(timeFormatter)
     val stopTime = Instant.ofEpochMilli(program.stopTimestamp).atZone(zone).format(timeFormatter)
-    val channelLabel = channelName ?: program.channelId.removeSuffix(".fr")
+    val channelLabel = channelName ?: ChannelCatalog.getDisplayName(program.channelId)
+    val channelLogoUrl = ChannelCatalog.getLogoUrl(program.channelId)
+    val channelNumber = ChannelCatalog.getChannelNumber(program.channelId)
 
     val episodeLabel = when {
         program.seasonNumber != null && program.episodeNumber != null -> stringResource(
@@ -94,8 +101,9 @@ fun ProgramCard(
     val density = com.music4music.tvguide.ui.theme.LocalDisplayDensity.current
     val highlightAccessibility = com.music4music.tvguide.ui.theme.LocalHighlightAccessibility.current
     val isCompact = density == "compact"
-    val thumbnailSize = if (isCompact) 56.dp else 72.dp
-    val cardPadding = if (isCompact) 8.dp else 12.dp
+    val timeColWidth = if (isCompact) 56.dp else 64.dp
+    val imageSize = if (isCompact) 60.dp else 72.dp
+    val cardPadding = if (isCompact) 10.dp else 12.dp
 
     Card(
         modifier = modifier
@@ -111,19 +119,61 @@ fun ProgramCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                if (!program.iconUrl.isNullOrBlank() && !program.iconUrl.startsWith("data:")) {
-                    AsyncImage(
-                        model = program.iconUrl,
-                        contentDescription = program.title,
-                        modifier = Modifier
-                            .size(thumbnailSize)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
+                Column(
+                    modifier = Modifier.width(timeColWidth),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (!channelLogoUrl.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White.copy(alpha = 0.08f),
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            AsyncImage(
+                                model = channelLogoUrl,
+                                contentDescription = channelLabel,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+
+                    Text(
+                        text = startTime,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isNowPlaying) IndicatorGreen else TextPrimary,
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.width(if (isCompact) 8.dp else 12.dp))
+                    Text(
+                        text = stopTime,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                    if (channelNumber > 0) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = DarkSurfaceVariant
+                        ) {
+                            Text(
+                                text = "$channelNumber",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = TextSecondary,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
                 }
+
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
@@ -131,25 +181,38 @@ fun ProgramCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = channelLabel,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AccentRed,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "  •  $startTime - $stopTime",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (isNowPlaying) IndicatorGreen else TextSecondary,
-                                fontWeight = if (isNowPlaying) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
+                        Text(
+                            text = channelLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentRed
+                        )
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            if (isNowPlaying) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = IndicatorGreen.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.status_live),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = IndicatorGreen,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                            if (program.durationMinutes > 0) {
+                                Text(
+                                    text = program.formattedDuration,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary
+                                )
+                            }
                             if (highlightAccessibility) {
                                 if (program.isHd) {
                                     Text(
@@ -176,13 +239,6 @@ fun ProgramCard(
                                     )
                                 }
                             }
-                            if (program.durationMinutes > 0) {
-                                Text(
-                                    text = program.formattedDuration,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary
-                                )
-                            }
                         }
                     }
 
@@ -193,7 +249,7 @@ fun ProgramCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
 
@@ -201,23 +257,61 @@ fun ProgramCard(
                         val subText = buildString {
                             if (episodeLabel != null) append(episodeLabel)
                             if (!program.subTitle.isNullOrEmpty()) {
-                                if (isNotEmpty()) append(" - ")
+                                if (isNotEmpty()) append(" • ")
                                 append(program.subTitle)
                             }
                         }
                         Text(
                             text = subText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = AccentRed.copy(alpha = 0.9f),
+                            color = TextSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
+
+                    if (program.categories.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            program.categories.forEach { category ->
+                                SuggestionChip(
+                                    onClick = { onCategoryClick?.invoke(category) },
+                                    label = {
+                                        Text(
+                                            text = category,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary
+                                        )
+                                    },
+                                    colors = SuggestionChipDefaults.suggestionChipColors(
+                                        containerColor = DarkSurfaceVariant
+                                    ),
+                                    border = null,
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (!program.iconUrl.isNullOrBlank() && !program.iconUrl.startsWith("data:")) {
+                    Spacer(modifier = Modifier.width(10.dp))
+                    AsyncImage(
+                        model = program.iconUrl,
+                        contentDescription = program.title,
+                        modifier = Modifier
+                            .size(imageSize)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
 
             if (isNowPlaying) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 LinearProgressIndicator(
                     progress = { animatedProgress },
                     modifier = Modifier
@@ -227,32 +321,6 @@ fun ProgramCard(
                     color = AccentRed,
                     trackColor = DarkSurfaceVariant
                 )
-            }
-
-            if (program.categories.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    program.categories.forEach { category ->
-                        SuggestionChip(
-                            onClick = { onCategoryClick?.invoke(category) },
-                            label = {
-                                Text(
-                                    text = category,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary
-                                )
-                            },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = DarkSurfaceVariant
-                            ),
-                            border = null,
-                            shape = RoundedCornerShape(6.dp)
-                        )
-                    }
-                }
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.music4music.tvguide.ui.now
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +41,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -86,6 +88,7 @@ fun NowPlayingScreen(
     val selectedEveningPart by viewModel.selectedEveningPart.collectAsStateWithLifecycle()
     val syncProgress by viewModel.syncProgress.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val selectedTag by viewModel.selectedTag.collectAsStateWithLifecycle()
     var isSearchActive by remember { mutableStateOf(false) }
 
     val syncMessage = when (syncProgress.state) {
@@ -336,6 +339,45 @@ fun NowPlayingScreen(
 
 
 
+            if (selectedTag != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = AccentRed.copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, AccentRed)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(start = 12.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = selectedTag!!,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = AccentRed,
+                                fontWeight = FontWeight.Bold
+                            )
+                            IconButton(
+                                onClick = { viewModel.clearTagFilter() },
+                                modifier = Modifier.size(20.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = null,
+                                    tint = AccentRed,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             if (programs.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -392,7 +434,8 @@ fun NowPlayingScreen(
                         ProgramCard(
                             program = program,
                             onClick = { onProgramClick(program.id) },
-                            channelName = ChannelCatalog.getDisplayName(program.channelId)
+                            channelName = ChannelCatalog.getDisplayName(program.channelId),
+                            onCategoryClick = { tag -> viewModel.filterByTag(tag) }
                         )
                     }
                 }

@@ -200,4 +200,5 @@
     <string name="filter_dates_title">Dates</string>
     <string name="filter_all_channels_short">Toutes</string>
     <string name="action_reset_filter">Réinitialiser</string>
+    <string name="status_live">DIRECT</string>
 </resources>

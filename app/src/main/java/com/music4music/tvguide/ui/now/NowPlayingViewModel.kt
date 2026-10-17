@@ -50,6 +50,7 @@ private data class Params(
     val period: BroadcastPeriod,
     val part: EveningPart,
     val query: String,
+    val selectedTag: String?,
     val prefs: FilterPrefs
 )
 
@@ -85,6 +86,22 @@ class NowPlayingViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _selectedTag = MutableStateFlow<String?>(null)
+    val selectedTag: StateFlow<String?> = _selectedTag.asStateFlow()
+
+    fun filterByTag(tag: String) {
+        val trimmed = tag.trim()
+        if (_selectedTag.value.equals(trimmed, ignoreCase = true)) {
+            _selectedTag.value = null
+        } else {
+            _selectedTag.value = trimmed
+        }
+    }
+
+    fun clearTagFilter() {
+        _selectedTag.value = null
+    }
+
     private val filterPrefsFlow = combine(
         userPreferences.hiddenChannels,
         userPreferences.favoriteChannels,
@@ -99,10 +116,11 @@ class NowPlayingViewModel @Inject constructor(
         _selectedPeriod,
         _selectedEveningPart,
         _searchQuery,
+        _selectedTag,
         filterPrefsFlow
-    ) { period, part, query, prefs ->
-        Params(period, part, query, prefs)
-    }.flatMapLatest { (period, part, query, prefs) ->
+    ) { period, part, query, tag, prefs ->
+        Params(period, part, query, tag, prefs)
+    }.flatMapLatest { (period, part, query, tag, prefs) ->
         val zone = ZoneId.of("Europe/Paris")
         val today = LocalDate.now(zone)
         val now = System.currentTimeMillis()
@@ -169,7 +187,10 @@ class NowPlayingViewModel @Inject constructor(
                         program.title.contains(query, ignoreCase = true) ||
                         program.categories.any { cat -> cat.contains(query, ignoreCase = true) } ||
                         ChannelCatalog.getDisplayName(program.channelId).contains(query, ignoreCase = true)
-                notHidden && notRerun && matchesQuery
+                val matchesTag = tag.isNullOrBlank() || program.categories.any { cat ->
+                    cat.contains(tag, ignoreCase = true) || tag.contains(cat, ignoreCase = true)
+                }
+                notHidden && notRerun && matchesQuery && matchesTag
             }
 
             when (prefs.sortOrder) {
