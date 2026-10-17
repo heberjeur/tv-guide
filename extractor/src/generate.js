@@ -571,6 +571,10 @@ function resolveParentCategories(categoriesList, title = '', desc = '') {
     parents.push('Musique');
   }
 
+  if (parents.length === 0) {
+    parents.push('Autre');
+  }
+
   return parents;
 }
 

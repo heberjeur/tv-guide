@@ -26,6 +26,7 @@
     <string name="category_documentaries">Documentaires</string>
     <string name="category_kids">Jeunesse</string>
     <string name="category_music">Musique</string>
+    <string name="category_other">Autre</string>
     <string name="category_empty">Aucune émission trouvée pour cette catégorie.</string>
 
     <string name="sync_state_downloading">Téléchargement du guide TV...</string>

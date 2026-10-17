@@ -26,6 +26,7 @@
     <string name="category_documentaries">Documentaries</string>
     <string name="category_kids">Kids</string>
     <string name="category_music">Music</string>
+    <string name="category_other">Other</string>
     <string name="category_empty">No programs found for this category.</string>
 
     <string name="sync_state_downloading">Downloading TV guide...</string>

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Close
@@ -1089,5 +1090,6 @@ private fun getCategoryIcon(category: TvCategory?): ImageVector {
         TvCategory.DOCUMENTARY -> Icons.Default.Public
         TvCategory.KIDS -> Icons.Default.ChildCare
         TvCategory.MUSIC -> Icons.Default.MusicNote
+        TvCategory.OTHER -> Icons.Default.Category
     }
 }

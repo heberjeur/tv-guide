@@ -15,5 +15,6 @@ enum class TvCategory(
     NEWS("news", R.string.category_news, "Info"),
     DOCUMENTARY("documentary", R.string.category_documentaries, "Documentaire"),
     KIDS("kids", R.string.category_kids, "Jeunesse"),
-    MUSIC("music", R.string.category_music, "Musique")
+    MUSIC("music", R.string.category_music, "Musique"),
+    OTHER("other", R.string.category_other, "Autre")
 }
