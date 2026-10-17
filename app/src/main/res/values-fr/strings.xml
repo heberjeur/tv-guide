@@ -12,10 +12,13 @@
     <string name="period_now">En ce moment</string>
     <string name="period_tonight">Ce soir</string>
     <string name="period_yesterday">Hier</string>
+    <string name="period_tomorrow">Demain</string>
     <string name="period_tonight_part_1">1ère partie</string>
     <string name="period_tonight_part_2">2ème partie</string>
     <string name="period_yesterday_part_1">1ère partie</string>
     <string name="period_yesterday_part_2">2ème partie</string>
+    <string name="period_tomorrow_part_1">1ère partie</string>
+    <string name="period_tomorrow_part_2">2ème partie</string>
 
 
     <string name="category_movies">Films</string>

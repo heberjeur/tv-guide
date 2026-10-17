@@ -10,6 +10,7 @@ import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.domain.model.TvCategory
 import com.music4music.tvguide.domain.repository.EpgRepository
 import com.music4music.tvguide.domain.usecase.GetChannelsUseCase
+import com.music4music.tvguide.domain.usecase.SyncEpgUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -30,8 +32,20 @@ import javax.inject.Inject
 class GuideViewModel @Inject constructor(
     private val epgRepository: EpgRepository,
     private val userPreferences: UserPreferences,
+    private val syncEpgUseCase: SyncEpgUseCase,
     getChannelsUseCase: GetChannelsUseCase
 ) : ViewModel() {
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    fun refresh(force: Boolean = true) {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            syncEpgUseCase(ChannelPackage.COMMUNITY_ENRICHED, forceRefresh = force)
+            _isRefreshing.value = false
+        }
+    }
 
     private val _selectedCategory = MutableStateFlow<TvCategory?>(null)
     val selectedCategory: StateFlow<TvCategory?> = _selectedCategory.asStateFlow()

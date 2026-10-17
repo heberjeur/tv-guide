@@ -29,9 +29,10 @@ import java.time.ZoneId
 import javax.inject.Inject
 
 enum class BroadcastPeriod {
+    YESTERDAY,
     NOW,
     TONIGHT,
-    YESTERDAY
+    TOMORROW
 }
 
 enum class EveningPart {
@@ -157,6 +158,20 @@ class NowPlayingViewModel @Inject constructor(
                     val target = yesterday.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
                     val s = yesterday.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
                     val e = today.atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
+                    Triple(target, s, e)
+                }
+            }
+            BroadcastPeriod.TOMORROW -> {
+                val tomorrow = today.plusDays(1)
+                if (part == EveningPart.PART_1) {
+                    val target = tomorrow.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
+                    val s = tomorrow.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
+                    val e = tomorrow.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    Triple(target, s, e)
+                } else {
+                    val target = tomorrow.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
+                    val s = tomorrow.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
+                    val e = tomorrow.plusDays(1).atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
                     Triple(target, s, e)
                 }
             }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,7 +26,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AlarmOn
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -91,6 +95,7 @@ fun ProgramDetailScreen(
 
     var selectedLeadTime by remember(defaultLeadTime) { mutableIntStateOf(defaultLeadTime) }
     var showLeadTimeOptions by remember { mutableStateOf(false) }
+    var isImageEnlarged by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -143,6 +148,7 @@ fun ProgramDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(240.dp)
+                            .clickable { isImageEnlarged = true }
                     ) {
                         AsyncImage(
                             model = currentProgram.iconUrl,
@@ -643,6 +649,42 @@ fun ProgramDetailScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+
+    if (isImageEnlarged && program != null && !program!!.iconUrl.isNullOrBlank()) {
+        Dialog(
+            onDismissRequest = { isImageEnlarged = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.95f))
+                    .clickable { isImageEnlarged = false },
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = program!!.iconUrl,
+                    contentDescription = program!!.title,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+                IconButton(
+                    onClick = { isImageEnlarged = false },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
                 }
             }
         }

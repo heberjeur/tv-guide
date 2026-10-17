@@ -257,6 +257,17 @@ fun NowPlayingScreen(
                 contentColor = AccentRed
             ) {
                 Tab(
+                    selected = selectedPeriod == BroadcastPeriod.YESTERDAY,
+                    onClick = { viewModel.selectPeriod(BroadcastPeriod.YESTERDAY) },
+                    text = {
+                        Text(
+                            text = stringResource(R.string.period_yesterday),
+                            color = if (selectedPeriod == BroadcastPeriod.YESTERDAY) AccentRed else TextSecondary,
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.YESTERDAY) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                )
+                Tab(
                     selected = selectedPeriod == BroadcastPeriod.NOW,
                     onClick = { viewModel.selectPeriod(BroadcastPeriod.NOW) },
                     text = {
@@ -279,13 +290,13 @@ fun NowPlayingScreen(
                     }
                 )
                 Tab(
-                    selected = selectedPeriod == BroadcastPeriod.YESTERDAY,
-                    onClick = { viewModel.selectPeriod(BroadcastPeriod.YESTERDAY) },
+                    selected = selectedPeriod == BroadcastPeriod.TOMORROW,
+                    onClick = { viewModel.selectPeriod(BroadcastPeriod.TOMORROW) },
                     text = {
                         Text(
-                            text = stringResource(R.string.period_yesterday),
-                            color = if (selectedPeriod == BroadcastPeriod.YESTERDAY) AccentRed else TextSecondary,
-                            fontWeight = if (selectedPeriod == BroadcastPeriod.YESTERDAY) FontWeight.Bold else FontWeight.Normal
+                            text = stringResource(R.string.period_tomorrow),
+                            color = if (selectedPeriod == BroadcastPeriod.TOMORROW) AccentRed else TextSecondary,
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.TOMORROW) FontWeight.Bold else FontWeight.Normal
                         )
                     }
                 )
@@ -304,7 +315,12 @@ fun NowPlayingScreen(
                         label = {
                             Text(
                                 text = stringResource(
-                                    if (selectedPeriod == BroadcastPeriod.TONIGHT) R.string.period_tonight_part_1 else R.string.period_yesterday_part_1
+                                    when (selectedPeriod) {
+                                        BroadcastPeriod.TONIGHT -> R.string.period_tonight_part_1
+                                        BroadcastPeriod.YESTERDAY -> R.string.period_yesterday_part_1
+                                        BroadcastPeriod.TOMORROW -> R.string.period_tomorrow_part_1
+                                        else -> R.string.period_tonight_part_1
+                                    }
                                 )
                             )
                         },
@@ -322,7 +338,12 @@ fun NowPlayingScreen(
                         label = {
                             Text(
                                 text = stringResource(
-                                    if (selectedPeriod == BroadcastPeriod.TONIGHT) R.string.period_tonight_part_2 else R.string.period_yesterday_part_2
+                                    when (selectedPeriod) {
+                                        BroadcastPeriod.TONIGHT -> R.string.period_tonight_part_2
+                                        BroadcastPeriod.YESTERDAY -> R.string.period_yesterday_part_2
+                                        BroadcastPeriod.TOMORROW -> R.string.period_tomorrow_part_2
+                                        else -> R.string.period_tonight_part_2
+                                    }
                                 )
                             )
                         },
