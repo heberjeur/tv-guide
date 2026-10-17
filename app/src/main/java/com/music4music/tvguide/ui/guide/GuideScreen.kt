@@ -237,16 +237,17 @@ fun GuideScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val categoryLabel = when {
-                    selectedSubCategory != null -> "${selectedCategory?.let { stringResource(it.nameRes) } ?: ""}: $selectedSubCategory"
+                    selectedCategory != null && selectedSubCategory != null -> "${stringResource(selectedCategory!!.nameRes)}: $selectedSubCategory"
+                    selectedSubCategory != null -> selectedSubCategory!!
                     selectedCategory != null -> stringResource(selectedCategory!!.nameRes)
                     else -> stringResource(R.string.filter_categories_title)
                 }
                 FilterPill(
-                    isSelected = selectedCategory != null,
+                    isSelected = selectedCategory != null || selectedSubCategory != null,
                     icon = getCategoryIcon(selectedCategory),
                     label = categoryLabel,
                     onClick = { showCategorySheet = true },
-                    onClear = { viewModel.selectCategory(null) }
+                    onClear = { viewModel.clearCategoryFilter() }
                 )
 
                 FilterPill(
@@ -339,7 +340,8 @@ fun GuideScreen(
                                 ProgramCard(
                                     program = program,
                                     onClick = { onProgramClick(program.id) },
-                                    channelName = channelNameMap[program.channelId]
+                                    channelName = channelNameMap[program.channelId],
+                                    onCategoryClick = { tag -> viewModel.filterByTag(tag) }
                                 )
                             }
                         }
@@ -351,7 +353,8 @@ fun GuideScreen(
                             ProgramCard(
                                 program = program,
                                 onClick = { onProgramClick(program.id) },
-                                channelName = channelNameMap[program.channelId]
+                                channelName = channelNameMap[program.channelId],
+                                onCategoryClick = { tag -> viewModel.filterByTag(tag) }
                             )
                         }
                     }

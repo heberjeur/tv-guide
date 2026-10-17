@@ -181,7 +181,7 @@ async function loadXmltvReference() {
       const subTitle = $xml(el).find('sub-title').text().trim();
       const title = $xml(el).find('title').text().trim();
       const rating = $xml(el).find('rating value').text().trim();
-      const category = $xml(el).find('category').text().trim();
+      const category = $xml(el).find('category').first().text().trim();
       const dateText = $xml(el).find('date').text().trim();
       const origDateText = $xml(el).find('orig-date').text().trim();
       const country = $xml(el).find('country').text().trim() || null;
@@ -228,7 +228,7 @@ async function loadXmltvReference() {
         const subTitle = $xml(el).find('sub-title').text().trim();
         const title = $xml(el).find('title').text().trim();
         const rating = $xml(el).find('rating value').text().trim();
-        const category = $xml(el).find('category').text().trim();
+        const category = $xml(el).find('category').first().text().trim();
         const dateText = $xml(el).find('date').text().trim();
         const origDateText = $xml(el).find('orig-date').text().trim();
         const country = $xml(el).find('country').text().trim() || null;
@@ -542,40 +542,78 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
   return programs;
 }
 
-function resolveParentCategories(categoriesList, title = '', desc = '') {
-  const combined = [title, ...categoriesList, desc.substring(0, 100)].join(' ').toLowerCase();
-  const parents = [];
+function resolvePrimaryParent(rawCategories, title = '', desc = '', season = null, episode = null) {
+  const text = [title, ...rawCategories, (desc || '').substring(0, 120)].join(' ').toLowerCase();
 
-  if (/s[ée]rie|feuilleton|soap|sitcom|telenovela|t[ée]l[ée]novela|mini[- ]s[ée]rie|fiction|policier|drame|thriller|science[- ]fiction|fantastique|com[ée]die dramatique|com[ée]die polici[èe]re/i.test(combined)) {
-    parents.push('Série');
-  }
-  if (/t[ée]l[ée]film|film|court[- ]m[ée]trage|long[- ]m[ée]trage|cin[ée]ma|biopic|western|drame psychologique|com[ée]die romantique/i.test(combined)) {
-    parents.push('Film');
-  }
-  if (/divertissement|magazine|jeu|talk[- ]show|t[ée]l[ée]r[ée]alit[ée]|vari[ée]t[ée]|humour|spectacle|gala|loto|culinaire|cuisine|gastronomie|t[ée]l[ée][- ]achat|mode|d[ée]co|relooking|sketch|stand[- ]up|cirque|magie|one[- ]man[- ]show|people|c[ée]r[ée]monie/i.test(combined)) {
-    parents.push('Divertissement');
-  }
-  if (/sport|football|foot|rugby|tennis|cyclisme|tour de france|basket|handball|volley|athl[ée]tisme|natation|boxe|mma|formule 1|f1|moto|automobile|courses? hippiques?|hippisme|golf|ski|omnisport/i.test(combined)) {
-    parents.push('Sport');
-  }
-  if (/info|journal|\bjt\b|m[ée]t[ée]o|d[ée]bat|[ée]dition sp[ée]ciale|actualit[ée]|politique|[ée]conomie|interview|culture infos|soci[ée]t[ée]|en direct/i.test(combined)) {
-    parents.push('Info');
-  }
-  if (/documentaire|docu|d[ée]couverte|reportage|enqu[êe]te|animalier|animaux|histoire|civilisation|nature|sciences?|g[ée]opolitique|voyage|faits divers/i.test(combined)) {
-    parents.push('Documentaire');
-  }
-  if (/jeunesse|animation|dessin anim[ée]|manga|anime|enfant|ado|junior|cartoon|pour enfants/i.test(combined)) {
-    parents.push('Jeunesse');
-  }
-  if (/musique|concert|clip|op[ée]ra|ballet|danse|chanson|vari[ée]t[ée]s? musicales?|pop|rock|jazz|live musical|festival/i.test(combined)) {
-    parents.push('Musique');
+  if (/\b(jt|journal|m[ée]t[ée]o|d[ée]bat|politique|[ée]mission politique|actualit[ée]|information|soir 3|12\.45|19\.45|le 20h|le 13h|culture infos|[ée]dition sp[ée]ciale|soci[ée]t[ée]|interview|en direct)\b/i.test(text) ||
+      /magazine d'information|journal t[ée]l[ée]vis[ée]|flash info/i.test(text)) {
+    return 'Info';
   }
 
-  if (parents.length === 0) {
-    parents.push('Autre');
+  if (/\b(sport|football|foot|rugby|tennis|cyclisme|tour de france|basket|handball|volley|athl[ée]tisme|natation|boxe|mma|formule 1|f1|moto|automobile|hippisme|courses? hippiques?|golf|ski|omnisport)\b/i.test(text) ||
+      /magazine sportif|championnat|coupe du monde|ligue 1|ligue des champions/i.test(text)) {
+    return 'Sport';
   }
 
-  return parents;
+  if (/\b(jeunesse|animation|dessin anim[ée]|manga|anime|enfant|enfants|ado|junior|cartoon|pour enfants)\b/i.test(text) ||
+      /s[ée]rie d'animation|programme jeunesse/i.test(text)) {
+    return 'Jeunesse';
+  }
+
+  if (/\b(jeu|jeux|loterie|loto|tirage|euromillions|eurodreams|k[ée]no|quizz?|talk[- ]show|t[ée]l[ée]r[ée]alit[ée]|vari[ée]t[ée]|humour|spectacle|gala|culinaire|cuisine|gastronomie|t[ée]l[ée][- ]achat|mode|d[ée]co|relooking|sketch|stand[- ]up|cirque|magie|one[- ]man[- ]show|people|c[ée]r[ée]monie|divertissement)\b/i.test(text)) {
+    return 'Divertissement';
+  }
+
+  if (/\b(t[ée]l[ée]film|film|court[- ]m[ée]trage|long[- ]m[ée]trage|cin[ée]ma|biopic|western)\b/i.test(text) ||
+      /com[ée]die romantique|drame psychologique/i.test(text)) {
+    return 'Film';
+  }
+
+  if (/\b(s[ée]rie|feuilleton|soap|sitcom|telenovela|t[ée]l[ée]novela|mini[- ]s[ée]rie|fiction|policier|drame|thriller|science[- ]fiction|fantastique)\b/i.test(text) ||
+      /s[ée]rie tv|s[ée]rie dramatique|s[ée]rie polici[èe]re|com[ée]die dramatique/i.test(text) ||
+      (season != null || episode != null)) {
+    return 'Série';
+  }
+
+  if (/\b(documentaire|docu|d[ée]couverte|reportage|enqu[êe]te|animalier|animaux|histoire|civilisation|nature|sciences?|g[ée]opolitique|voyage|faits divers)\b/i.test(text) ||
+      /docu[- ]fiction|grands reportages/i.test(text)) {
+    return 'Documentaire';
+  }
+
+  if (/\b(musique|concert|clip|op[ée]ra|ballet|danse|chanson|pop|rock|jazz|live musical|festival musical)\b/i.test(text) ||
+      /vari[ée]t[ée]s? musicales?/i.test(text)) {
+    return 'Musique';
+  }
+
+  return 'Autre';
+}
+
+function sanitizeCategories(rawCategories, primaryParent) {
+  const parentNames = ['Film', 'Série', 'Divertissement', 'Sport', 'Info', 'Documentaire', 'Jeunesse', 'Musique', 'Autre'];
+  const cleaned = [];
+
+  for (let cat of rawCategories) {
+    if (!cat) continue;
+    cat = cat.trim();
+    if (!cat || cat.toLowerCase() === 'general' || cat.toLowerCase() === 'autre') continue;
+
+    if (/jeunesses[ée]rie/i.test(cat)) {
+      cat = "Série d'animation";
+    }
+
+    const matchesOtherParent = parentNames.some(p => p.toLowerCase() === cat.toLowerCase());
+    if (matchesOtherParent) continue;
+
+    if (primaryParent === 'Documentaire' && /^s[ée]rie( tv| dramatique)?$/i.test(cat)) continue;
+    if (primaryParent === 'Film' && /^s[ée]rie$/i.test(cat)) continue;
+    if (primaryParent === 'Jeunesse' && /^(sport|info|musique|s[ée]rie)$/i.test(cat)) continue;
+
+    if (!cleaned.includes(cat)) {
+      cleaned.push(cat);
+    }
+  }
+
+  return [primaryParent, ...cleaned];
 }
 
 function buildXml(channels, programs) {
@@ -617,19 +655,14 @@ function buildXml(channels, programs) {
       const e = program.episode != null ? (program.episode - 1) : '';
       xml += `    <episode-num system="xmltv_ns">${s}.${e}.</episode-num>\n`;
     }
-    const categories = [];
-    if (program.category && program.category !== 'General') categories.push(program.category);
-    if (program.format && !categories.includes(program.format)) categories.push(program.format);
-    if (program.genre && !categories.includes(program.genre)) categories.push(program.genre);
+    const rawCategories = [];
+    if (program.category && program.category !== 'General') rawCategories.push(program.category);
+    if (program.format && !rawCategories.includes(program.format)) rawCategories.push(program.format);
+    if (program.genre && !rawCategories.includes(program.genre)) rawCategories.push(program.genre);
 
-    const parentCategories = resolveParentCategories(categories, program.title || '', program.desc || '');
-    for (const parent of parentCategories) {
-      if (!categories.includes(parent)) {
-        categories.unshift(parent);
-      }
-    }
+    const primaryParent = resolvePrimaryParent(rawCategories, program.title || '', program.desc || '', program.season, program.episode);
+    const categories = sanitizeCategories(rawCategories, primaryParent);
 
-    if (categories.length === 0) categories.push('General');
     for (const cat of categories) {
       xml += `    <category lang="fr">${escapeXml(cat)}</category>\n`;
     }

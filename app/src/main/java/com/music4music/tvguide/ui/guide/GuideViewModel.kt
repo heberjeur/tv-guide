@@ -42,8 +42,17 @@ class GuideViewModel @Inject constructor(
     val availableSubCategories: StateFlow<List<String>> = _selectedCategory.flatMapLatest { cat ->
         if (cat == null) flowOf(emptyList())
         else epgRepository.getFilteredPrograms(cat.searchKeyword, null, 0L, 0L).map { list ->
+            val parentNames = TvCategory.entries.map { it.searchKeyword.lowercase() } + listOf("general", "autre", "divers")
             list.flatMap { it.categories }
-                .filter { it.isNotBlank() && !it.equals(cat.searchKeyword, ignoreCase = true) && !it.equals("General", ignoreCase = true) }
+                .map { it.trim() }
+                .filter { tag ->
+                    tag.isNotBlank() &&
+                        !parentNames.contains(tag.lowercase()) &&
+                        !tag.equals(cat.searchKeyword, ignoreCase = true) &&
+                        !(cat == TvCategory.DOCUMENTARY && tag.contains("série", ignoreCase = true)) &&
+                        !(cat == TvCategory.MOVIES && tag.contains("série", ignoreCase = true)) &&
+                        !(cat == TvCategory.KIDS && (tag.equals("sport", ignoreCase = true) || tag.equals("musique", ignoreCase = true) || tag.equals("info", ignoreCase = true)))
+                }
                 .groupingBy { it }
                 .eachCount()
                 .toList()
@@ -185,6 +194,38 @@ class GuideViewModel @Inject constructor(
 
     fun selectSubCategory(subCategory: String?) {
         _selectedSubCategory.value = subCategory
+    }
+
+    fun filterByTag(tag: String) {
+        val trimmed = tag.trim()
+        if (trimmed.isBlank()) return
+        val matchingParent = TvCategory.entries.find {
+            it.searchKeyword.equals(trimmed, ignoreCase = true) ||
+                it.name.equals(trimmed, ignoreCase = true)
+        }
+        if (matchingParent != null) {
+            _selectedCategory.value = matchingParent
+            _selectedSubCategory.value = null
+        } else {
+            val inferredParent = when {
+                trimmed.contains("film", ignoreCase = true) || trimmed.contains("cinéma", ignoreCase = true) || trimmed.contains("court-métrage", ignoreCase = true) -> TvCategory.MOVIES
+                trimmed.contains("série", ignoreCase = true) || trimmed.contains("feuilleton", ignoreCase = true) || trimmed.contains("sitcom", ignoreCase = true) -> TvCategory.SERIES
+                trimmed.contains("journal", ignoreCase = true) || trimmed.contains("météo", ignoreCase = true) || trimmed.contains("débat", ignoreCase = true) || trimmed.contains("politique", ignoreCase = true) -> TvCategory.NEWS
+                trimmed.contains("jeu", ignoreCase = true) || trimmed.contains("loto", ignoreCase = true) || trimmed.contains("loterie", ignoreCase = true) || trimmed.contains("humour", ignoreCase = true) -> TvCategory.ENTERTAINMENT
+                trimmed.contains("sport", ignoreCase = true) || trimmed.contains("foot", ignoreCase = true) || trimmed.contains("rugby", ignoreCase = true) -> TvCategory.SPORT
+                trimmed.contains("documentaire", ignoreCase = true) || trimmed.contains("découverte", ignoreCase = true) || trimmed.contains("reportage", ignoreCase = true) -> TvCategory.DOCUMENTARY
+                trimmed.contains("animation", ignoreCase = true) || trimmed.contains("jeunesse", ignoreCase = true) || trimmed.contains("manga", ignoreCase = true) -> TvCategory.KIDS
+                trimmed.contains("concert", ignoreCase = true) || trimmed.contains("musique", ignoreCase = true) || trimmed.contains("opéra", ignoreCase = true) -> TvCategory.MUSIC
+                else -> _selectedCategory.value
+            }
+            _selectedCategory.value = inferredParent
+            _selectedSubCategory.value = trimmed
+        }
+    }
+
+    fun clearCategoryFilter() {
+        _selectedCategory.value = null
+        _selectedSubCategory.value = null
     }
 
     fun selectDate(date: LocalDate?) {

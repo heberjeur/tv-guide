@@ -55,7 +55,8 @@ fun ProgramCard(
     program: Program,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    channelName: String? = null
+    channelName: String? = null,
+    onCategoryClick: ((String) -> Unit)? = null
 ) {
     val zone = ZoneId.systemDefault()
     val startTime = Instant.ofEpochMilli(program.startTimestamp).atZone(zone).format(timeFormatter)
@@ -236,7 +237,7 @@ fun ProgramCard(
                 ) {
                     program.categories.forEach { category ->
                         SuggestionChip(
-                            onClick = {},
+                            onClick = { onCategoryClick?.invoke(category) },
                             label = {
                                 Text(
                                     text = category,
