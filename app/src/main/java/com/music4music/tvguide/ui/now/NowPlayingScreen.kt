@@ -57,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -258,48 +259,88 @@ fun NowPlayingScreen(
             ) {
                 Tab(
                     selected = selectedPeriod == BroadcastPeriod.YESTERDAY,
-                    onClick = { viewModel.selectPeriod(BroadcastPeriod.YESTERDAY) },
-                    text = {
+                    onClick = { viewModel.selectPeriod(BroadcastPeriod.YESTERDAY) }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp, horizontal = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = stringResource(R.string.period_yesterday),
                             color = if (selectedPeriod == BroadcastPeriod.YESTERDAY) AccentRed else TextSecondary,
-                            fontWeight = if (selectedPeriod == BroadcastPeriod.YESTERDAY) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.YESTERDAY) FontWeight.Bold else FontWeight.Normal,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                )
+                }
                 Tab(
                     selected = selectedPeriod == BroadcastPeriod.NOW,
-                    onClick = { viewModel.selectPeriod(BroadcastPeriod.NOW) },
-                    text = {
+                    onClick = { viewModel.selectPeriod(BroadcastPeriod.NOW) }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp, horizontal = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = stringResource(R.string.period_now),
                             color = if (selectedPeriod == BroadcastPeriod.NOW) AccentRed else TextSecondary,
-                            fontWeight = if (selectedPeriod == BroadcastPeriod.NOW) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.NOW) FontWeight.Bold else FontWeight.Normal,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                )
+                }
                 Tab(
                     selected = selectedPeriod == BroadcastPeriod.TONIGHT,
-                    onClick = { viewModel.selectPeriod(BroadcastPeriod.TONIGHT) },
-                    text = {
+                    onClick = { viewModel.selectPeriod(BroadcastPeriod.TONIGHT) }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp, horizontal = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = stringResource(R.string.period_tonight),
                             color = if (selectedPeriod == BroadcastPeriod.TONIGHT) AccentRed else TextSecondary,
-                            fontWeight = if (selectedPeriod == BroadcastPeriod.TONIGHT) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.TONIGHT) FontWeight.Bold else FontWeight.Normal,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                )
+                }
                 Tab(
                     selected = selectedPeriod == BroadcastPeriod.TOMORROW,
-                    onClick = { viewModel.selectPeriod(BroadcastPeriod.TOMORROW) },
-                    text = {
+                    onClick = { viewModel.selectPeriod(BroadcastPeriod.TOMORROW) }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp, horizontal = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = stringResource(R.string.period_tomorrow),
                             color = if (selectedPeriod == BroadcastPeriod.TOMORROW) AccentRed else TextSecondary,
-                            fontWeight = if (selectedPeriod == BroadcastPeriod.TOMORROW) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (selectedPeriod == BroadcastPeriod.TOMORROW) FontWeight.Bold else FontWeight.Normal,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                )
+                }
             }
 
             if (selectedPeriod != BroadcastPeriod.NOW) {
