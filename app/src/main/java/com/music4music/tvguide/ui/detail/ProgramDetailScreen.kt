@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -179,13 +180,6 @@ fun ProgramDetailScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Text(
-                        text = currentProgram.title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-
                     val displaySubtitle = when {
                         currentProgram.subTitle.isNullOrEmpty() -> {
                             if (currentProgram.episodeNumber != null) {
@@ -202,13 +196,24 @@ fun ProgramDetailScreen(
                         else -> currentProgram.subTitle
                     }
 
-                    if (!displaySubtitle.isNullOrEmpty()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = displaySubtitle,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = TextSecondary
-                        )
+                    SelectionContainer {
+                        Column {
+                            Text(
+                                text = currentProgram.title,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+
+                            if (!displaySubtitle.isNullOrEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = displaySubtitle,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -503,12 +508,14 @@ fun ProgramDetailScreen(
                             color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = currentProgram.description,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextPrimary,
-                            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.3
-                        )
+                        SelectionContainer {
+                            Text(
+                                text = currentProgram.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.3
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))

@@ -205,6 +205,13 @@ fun GuideScreen(
                             }
                         }
                     } else {
+                        IconButton(onClick = { isSearchActive = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(R.string.action_search),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                         IconButton(
                             onClick = { viewModel.refresh(force = true) },
                             enabled = !isRefreshing
@@ -222,13 +229,6 @@ fun GuideScreen(
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                        }
-                        IconButton(onClick = { isSearchActive = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = stringResource(R.string.action_search),
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
                         }
                         IconButton(onClick = onSettingsClick) {
                             Icon(

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TV Guide</string>
-    <string name="tab_now">En ce moment</string>
+    <string name="tab_now">Maintenant</string>
     <string name="tab_programs">Programme</string>
     <string name="tab_guide">Guide</string>
     <string name="tab_channels">Chaînes</string>
@@ -9,7 +9,7 @@
     <string name="tab_categories">Catégories</string>
     <string name="tab_calendar">Calendrier</string>
 
-    <string name="period_now">En ce moment</string>
+    <string name="period_now">Maintenant</string>
     <string name="period_tonight">Ce soir</string>
     <string name="period_yesterday">Hier</string>
     <string name="period_tomorrow">Demain</string>
