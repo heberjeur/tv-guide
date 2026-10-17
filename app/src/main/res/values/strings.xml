@@ -193,4 +193,7 @@
     <string name="filter_tomorrow">Tomorrow</string>
     <string name="filter_today_prefix">Today • %1$s</string>
     <string name="filter_tomorrow_prefix">Tomorrow • %1$s</string>
+    <string name="filter_categories_title">Filter by category</string>
+    <string name="filter_all_channels_short">All</string>
+    <string name="action_reset_filter">Reset filter</string>
 </resources>
