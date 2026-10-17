@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,20 +19,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
@@ -43,11 +46,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.TheaterComedy
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -95,6 +97,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val dayChipFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
+private val fullDayFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,20 +116,12 @@ fun GuideScreen(
 
     var isSearchActive by remember { mutableStateOf(false) }
     var showCategorySheet by remember { mutableStateOf(false) }
+    var showChannelSheet by remember { mutableStateOf(false) }
+    var showDateSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(initialChannelId) {
         if (!initialChannelId.isNullOrBlank()) {
             viewModel.selectChannel(initialChannelId)
-        }
-    }
-
-    val channelListState = rememberLazyListState()
-    LaunchedEffect(selectedChannelId, channels) {
-        if (selectedChannelId != null) {
-            val index = channels.indexOfFirst { it.id == selectedChannelId }
-            if (index >= 0) {
-                channelListState.animateScrollToItem(index + 1)
-            }
         }
     }
 
@@ -139,6 +134,10 @@ fun GuideScreen(
 
     val channelNameMap = remember(channels) {
         channels.associate { it.id to it.displayName }
+    }
+
+    val activeChannel = remember(selectedChannelId, channels) {
+        channels.find { it.id == selectedChannelId }
     }
 
     Scaffold(
@@ -224,160 +223,51 @@ fun GuideScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (channels.isNotEmpty()) {
-                LazyRow(
-                    state = channelListState,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    item(key = "all_channels") {
-                        ChannelLogoItem(
-                            channel = null,
-                            isSelected = selectedChannelId == null,
-                            onClick = { viewModel.selectChannel(null) }
-                        )
-                    }
-                    items(
-                        items = channels,
-                        key = { it.id }
-                    ) { channel ->
-                        ChannelLogoItem(
-                            channel = channel,
-                            isSelected = selectedChannelId == channel.id,
-                            onClick = {
-                                if (selectedChannelId == channel.id) {
-                                    viewModel.selectChannel(null)
-                                } else {
-                                    viewModel.selectChannel(channel.id)
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
+                FilterPill(
+                    isSelected = selectedCategory != null,
+                    icon = getCategoryIcon(selectedCategory),
+                    label = if (selectedCategory == null) {
+                        stringResource(R.string.filter_categories_title)
+                    } else {
+                        stringResource(selectedCategory!!.nameRes)
+                    },
                     onClick = { showCategorySheet = true },
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (selectedCategory != null) AccentRed else MaterialTheme.colorScheme.surfaceVariant,
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = if (selectedCategory != null) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                    )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
-                    ) {
-                        Icon(
-                            imageVector = getCategoryIcon(selectedCategory),
-                            contentDescription = null,
-                            tint = if (selectedCategory != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (selectedCategory == null) {
-                                stringResource(R.string.filter_categories_title)
-                            } else {
-                                stringResource(selectedCategory!!.nameRes)
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (selectedCategory != null) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selectedCategory != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        if (selectedCategory != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clickable { viewModel.selectCategory(null) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.action_reset_filter),
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Box(
-                    modifier = Modifier
-                        .height(20.dp)
-                        .width(1.dp)
-                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                    onClear = { viewModel.selectCategory(null) }
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                FilterPill(
+                    isSelected = activeChannel != null,
+                    icon = Icons.Default.LiveTv,
+                    channelIconUrl = activeChannel?.iconUrl,
+                    label = activeChannel?.displayName ?: stringResource(R.string.filter_channels_title),
+                    onClick = { showChannelSheet = true },
+                    onClear = { viewModel.selectChannel(null) }
+                )
 
-                LazyRow(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    contentPadding = PaddingValues(end = 4.dp)
-                ) {
-                    item {
-                        FilterChip(
-                            selected = selectedDate == null,
-                            onClick = { viewModel.selectDate(null) },
-                            label = { Text(text = stringResource(R.string.filter_all_days), style = MaterialTheme.typography.labelMedium) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AccentRed,
-                                selectedLabelColor = Color.White,
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            border = null,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                    }
-                    items(
-                        items = availableDates,
-                        key = { it.toString() }
-                    ) { date ->
-                        val label = when (date) {
-                            today -> stringResource(R.string.filter_today)
-                            tomorrow -> stringResource(R.string.filter_tomorrow)
-                            else -> date.format(dayChipFormatter)
-                        }
-                        FilterChip(
-                            selected = selectedDate == date,
-                            onClick = { viewModel.selectDate(date) },
-                            label = { Text(text = label, style = MaterialTheme.typography.labelMedium) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AccentRed,
-                                selectedLabelColor = Color.White,
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            border = null,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                    }
+                val dateLabel = when (selectedDate) {
+                    null -> stringResource(R.string.filter_dates_title)
+                    today -> stringResource(R.string.filter_today)
+                    tomorrow -> stringResource(R.string.filter_tomorrow)
+                    else -> selectedDate!!.format(dayChipFormatter)
                 }
+                FilterPill(
+                    isSelected = selectedDate != null,
+                    icon = if (selectedDate != null) Icons.Default.Today else Icons.Default.CalendarMonth,
+                    label = dateLabel,
+                    onClick = { showDateSheet = true },
+                    onClear = { viewModel.selectDate(null) }
+                )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             if (programs.isEmpty()) {
                 Box(
@@ -409,7 +299,6 @@ fun GuideScreen(
                     }
                 }
             } else {
-                val dayHeaderFormatter = remember { DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault()) }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
@@ -421,7 +310,7 @@ fun GuideScreen(
                         }
                         grouped.forEach { (date, datePrograms) ->
                             item(key = "header_$date") {
-                                val formattedDate = date.format(dayHeaderFormatter).replaceFirstChar { it.uppercase() }
+                                val formattedDate = date.format(fullDayFormatter).replaceFirstChar { it.uppercase() }
                                 val headerTitle = when (date) {
                                     today -> stringResource(R.string.filter_today_prefix, formattedDate)
                                     tomorrow -> stringResource(R.string.filter_tomorrow_prefix, formattedDate)
@@ -472,75 +361,106 @@ fun GuideScreen(
             onDismiss = { showCategorySheet = false }
         )
     }
+
+    if (showChannelSheet) {
+        ChannelFilterBottomSheet(
+            channels = channels,
+            selectedChannelId = selectedChannelId,
+            onChannelSelect = viewModel::selectChannel,
+            onDismiss = { showChannelSheet = false }
+        )
+    }
+
+    if (showDateSheet) {
+        DateFilterBottomSheet(
+            availableDates = availableDates,
+            selectedDate = selectedDate,
+            today = today,
+            tomorrow = tomorrow,
+            onDateSelect = viewModel::selectDate,
+            onDismiss = { showDateSheet = false }
+        )
+    }
 }
 
 @Composable
-private fun ChannelLogoItem(
-    channel: Channel?,
+private fun FilterPill(
     isSelected: Boolean,
+    icon: ImageVector,
+    label: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+    channelIconUrl: String? = null
 ) {
-    val borderColor = if (isSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-    val backgroundColor = if (isSelected) AccentRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = if (isSelected) AccentRed else MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        ),
         modifier = modifier
-            .width(58.dp)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
     ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(backgroundColor)
-                .border(
-                    width = if (isSelected) 2.dp else 1.dp,
-                    color = borderColor,
-                    shape = RoundedCornerShape(12.dp)
-                ),
-            contentAlignment = Alignment.Center
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
         ) {
-            if (channel == null) {
-                Icon(
-                    imageVector = Icons.Default.LiveTv,
-                    contentDescription = stringResource(R.string.filter_all_channels),
-                    tint = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
-                )
-            } else if (!channel.iconUrl.isNullOrBlank() && !channel.iconUrl.startsWith("data:")) {
+            if (channelIconUrl != null && !channelIconUrl.startsWith("data:")) {
                 AsyncImage(
-                    model = channel.iconUrl,
-                    contentDescription = channel.displayName,
+                    model = channelIconUrl,
+                    contentDescription = null,
                     modifier = Modifier
-                        .size(36.dp)
-                        .padding(2.dp),
+                        .size(18.dp)
+                        .clip(RoundedCornerShape(4.dp)),
                     contentScale = ContentScale.Fit
                 )
             } else {
-                Text(
-                    text = if (channel.channelNumber > 0) channel.channelNumber.toString() else channel.displayName.take(2).uppercase(),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurface
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onClear
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.action_reset_filter),
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = channel?.displayName ?: stringResource(R.string.filter_all_channels_short),
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            textAlign = TextAlign.Center
-        )
     }
 }
 
@@ -687,6 +607,392 @@ private fun CategoryItemCard(
                     tint = AccentRed,
                     modifier = Modifier.size(18.dp)
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChannelFilterBottomSheet(
+    channels: List<Channel>,
+    selectedChannelId: String?,
+    onChannelSelect: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    var channelQuery by remember { mutableStateOf("") }
+
+    val filteredChannels = remember(channels, channelQuery) {
+        if (channelQuery.isBlank()) channels
+        else channels.filter {
+            it.displayName.contains(channelQuery, ignoreCase = true) ||
+            (it.channelNumber > 0 && it.channelNumber.toString().contains(channelQuery))
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.filter_channels_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (selectedChannelId != null) {
+                    TextButton(
+                        onClick = {
+                            onChannelSelect(null)
+                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.action_reset_filter),
+                            color = AccentRed,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = channelQuery,
+                onValueChange = { channelQuery = it },
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.channels_search_placeholder),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                trailingIcon = {
+                    if (channelQuery.isNotEmpty()) {
+                        IconButton(onClick = { channelQuery = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentRed,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(380.dp)
+            ) {
+                item(span = { GridItemSpan(3) }) {
+                    Surface(
+                        onClick = {
+                            onChannelSelect(null)
+                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (selectedChannelId == null) AccentRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(
+                            if (selectedChannelId == null) 2.dp else 1.dp,
+                            if (selectedChannelId == null) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LiveTv,
+                                contentDescription = null,
+                                tint = if (selectedChannelId == null) AccentRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(R.string.filter_all_channels),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (selectedChannelId == null) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedChannelId == null) AccentRed else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (selectedChannelId == null) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = AccentRed,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                items(
+                    items = filteredChannels,
+                    key = { it.id }
+                ) { channel ->
+                    val isSelected = selectedChannelId == channel.id
+                    val borderColor = if (isSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    val containerColor = if (isSelected) AccentRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
+
+                    Surface(
+                        onClick = {
+                            onChannelSelect(channel.id)
+                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = containerColor,
+                        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (!channel.iconUrl.isNullOrBlank() && !channel.iconUrl.startsWith("data:")) {
+                                    AsyncImage(
+                                        model = channel.iconUrl,
+                                        contentDescription = channel.displayName,
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .padding(2.dp),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                } else {
+                                    Text(
+                                        text = if (channel.channelNumber > 0) channel.channelNumber.toString() else channel.displayName.take(2).uppercase(),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = channel.displayName,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                                color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurface,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateFilterBottomSheet(
+    availableDates: List<LocalDate>,
+    selectedDate: LocalDate?,
+    today: LocalDate,
+    tomorrow: LocalDate,
+    onDateSelect: (LocalDate?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.filter_dates_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (selectedDate != null) {
+                    TextButton(
+                        onClick = {
+                            onDateSelect(null)
+                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                        }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.action_reset_filter),
+                            color = AccentRed,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(360.dp)
+            ) {
+                item {
+                    val isAllSelected = selectedDate == null
+                    Surface(
+                        onClick = {
+                            onDateSelect(null)
+                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isAllSelected) AccentRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(
+                            if (isAllSelected) 2.dp else 1.dp,
+                            if (isAllSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = null,
+                                tint = if (isAllSelected) AccentRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(R.string.filter_all_days),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isAllSelected) AccentRed else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isAllSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = AccentRed,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                items(
+                    items = availableDates,
+                    key = { it.toString() }
+                ) { date ->
+                    val isSelected = selectedDate == date
+                    val label = when (date) {
+                        today -> stringResource(R.string.filter_today)
+                        tomorrow -> stringResource(R.string.filter_tomorrow)
+                        else -> date.format(fullDayFormatter).replaceFirstChar { it.uppercase() }
+                    }
+                    val icon = when (date) {
+                        today -> Icons.Default.Today
+                        tomorrow -> Icons.Default.Event
+                        else -> Icons.Default.CalendarToday
+                    }
+
+                    Surface(
+                        onClick = {
+                            onDateSelect(date)
+                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) AccentRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(
+                            if (isSelected) 2.dp else 1.dp,
+                            if (isSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = AccentRed,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

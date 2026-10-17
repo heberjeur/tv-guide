@@ -193,7 +193,9 @@
     <string name="filter_tomorrow">Demain</string>
     <string name="filter_today_prefix">Aujourd\'hui • %1$s</string>
     <string name="filter_tomorrow_prefix">Demain • %1$s</string>
-    <string name="filter_categories_title">Filtrer par catégorie</string>
+    <string name="filter_categories_title">Catégories</string>
+    <string name="filter_channels_title">Chaînes</string>
+    <string name="filter_dates_title">Dates</string>
     <string name="filter_all_channels_short">Toutes</string>
     <string name="action_reset_filter">Réinitialiser</string>
 </resources>
