@@ -200,9 +200,13 @@ fun ProgramDetailScreen(
                     }
                 }
 
+                val isSeriesProgram = currentProgram.seasonNumber != null ||
+                    currentProgram.seriesYear != null ||
+                    currentProgram.categories.any { it.equals("Série", ignoreCase = true) }
+
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "${currentProgram.channelId}  •  $startTime - $stopTime  •  ${currentProgram.formattedDuration}",
+                        text = "${currentProgram.channelId}  •  ${broadcastDate.replaceFirstChar { it.uppercase() }}  •  $startTime - $stopTime  •  ${currentProgram.formattedDuration}",
                         style = MaterialTheme.typography.labelMedium,
                         color = AccentRed,
                         fontWeight = FontWeight.Bold
@@ -344,10 +348,6 @@ fun ProgramDetailScreen(
                                     value = currentProgram.credit.directors.joinToString(", ")
                                 )
                             }
-
-                            val isSeriesProgram = currentProgram.seasonNumber != null ||
-                                currentProgram.seriesYear != null ||
-                                currentProgram.categories.any { it.equals("Série", ignoreCase = true) }
 
                             if (isSeriesProgram) {
                                 if (currentProgram.productionYear != null) {
@@ -567,6 +567,18 @@ fun ProgramDetailScreen(
                         }
                     }
 
+                    val primaryDescriptionHeader = when {
+                        isSeriesProgram && !cleanedSecondaryDescription.isNullOrBlank() -> stringResource(R.string.section_episode_description)
+                        isSeriesProgram && currentProgram.seasonNumber == null && currentProgram.episodeNumber == null -> stringResource(R.string.section_series_description)
+                        else -> stringResource(R.string.section_description)
+                    }
+
+                    val secondaryDescriptionHeader = if (isSeriesProgram) {
+                        stringResource(R.string.section_series_description)
+                    } else {
+                        stringResource(R.string.section_more_details)
+                    }
+
                     if (!cleanedDescription.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(
@@ -580,7 +592,7 @@ fun ProgramDetailScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = stringResource(R.string.section_description),
+                                text = primaryDescriptionHeader,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
@@ -610,7 +622,7 @@ fun ProgramDetailScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = stringResource(R.string.section_more_details),
+                                text = secondaryDescriptionHeader,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
@@ -627,58 +639,25 @@ fun ProgramDetailScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Tv,
-                                    contentDescription = null,
-                                    tint = AccentRed,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.section_where_to_watch),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = stringResource(
-                                    R.string.broadcast_on_channel,
-                                    currentProgram.channelId,
-                                    broadcastDate,
-                                    startTime,
-                                    stopTime
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = stringResource(R.string.broadcast_replay_available),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-
                     if (upcomingBroadcasts.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.section_upcoming_broadcasts),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tv,
+                                contentDescription = null,
+                                tint = AccentRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.section_upcoming_broadcasts),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
 
                         upcomingBroadcasts.take(5).forEach { upcoming ->

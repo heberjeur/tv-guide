@@ -73,6 +73,8 @@
     <string name="default_country">France</string>
     <string name="section_synopsis">Synopsis</string>
     <string name="section_description">Description</string>
+    <string name="section_episode_description">Episode description</string>
+    <string name="section_series_description">Series description</string>
     <string name="section_more_details">More Details</string>
     <string name="section_where_to_watch">Where to Watch</string>
     <string name="broadcast_on_channel">Broadcast on %1$s on %2$s from %3$s to %4$s.</string>
