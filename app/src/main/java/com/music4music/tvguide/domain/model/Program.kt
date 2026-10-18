@@ -8,6 +8,7 @@ data class Program(
     val title: String,
     val subTitle: String? = null,
     val description: String = "",
+    val secondaryDescription: String? = null,
     val categories: List<String> = emptyList(),
     val iconUrl: String? = null,
     val seasonNumber: Int? = null,

@@ -70,6 +70,8 @@
     <string name="label_not_specified">Non spécifié</string>
     <string name="default_country">France</string>
     <string name="section_synopsis">Synopsis</string>
+    <string name="section_description">Description</string>
+    <string name="section_more_details">En savoir plus</string>
     <string name="section_where_to_watch">Où regarder</string>
     <string name="broadcast_on_channel">Diffusé sur %1$s le %2$s de %3$s à %4$s.</string>
     <string name="broadcast_replay_available">Également disponible en Replay sur l\'application officielle de la chaîne.</string>
@@ -204,4 +206,11 @@
     <string name="filter_all_channels_short">Toutes</string>
     <string name="action_reset_filter">Réinitialiser</string>
     <string name="status_live">DIRECT</string>
+
+    <string name="settings_timezone_title">Chronologie et horaires du guide</string>
+    <string name="settings_timezone_desc">Choisissez le fuseau horaire d\'affichage des heures de diffusion</string>
+    <string name="timezone_system">Heure de l\'appareil (Auto)</string>
+    <string name="timezone_origin">Heure d\'origine (Paris)</string>
+    <string name="dialog_select_timezone_title">Choisir le fuseau horaire</string>
+    <string name="label_more_timezones">Autre fuseau...</string>
 </resources>

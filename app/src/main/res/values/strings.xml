@@ -70,6 +70,8 @@
     <string name="label_not_specified">Not specified</string>
     <string name="default_country">France</string>
     <string name="section_synopsis">Synopsis</string>
+    <string name="section_description">Description</string>
+    <string name="section_more_details">More Details</string>
     <string name="section_where_to_watch">Where to Watch</string>
     <string name="broadcast_on_channel">Broadcast on %1$s on %2$s from %3$s to %4$s.</string>
     <string name="broadcast_replay_available">Also available on catch-up TV via the official network app.</string>
@@ -204,4 +206,11 @@
     <string name="filter_all_channels_short">All</string>
     <string name="action_reset_filter">Reset filter</string>
     <string name="status_live">LIVE</string>
+
+    <string name="settings_timezone_title">Guide Schedule &amp; Timezone</string>
+    <string name="settings_timezone_desc">Choose display timezone for broadcast hours and timeline</string>
+    <string name="timezone_system">Device Time (Auto)</string>
+    <string name="timezone_origin">Original Time (Paris)</string>
+    <string name="dialog_select_timezone_title">Select Timezone</string>
+    <string name="label_more_timezones">Other...</string>
 </resources>

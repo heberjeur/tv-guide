@@ -64,7 +64,7 @@ fun ProgramCard(
     channelName: String? = null,
     onCategoryClick: ((String) -> Unit)? = null
 ) {
-    val zone = ZoneId.of("Europe/Paris")
+    val zone = com.music4music.tvguide.ui.theme.LocalDisplayZone.current
     val startTime = Instant.ofEpochMilli(program.startTimestamp).atZone(zone).format(timeFormatter)
     val stopTime = Instant.ofEpochMilli(program.stopTimestamp).atZone(zone).format(timeFormatter)
     val channelLabel = channelName ?: ChannelCatalog.getDisplayName(program.channelId)

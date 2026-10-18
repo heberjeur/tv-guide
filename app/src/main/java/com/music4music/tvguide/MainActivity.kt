@@ -45,6 +45,10 @@ class MainActivity : ComponentActivity() {
             val fontSizeScale by userPreferences.fontSizeScale.collectAsStateWithLifecycle(initialValue = "normal")
             val displayDensity by userPreferences.displayDensity.collectAsStateWithLifecycle(initialValue = "comfort")
             val highlightAccessibility by userPreferences.highlightAccessibility.collectAsStateWithLifecycle(initialValue = true)
+            val displayTimezone by userPreferences.displayTimezone.collectAsStateWithLifecycle(initialValue = "origin")
+            val currentDisplayZone = androidx.compose.runtime.remember(displayTimezone) {
+                com.music4music.tvguide.util.TimezoneUtils.resolveZoneId(displayTimezone)
+            }
 
             TvGuideTheme(themeMode = themeMode, fontSizeScale = fontSizeScale) {
                 val currentDensity = androidx.compose.ui.platform.LocalDensity.current
@@ -61,7 +65,8 @@ class MainActivity : ComponentActivity() {
                     androidx.compose.ui.platform.LocalDensity provides effectiveDensity,
                     LocalDisplayDensity provides displayDensity,
                     LocalHighlightAccessibility provides highlightAccessibility,
-                    LocalFontSizeScale provides fontSizeScale
+                    LocalFontSizeScale provides fontSizeScale,
+                    com.music4music.tvguide.ui.theme.LocalDisplayZone provides currentDisplayZone
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),

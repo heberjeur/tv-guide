@@ -79,6 +79,9 @@ class SettingsViewModel @Inject constructor(
     val displayDensity: StateFlow<String> = userPreferences.displayDensity
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "comfort")
 
+    val displayTimezone: StateFlow<String> = userPreferences.displayTimezone
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "origin")
+
     val fontSizeScale: StateFlow<String> = userPreferences.fontSizeScale
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "normal")
 
@@ -260,6 +263,12 @@ class SettingsViewModel @Inject constructor(
     fun setDisplayDensity(density: String) {
         viewModelScope.launch {
             userPreferences.setDisplayDensity(density)
+        }
+    }
+
+    fun setDisplayTimezone(timezone: String) {
+        viewModelScope.launch {
+            userPreferences.setDisplayTimezone(timezone)
         }
     }
 

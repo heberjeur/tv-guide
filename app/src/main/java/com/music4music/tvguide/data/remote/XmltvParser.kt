@@ -4,6 +4,7 @@ import android.util.Xml
 import com.music4music.tvguide.data.local.ChannelCatalog
 import com.music4music.tvguide.data.local.entity.ChannelEntity
 import com.music4music.tvguide.data.local.entity.ProgramEntity
+import com.music4music.tvguide.util.ProgramDescriptionUtils
 import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
 import java.time.ZonedDateTime
@@ -131,6 +132,7 @@ class XmltvParser @Inject constructor() {
         var title = ""
         var subTitle: String? = null
         var description = ""
+        var secondaryDescription: String? = null
         val categories = mutableListOf<String>()
         var iconUrl: String? = null
         var seasonNumber: Int? = null
@@ -158,7 +160,18 @@ class XmltvParser @Inject constructor() {
             when (parser.name) {
                 "title" -> title = readText(parser)
                 "sub-title" -> subTitle = readText(parser)
-                "desc" -> description = readText(parser)
+                "desc" -> {
+                    val lang = parser.getAttributeValue(null, "lang")
+                    val text = readText(parser)
+                    if (lang == "fr-more" || lang == "more") {
+                        secondaryDescription = text
+                    } else if (description.isEmpty()) {
+                        description = text
+                    } else if (secondaryDescription.isNullOrEmpty() && text != description) {
+                        secondaryDescription = text
+                    }
+                }
+                "desc-more" -> secondaryDescription = readText(parser)
                 "category" -> categories.add(readText(parser))
                 "date" -> {
                     val text = readText(parser).trim()
@@ -244,6 +257,27 @@ class XmltvParser @Inject constructor() {
             val cRegex = Regex("""Pays\s*:\s*([^•\n\r|]{3,30})""", RegexOption.IGNORE_CASE)
             country = cRegex.find(description)?.groupValues?.get(1)?.trim()
         }
+        if (productionYear == null && !secondaryDescription.isNullOrBlank()) {
+            val yRegex = Regex("""(?:Sortie|Année)\s*:\s*(\d{4})""", RegexOption.IGNORE_CASE)
+            productionYear = yRegex.find(secondaryDescription)?.groupValues?.get(1)?.toIntOrNull()
+        }
+        if (seriesYear == null && !secondaryDescription.isNullOrBlank()) {
+            val syRegex = Regex("""(?:Série|Origine)\s*:\s*(\d{4})""", RegexOption.IGNORE_CASE)
+            seriesYear = syRegex.find(secondaryDescription)?.groupValues?.get(1)?.toIntOrNull()
+        }
+        if (country == null && !secondaryDescription.isNullOrBlank()) {
+            val cRegex = Regex("""Pays\s*:\s*([^•\n\r|]{3,30})""", RegexOption.IGNORE_CASE)
+            country = cRegex.find(secondaryDescription)?.groupValues?.get(1)?.trim()
+        }
+
+        val cleanedPrimary = ProgramDescriptionUtils.clean(description) ?: ""
+        val cleanedSecondary = ProgramDescriptionUtils.clean(secondaryDescription)
+        val finalSecondary = if (ProgramDescriptionUtils.isRedundant(cleanedPrimary, cleanedSecondary)) {
+            null
+        } else {
+            cleanedSecondary
+        }
+
         val calculatedDuration = if (lengthMinutes > 0) {
             lengthMinutes
         } else {
@@ -256,7 +290,8 @@ class XmltvParser @Inject constructor() {
             stopTimestamp = stopTimestamp,
             title = title,
             subTitle = subTitle,
-            description = description,
+            description = cleanedPrimary,
+            secondaryDescription = finalSecondary,
             categories = categories,
             iconUrl = iconUrl,
             seasonNumber = seasonNumber,

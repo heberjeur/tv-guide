@@ -40,6 +40,11 @@ class UserPreferences @Inject constructor(
     private val keyVibrationEnabled = booleanPreferencesKey("vibration_enabled")
     private val keyHighlightAccessibility = booleanPreferencesKey("highlight_accessibility")
     private val keyCustomNotificationDateTime = androidx.datastore.preferences.core.longPreferencesKey("custom_notification_datetime")
+    private val keyDisplayTimezone = stringPreferencesKey("display_timezone")
+
+    val displayTimezone: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyDisplayTimezone] ?: "origin"
+    }
 
     val customNotificationDateTime: Flow<Long?> = context.dataStore.data.map { preferences ->
         preferences[keyCustomNotificationDateTime]
@@ -261,6 +266,12 @@ class UserPreferences @Inject constructor(
     suspend fun setHighlightAccessibility(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[keyHighlightAccessibility] = enabled
+        }
+    }
+
+    suspend fun setDisplayTimezone(timezone: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyDisplayTimezone] = timezone
         }
     }
 }

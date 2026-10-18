@@ -77,6 +77,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.music4music.tvguide.R
+import com.music4music.tvguide.util.ProgramDescriptionUtils
 import com.music4music.tvguide.ui.theme.AccentRed
 import com.music4music.tvguide.ui.theme.DarkBackground
 import com.music4music.tvguide.ui.theme.DarkSurface
@@ -143,7 +144,7 @@ fun ProgramDetailScreen(
                 CircularProgressIndicator(color = AccentRed)
             }
         } else {
-            val zone = ZoneId.of("Europe/Paris")
+            val zone = com.music4music.tvguide.ui.theme.LocalDisplayZone.current
             val startTime = Instant.ofEpochMilli(currentProgram.startTimestamp).atZone(zone).format(timeFormatter)
             val stopTime = Instant.ofEpochMilli(currentProgram.stopTimestamp).atZone(zone).format(timeFormatter)
             val broadcastDate = Instant.ofEpochMilli(currentProgram.startTimestamp).atZone(zone).format(dateFormatter)
@@ -535,10 +536,23 @@ fun ProgramDetailScreen(
                         }
                     }
 
-                    if (currentProgram.description.isNotEmpty()) {
+                    val cleanedDescription = remember(currentProgram.description, currentProgram.title) {
+                        ProgramDescriptionUtils.cleanWithTitlePrefix(currentProgram.description, currentProgram.title)
+                    }
+
+                    val cleanedSecondaryDescription = remember(currentProgram.secondaryDescription, currentProgram.title, cleanedDescription) {
+                        val secondary = ProgramDescriptionUtils.cleanWithTitlePrefix(currentProgram.secondaryDescription, currentProgram.title)
+                        if (secondary != null && !ProgramDescriptionUtils.isRedundant(cleanedDescription, secondary)) {
+                            secondary
+                        } else {
+                            null
+                        }
+                    }
+
+                    if (!cleanedDescription.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = stringResource(R.string.section_synopsis),
+                            text = stringResource(R.string.section_description),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -546,7 +560,26 @@ fun ProgramDetailScreen(
                         Spacer(modifier = Modifier.height(6.dp))
                         SelectionContainer {
                             Text(
-                                text = currentProgram.description,
+                                text = cleanedDescription,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.3
+                            )
+                        }
+                    }
+
+                    if (!cleanedSecondaryDescription.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.section_more_details),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SelectionContainer {
+                            Text(
+                                text = cleanedSecondaryDescription,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = TextPrimary,
                                 lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.3

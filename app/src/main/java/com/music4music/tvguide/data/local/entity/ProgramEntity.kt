@@ -22,6 +22,7 @@ data class ProgramEntity(
     val title: String,
     val subTitle: String?,
     val description: String,
+    val secondaryDescription: String? = null,
     val categories: List<String>,
     val iconUrl: String?,
     val seasonNumber: Int?,

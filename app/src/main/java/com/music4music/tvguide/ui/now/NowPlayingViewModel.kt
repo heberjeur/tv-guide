@@ -54,7 +54,8 @@ private data class Params(
     val part: EveningPart,
     val query: String,
     val selectedTag: String?,
-    val prefs: FilterPrefs
+    val prefs: FilterPrefs,
+    val zone: ZoneId
 )
 
 data class NowPlayingUiState(
@@ -123,14 +124,18 @@ class NowPlayingViewModel @Inject constructor(
 
     private val _manualRefreshTrigger = MutableStateFlow(0L)
 
+    private val displayZoneFlow: Flow<ZoneId> = userPreferences.displayTimezone.map {
+        com.music4music.tvguide.util.TimezoneUtils.resolveZoneId(it)
+    }
+
     private val rawProgramsFlow = combine(
         _selectedPeriod,
         _selectedEveningPart,
-        _manualRefreshTrigger
-    ) { period, part, _ ->
-        period to part
-    }.flatMapLatest { (period, part) ->
-        val zone = ZoneId.of("Europe/Paris")
+        _manualRefreshTrigger,
+        displayZoneFlow
+    ) { period, part, _, zone ->
+        Triple(period, part, zone)
+    }.flatMapLatest { (period, part, zone) ->
         val today = LocalDate.now(zone)
         val now = System.currentTimeMillis()
 
@@ -182,9 +187,9 @@ class NowPlayingViewModel @Inject constructor(
         _selectedEveningPart,
         _searchQuery,
         _selectedTag,
-        filterPrefsFlow
-    ) { period, part, query, tag, prefs ->
-        Params(period, part, query, tag, prefs)
+        combine(filterPrefsFlow, displayZoneFlow) { prefs, zone -> prefs to zone }
+    ) { period, part, query, tag, (prefs, zone) ->
+        Params(period, part, query, tag, prefs, zone)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -192,8 +197,7 @@ class NowPlayingViewModel @Inject constructor(
         rawProgramsFlow,
         currentTimeFlow,
         paramsFlow
-    ) { rawList, currentTime, (period, part, query, tag, prefs) ->
-        val zone = ZoneId.of("Europe/Paris")
+    ) { rawList, currentTime, (period, part, query, tag, prefs, zone) ->
         val today = LocalDate.now(zone)
 
         val targetTime = when (period) {

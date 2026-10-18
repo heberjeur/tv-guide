@@ -90,11 +90,11 @@ fun CalendarScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     var isSearchActive by remember { mutableStateOf(false) }
 
-    val zone = ZoneId.of("Europe/Paris")
-    val today = remember { LocalDate.now(zone) }
+    val zone = com.music4music.tvguide.ui.theme.LocalDisplayZone.current
+    val today = remember(zone) { LocalDate.now(zone) }
     var currentYearMonth by remember { mutableStateOf(YearMonth.from(selectedDate)) }
 
-    val reminderDates = remember(allReminders) {
+    val reminderDates = remember(allReminders, zone) {
         allReminders.map { Instant.ofEpochMilli(it.startTimestamp).atZone(zone).toLocalDate() }.toSet()
     }
 
@@ -396,7 +396,7 @@ private fun CalendarReminderItem(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val zone = ZoneId.of("Europe/Paris")
+    val zone = com.music4music.tvguide.ui.theme.LocalDisplayZone.current
     val startTime = Instant.ofEpochMilli(reminder.startTimestamp).atZone(zone).format(timeFormatter)
 
     Card(

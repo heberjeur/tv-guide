@@ -24,6 +24,66 @@ const HTTP_HEADERS = {
 
 const detailCache = new Map();
 
+const BOILERPLATE_PHRASES = [
+  'Chaque jour, Laurent Mariotte propose des recettes simples',
+  'Les prévisions météo pour la journée',
+  'Les prévisions météo pour le lendemain',
+  'Le bulletin météorologique international',
+  'Un point quotidien sur l\'actualité météo',
+  'Retrouvez tous vos programmes de nuit',
+  'A suivre, des rediffusions des émissions de la chaîne',
+  'Programmes de la nuit',
+  'Fin des émissions',
+  'Toutes les prévisions météo'
+];
+
+function sanitizeDescriptionText(text) {
+  if (!text) return null;
+  let cleaned = text.trim();
+  for (const phrase of BOILERPLATE_PHRASES) {
+    if (cleaned.toLowerCase().includes(phrase.toLowerCase())) {
+      const reg = new RegExp('[^.\\n]*' + phrase.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&') + '[^.\\n]*\\.?', 'gi');
+      cleaned = cleaned.replace(reg, '').trim();
+    }
+  }
+  cleaned = cleaned.replace(/[^.\n]*\b(?:télé[- ]loisirs|programme[- ]tv\.net)\b[^.\n]*\.?/gi, '').trim();
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+  if (cleaned.length < 15 || !/[a-zA-Z0-9]/.test(cleaned)) {
+    return null;
+  }
+  return cleaned;
+}
+
+function normalizeForComparison(str) {
+  return (str || '')
+    .toLowerCase()
+    .replace(/œ/g, 'oe')
+    .replace(/æ/g, 'ae')
+    .replace(/[’']/g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function resolveDescriptions(source1, source2) {
+  const clean1 = sanitizeDescriptionText(source1);
+  const clean2 = sanitizeDescriptionText(source2);
+
+  if (!clean1 && !clean2) return { primary: null, secondary: null };
+  if (!clean1) return { primary: clean2, secondary: null };
+  if (!clean2) return { primary: clean1, secondary: null };
+
+  const norm1 = normalizeForComparison(clean1);
+  const norm2 = normalizeForComparison(clean2);
+
+  if (norm1 === norm2 || norm1.startsWith(norm2) || norm2.startsWith(norm1) || norm1.includes(norm2) || norm2.includes(norm1)) {
+    const longer = clean1.length >= clean2.length ? clean1 : clean2;
+    return { primary: longer, secondary: null };
+  }
+
+  return { primary: clean1, secondary: clean2 };
+}
+
 function cleanTitle(str) {
   return (str || '')
     .toLowerCase()
@@ -313,16 +373,14 @@ async function fetchDetailPageData(link) {
       } catch {}
     });
 
-    if (!desc || desc.endsWith('...') || desc.endsWith('…')) {
-      let pageSyn = $page('.synopsis-text').first().text().replace(/\s+/g, ' ').trim();
-      if (!pageSyn) {
-        const synEl = $page('.synopsis, .program-summary').first().clone();
-        synEl.find('button, .synopsis-action, a, [class*="action"], [class*="btn"]').remove();
-        pageSyn = synEl.text().replace(/\s+/g, ' ').replace(/^R[ée]sum[ée]\s+[^:]*:\s*/i, '').replace(/Voir plusmoins/gi, '').trim();
-      }
-      if (pageSyn && pageSyn.length > 20 && !pageSyn.endsWith('...') && !pageSyn.endsWith('…')) {
-        desc = pageSyn;
-      }
+    let pageSyn = $page('.synopsis-text').first().text().replace(/\s+/g, ' ').trim();
+    if (!pageSyn) {
+      const synEl = $page('.synopsis, .program-summary').first().clone();
+      synEl.find('button, .synopsis-action, a, [class*="action"], [class*="btn"]').remove();
+      pageSyn = synEl.text().replace(/\s+/g, ' ').replace(/^R[ée]sum[ée]\s+[^:]*:\s*/i, '').replace(/Voir plusmoins/gi, '').trim();
+    }
+    if (pageSyn && pageSyn.length > 20 && !pageSyn.endsWith('...') && !pageSyn.endsWith('…')) {
+      desc = pageSyn;
     }
 
     if (!desc) {
@@ -514,24 +572,25 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
 
     let detailData = null;
     const isPrimeTime = item.hours >= 20 && item.hours <= 23;
-    const isTruncated = matchedDesc && (matchedDesc.endsWith('...') || matchedDesc.endsWith('…'));
+    const isTruncated = !matchedDesc ||
+      matchedDesc.endsWith('...') ||
+      matchedDesc.endsWith('…') ||
+      (!/[.!?\"»\)]$/.test(matchedDesc.trim()) && matchedDesc.length > 50) ||
+      matchedDesc.includes('Toutes les infos de casting et de diffusions TV') ||
+      matchedDesc.length < 180;
     const isSpecial = item.link && (item.link.includes('/cinema/') || item.link.includes('/series/') || item.link.includes('/saisons/'));
-    if (item.link && (isPrimeTime || !matchedDesc || isTruncated || isSpecial)) {
+    if (item.link && (isPrimeTime || isTruncated || isSpecial)) {
       detailData = await fetchDetailPageData(item.link);
-      if (detailData && detailData.desc && detailData.desc.length > 20 && !detailData.desc.endsWith('...') && !detailData.desc.endsWith('…')) {
-        matchedDesc = detailData.desc;
-      }
     }
 
-    if (matchedDesc && (matchedDesc.endsWith('...') || matchedDesc.endsWith('…'))) {
-      matchedDesc = matchedDesc.replace(/\s*(\.\.\.|…)\s*$/, '').trim();
-    }
+    const resolvedDesc = resolveDescriptions(matchedDesc, detailData ? detailData.desc : null);
 
     programs.push({
       channelId: channel.id,
       title: item.title,
       subTitle: matchedSubtitle,
-      desc: matchedDesc,
+      desc: resolvedDesc.primary,
+      secondaryDesc: resolvedDesc.secondary,
       category: matchedCategory,
       format: detailData ? detailData.format : null,
       genre: detailData ? detailData.genre : null,
@@ -653,6 +712,10 @@ function buildXml(channels, programs) {
     }
     if (program.desc) {
       xml += `    <desc lang="fr">${escapeXml(program.desc)}</desc>\n`;
+    }
+    if (program.secondaryDesc) {
+      xml += `    <desc-more lang="fr">${escapeXml(program.secondaryDesc)}</desc-more>\n`;
+      xml += `    <desc lang="fr-more">${escapeXml(program.secondaryDesc)}</desc>\n`;
     }
     if (program.year) {
       xml += `    <date>${escapeXml(String(program.year))}</date>\n`;

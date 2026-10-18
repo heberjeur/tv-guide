@@ -164,8 +164,13 @@ class GuideViewModel @Inject constructor(
         }
     }
 
-    val programs: StateFlow<List<Program>> = guideFilterFlow.flatMapLatest { filter ->
-        val zone = ZoneId.of("Europe/Paris")
+    private val displayZoneFlow: Flow<ZoneId> = userPreferences.displayTimezone.map {
+        com.music4music.tvguide.util.TimezoneUtils.resolveZoneId(it)
+    }
+
+    val programs: StateFlow<List<Program>> = combine(guideFilterFlow, displayZoneFlow) { filter, zone ->
+        filter to zone
+    }.flatMapLatest { (filter, zone) ->
         val (dayStart, dayEnd) = if (filter.date != null) {
             val start = filter.date.atStartOfDay(zone).toInstant().toEpochMilli()
             val end = filter.date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()

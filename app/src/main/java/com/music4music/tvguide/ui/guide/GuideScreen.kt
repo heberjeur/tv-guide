@@ -133,10 +133,10 @@ fun GuideScreen(
         }
     }
 
-    val parisZone = remember { ZoneId.of("Europe/Paris") }
-    val today = remember { LocalDate.now(parisZone) }
-    val tomorrow = remember { today.plusDays(1) }
-    val availableDates = remember {
+    val zone = com.music4music.tvguide.ui.theme.LocalDisplayZone.current
+    val today = remember(zone) { LocalDate.now(zone) }
+    val tomorrow = remember(today) { today.plusDays(1) }
+    val availableDates = remember(today) {
         (0..10).map { today.plusDays(it.toLong()) }
     }
 
@@ -334,7 +334,7 @@ fun GuideScreen(
                 ) {
                     if (selectedDate == null) {
                         val grouped = programs.groupBy { prog ->
-                            Instant.ofEpochMilli(prog.startTimestamp).atZone(parisZone).toLocalDate()
+                            Instant.ofEpochMilli(prog.startTimestamp).atZone(zone).toLocalDate()
                         }
                         grouped.forEach { (date, datePrograms) ->
                             item(key = "header_$date") {

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -19,10 +20,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
-    private val reminderRepository: ReminderRepository
+    private val reminderRepository: ReminderRepository,
+    private val userPreferences: com.music4music.tvguide.data.local.prefs.UserPreferences
 ) : ViewModel() {
 
-    private val _selectedDate = MutableStateFlow(LocalDate.now(ZoneId.of("Europe/Paris")))
+    private val displayZoneFlow = userPreferences.displayTimezone.map {
+        com.music4music.tvguide.util.TimezoneUtils.resolveZoneId(it)
+    }
+
+    private val _selectedDate = MutableStateFlow(LocalDate.now(com.music4music.tvguide.util.TimezoneUtils.ORIGIN_ZONE))
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
@@ -31,8 +37,7 @@ class CalendarViewModel @Inject constructor(
     val allReminders: StateFlow<List<Reminder>> = reminderRepository.getAllReminders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val filteredReminders: StateFlow<List<Reminder>> = combine(allReminders, _selectedDate, _searchQuery) { reminders, date, query ->
-        val zone = ZoneId.of("Europe/Paris")
+    val filteredReminders: StateFlow<List<Reminder>> = combine(allReminders, _selectedDate, _searchQuery, displayZoneFlow) { reminders, date, query, zone ->
         reminders.filter { reminder ->
             val reminderDate = Instant.ofEpochMilli(reminder.startTimestamp).atZone(zone).toLocalDate()
             val matchesDate = reminderDate == date

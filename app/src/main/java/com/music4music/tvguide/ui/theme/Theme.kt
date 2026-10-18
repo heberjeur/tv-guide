@@ -54,6 +54,7 @@ private val LightColorScheme = lightColorScheme(
 val LocalDisplayDensity = compositionLocalOf { "comfort" }
 val LocalHighlightAccessibility = compositionLocalOf { true }
 val LocalFontSizeScale = compositionLocalOf { "normal" }
+val LocalDisplayZone = compositionLocalOf { java.time.ZoneId.of("Europe/Paris") }
 
 private fun scaledTypography(scale: Float): Typography {
     val default = Typography()

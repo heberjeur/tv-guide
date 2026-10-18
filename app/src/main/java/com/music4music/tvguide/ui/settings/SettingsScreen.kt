@@ -114,9 +114,11 @@ fun SettingsScreen(
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
     val highlightAccessibility by viewModel.highlightAccessibility.collectAsStateWithLifecycle()
     val allChannels by viewModel.allChannels.collectAsStateWithLifecycle()
+    val displayTimezone by viewModel.displayTimezone.collectAsStateWithLifecycle()
 
     var showFavoritesDialog by remember { mutableStateOf(false) }
     var showHiddenDialog by remember { mutableStateOf(false) }
+    var showTimezoneDialog by remember { mutableStateOf(false) }
 
     val soundDisplayName = remember(notificationSound) {
         if (notificationSound != null) {
@@ -246,6 +248,69 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = { showHiddenDialog = false }) {
                     Text(text = stringResource(R.string.action_confirm), color = AccentRed)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
+    if (showTimezoneDialog) {
+        AlertDialog(
+            onDismissRequest = { showTimezoneDialog = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.dialog_select_timezone_title),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(350.dp)
+                ) {
+                    items(com.music4music.tvguide.util.TimezoneUtils.AVAILABLE_TIMEZONES) { tz ->
+                        val isSelected = displayTimezone == tz
+                        val label = when (tz) {
+                            "origin" -> stringResource(R.string.timezone_origin)
+                            "system" -> stringResource(R.string.timezone_system)
+                            else -> tz
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setDisplayTimezone(tz)
+                                    showTimezoneDialog = false
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    viewModel.setDisplayTimezone(tz)
+                                    showTimezoneDialog = false
+                                },
+                                colors = androidx.compose.material3.RadioButtonDefaults.colors(
+                                    selectedColor = AccentRed
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = label,
+                                color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTimezoneDialog = false }) {
+                    Text(text = stringResource(R.string.action_cancel), color = AccentRed)
                 }
             },
             containerColor = MaterialTheme.colorScheme.surface
@@ -547,6 +612,67 @@ fun SettingsScreen(
                                 shape = RoundedCornerShape(8.dp)
                             )
                         }
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_timezone_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.settings_timezone_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "origin" to stringResource(R.string.timezone_origin),
+                            "system" to stringResource(R.string.timezone_system),
+                            "GMT+1" to "GMT+1",
+                            "GMT+2" to "GMT+2"
+                        ).forEach { (tz, label) ->
+                            FilterChip(
+                                selected = displayTimezone == tz,
+                                onClick = { viewModel.setDisplayTimezone(tz) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                        val isCustomTz = displayTimezone !in listOf("origin", "system", "GMT+1", "GMT+2")
+                        FilterChip(
+                            selected = isCustomTz,
+                            onClick = { showTimezoneDialog = true },
+                            label = { Text(text = if (isCustomTz) displayTimezone else stringResource(R.string.label_more_timezones)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AccentRed,
+                                selectedLabelColor = Color.White,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            border = null,
+                            shape = RoundedCornerShape(8.dp)
+                        )
                     }
                 }
             }
