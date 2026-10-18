@@ -180,7 +180,13 @@
     <string name="retention_3_days">3 days</string>
     <string name="retention_7_days">7 days</string>
     <string name="retention_14_days">14 days</string>
+    <string name="retention_permanent">Permanent</string>
 
+    <string name="settings_reminder_recurrence">Reminder Recurrence</string>
+    <string name="reminder_recurrence_once">Once</string>
+    <string name="reminder_recurrence_daily">Every day</string>
+    <string name="reminder_recurrence_weekly">Every week</string>
+    <string name="reminder_recurrence_monthly">Every month</string>
 
     <string name="settings_vibration_enable">Vibrate on notification</string>
     <string name="settings_custom_datetime_title">Custom Notification Date &amp; Time</string>
@@ -198,6 +204,9 @@
     <string name="channels_empty">No channels found.</string>
     <string name="no_programs_for_date">No programs available for this date.</string>
     <string name="badge_subtitles">ST</string>
+    <string name="badge_subtitles_long">Subtitles</string>
+    <string name="badge_audio_description">AD</string>
+    <string name="badge_ad_long">Audio description</string>
     <string name="badge_hd">HD</string>
     <string name="badge_unreleased">Inédit</string>
     <string name="filter_today">Today</string>
@@ -212,10 +221,10 @@
     <string name="action_reset_filter">Reset filter</string>
     <string name="status_live">LIVE</string>
 
-    <string name="settings_timezone_title">Guide Schedule &amp; Timezone</string>
+    <string name="settings_timezone_title">Timezone Selection</string>
     <string name="settings_timezone_desc">Choose display timezone for broadcast hours and timeline</string>
     <string name="timezone_system">Device Time (Auto)</string>
-    <string name="timezone_origin">Original Time (Paris)</string>
+    <string name="timezone_origin">Original Time</string>
     <string name="dialog_select_timezone_title">Select Timezone</string>
     <string name="label_more_timezones">Other...</string>
 </resources>

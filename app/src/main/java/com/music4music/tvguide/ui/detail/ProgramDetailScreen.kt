@@ -105,9 +105,11 @@ fun ProgramDetailScreen(
     val reminder by viewModel.reminder.collectAsStateWithLifecycle()
     val upcomingBroadcasts by viewModel.upcomingBroadcasts.collectAsStateWithLifecycle()
     val defaultLeadTime by viewModel.defaultLeadTimeMinutes.collectAsStateWithLifecycle()
+    val defaultRecurrence by viewModel.defaultReminderRecurrence.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var selectedLeadTime by remember(defaultLeadTime) { mutableIntStateOf(defaultLeadTime) }
+    var selectedRecurrence by remember(defaultRecurrence) { mutableStateOf(defaultRecurrence) }
     var showLeadTimeOptions by remember { mutableStateOf(false) }
     var isImageEnlarged by remember { mutableStateOf(false) }
 
@@ -274,6 +276,15 @@ fun ProgramDetailScreen(
                         if (currentProgram.isHd) {
                             BadgeItem(text = stringResource(R.string.label_hd), color = AccentRed)
                         }
+                        val highlightAccessibility = com.music4music.tvguide.ui.theme.LocalHighlightAccessibility.current
+                        if (highlightAccessibility) {
+                            if (currentProgram.hasSubtitlesResolved) {
+                                BadgeItem(text = stringResource(R.string.badge_subtitles_long), color = TextSecondary)
+                            }
+                            if (currentProgram.hasAudioDescription) {
+                                BadgeItem(text = stringResource(R.string.badge_ad_long), color = TextSecondary)
+                            }
+                        }
                         if (currentProgram.contentRating != null) {
                             BadgeItem(text = currentProgram.contentRating, color = TextSecondary)
                         }
@@ -398,9 +409,6 @@ fun ProgramDetailScreen(
                                     viewModel.toggleReminder()
                                 } else {
                                     showLeadTimeOptions = !showLeadTimeOptions
-                                    if (!showLeadTimeOptions) {
-                                        viewModel.toggleReminder(selectedLeadTime)
-                                    }
                                 }
                             },
                             modifier = Modifier.weight(1f),
@@ -415,13 +423,18 @@ fun ProgramDetailScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (reminder != null) {
-                                    stringResource(R.string.reminder_active)
-                                } else {
-                                    stringResource(R.string.reminder_set)
+                            val reminderButtonText = if (reminder != null) {
+                                val recurrenceText = when (reminder?.recurrence) {
+                                    "daily" -> " (${stringResource(R.string.reminder_recurrence_daily)})"
+                                    "weekly" -> " (${stringResource(R.string.reminder_recurrence_weekly)})"
+                                    "monthly" -> " (${stringResource(R.string.reminder_recurrence_monthly)})"
+                                    else -> ""
                                 }
-                            )
+                                stringResource(R.string.reminder_active) + recurrenceText
+                            } else {
+                                stringResource(R.string.reminder_set)
+                            }
+                            Text(text = reminderButtonText)
                         }
 
                         OutlinedButton(
@@ -474,7 +487,7 @@ fun ProgramDetailScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
-                                    text = stringResource(R.string.reminder_dialog_lead_time),
+                                    text = stringResource(R.string.settings_reminder_lead_time),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextSecondary
                                 )
@@ -484,14 +497,10 @@ fun ProgramDetailScreen(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    listOf(0, 5, 10, 15, 30).forEach { mins ->
+                                    listOf(0, 30, 60).forEach { mins ->
                                         val isChosen = selectedLeadTime == mins
                                         SuggestionChip(
-                                            onClick = {
-                                                selectedLeadTime = mins
-                                                showLeadTimeOptions = false
-                                                viewModel.toggleReminder(mins)
-                                            },
+                                            onClick = { selectedLeadTime = mins },
                                             label = {
                                                 Text(
                                                     text = if (mins == 0) {
@@ -509,46 +518,55 @@ fun ProgramDetailScreen(
                                             border = null
                                         )
                                     }
+                                }
 
-                                    SuggestionChip(
-                                        onClick = {
-                                            val cal = java.util.Calendar.getInstance().apply {
-                                                timeInMillis = currentProgram.startTimestamp
-                                            }
-                                            android.app.DatePickerDialog(
-                                                context,
-                                                { _, year, month, day ->
-                                                    android.app.TimePickerDialog(
-                                                        context,
-                                                        { _, hour, minute ->
-                                                            val picked = java.util.Calendar.getInstance().apply {
-                                                                set(year, month, day, hour, minute, 0)
-                                                            }
-                                                            viewModel.setCustomDateTimeReminder(picked.timeInMillis)
-                                                            showLeadTimeOptions = false
-                                                        },
-                                                        cal.get(java.util.Calendar.HOUR_OF_DAY),
-                                                        cal.get(java.util.Calendar.MINUTE),
-                                                        true
-                                                    ).show()
-                                                },
-                                                cal.get(java.util.Calendar.YEAR),
-                                                cal.get(java.util.Calendar.MONTH),
-                                                cal.get(java.util.Calendar.DAY_OF_MONTH)
-                                            ).show()
-                                        },
-                                        label = {
-                                            Text(
-                                                text = stringResource(R.string.action_pick_datetime),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = AccentRed
-                                            )
-                                        },
-                                        colors = SuggestionChipDefaults.suggestionChipColors(
-                                            containerColor = DarkSurfaceVariant
-                                        ),
-                                        border = null
-                                    )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = stringResource(R.string.settings_reminder_recurrence),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf(
+                                        "once" to stringResource(R.string.reminder_recurrence_once),
+                                        "daily" to stringResource(R.string.reminder_recurrence_daily),
+                                        "weekly" to stringResource(R.string.reminder_recurrence_weekly),
+                                        "monthly" to stringResource(R.string.reminder_recurrence_monthly)
+                                    ).forEach { (recurrenceKey, label) ->
+                                        val isChosen = selectedRecurrence == recurrenceKey
+                                        SuggestionChip(
+                                            onClick = { selectedRecurrence = recurrenceKey },
+                                            label = {
+                                                Text(
+                                                    text = label,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (isChosen) AccentRed else TextPrimary
+                                                )
+                                            },
+                                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                                containerColor = if (isChosen) DarkSurfaceVariant else Color.Transparent
+                                            ),
+                                            border = null
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = {
+                                        showLeadTimeOptions = false
+                                        viewModel.toggleReminder(selectedLeadTime, selectedRecurrence)
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = AccentRed),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(text = stringResource(R.string.action_confirm), color = Color.White)
                                 }
                             }
                         }

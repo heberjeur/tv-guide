@@ -56,7 +56,10 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val reminderLeadTime: StateFlow<Int> = userPreferences.reminderLeadTimeMinutes
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val reminderRecurrence: StateFlow<String> = userPreferences.reminderRecurrence
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "once")
 
     val customNotificationDateTime: StateFlow<Long?> = userPreferences.customNotificationDateTime
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -154,6 +157,12 @@ class SettingsViewModel @Inject constructor(
     fun setLeadTime(minutes: Int) {
         viewModelScope.launch {
             userPreferences.setReminderLeadTime(minutes)
+        }
+    }
+
+    fun setReminderRecurrence(recurrence: String) {
+        viewModelScope.launch {
+            userPreferences.setReminderRecurrence(recurrence)
         }
     }
 

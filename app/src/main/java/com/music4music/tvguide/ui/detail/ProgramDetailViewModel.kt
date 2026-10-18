@@ -49,7 +49,10 @@ class ProgramDetailViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val defaultLeadTimeMinutes: StateFlow<Int> = userPreferences.reminderLeadTimeMinutes
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val defaultReminderRecurrence: StateFlow<String> = userPreferences.reminderRecurrence
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "once")
 
     val upcomingBroadcasts: StateFlow<List<Program>> = program.flatMapLatest { prog ->
         if (prog != null && prog.title.isNotBlank()) {
@@ -59,7 +62,7 @@ class ProgramDetailViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun toggleReminder(customLeadTime: Int? = null) {
+    fun toggleReminder(customLeadTime: Int? = null, customRecurrence: String? = null) {
         val currentProgram = program.value ?: return
         val currentReminder = reminder.value
 
@@ -69,13 +72,15 @@ class ProgramDetailViewModel @Inject constructor(
                 reminderRepository.deleteReminder(programId)
             } else {
                 val leadTime = customLeadTime ?: userPreferences.reminderLeadTimeMinutes.first()
+                val recurrence = customRecurrence ?: userPreferences.reminderRecurrence.first()
                 val soundUri = userPreferences.notificationSound.first()
 
                 setReminderUseCase(
                     program = currentProgram,
                     leadTimeMinutes = leadTime,
                     syncToCalendar = false,
-                    soundUri = soundUri
+                    soundUri = soundUri,
+                    recurrence = recurrence
                 )
 
                 scheduleAlarm(

@@ -180,7 +180,13 @@
     <string name="retention_3_days">3 jours</string>
     <string name="retention_7_days">7 jours</string>
     <string name="retention_14_days">14 jours</string>
+    <string name="retention_permanent">Permanent</string>
 
+    <string name="settings_reminder_recurrence">Répétition du rappel</string>
+    <string name="reminder_recurrence_once">Une seule fois</string>
+    <string name="reminder_recurrence_daily">Chaque jour</string>
+    <string name="reminder_recurrence_weekly">Chaque semaine</string>
+    <string name="reminder_recurrence_monthly">Chaque mois</string>
 
     <string name="settings_vibration_enable">Vibrer lors du rappel</string>
     <string name="settings_custom_datetime_title">Date et heure du rappel</string>
@@ -198,6 +204,9 @@
     <string name="channels_empty">Aucune chaîne trouvée.</string>
     <string name="no_programs_for_date">Aucun programme disponible pour cette date.</string>
     <string name="badge_subtitles">ST</string>
+    <string name="badge_subtitles_long">Sous-titres</string>
+    <string name="badge_audio_description">AD</string>
+    <string name="badge_ad_long">Audiodescription</string>
     <string name="badge_hd">HD</string>
     <string name="badge_unreleased">Inédit</string>
     <string name="filter_today">Aujourd\'hui</string>
@@ -212,10 +221,10 @@
     <string name="action_reset_filter">Réinitialiser</string>
     <string name="status_live">DIRECT</string>
 
-    <string name="settings_timezone_title">Chronologie et horaires du guide</string>
+    <string name="settings_timezone_title">Choix du fuseau horaire</string>
     <string name="settings_timezone_desc">Choisissez le fuseau horaire d\'affichage des heures de diffusion</string>
     <string name="timezone_system">Heure de l\'appareil (Auto)</string>
-    <string name="timezone_origin">Heure d\'origine (Paris)</string>
+    <string name="timezone_origin">Heure d\'origine</string>
     <string name="dialog_select_timezone_title">Choisir le fuseau horaire</string>
     <string name="label_more_timezones">Autre fuseau...</string>
 </resources>

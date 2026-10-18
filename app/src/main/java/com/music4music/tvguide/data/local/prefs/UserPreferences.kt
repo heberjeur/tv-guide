@@ -23,6 +23,7 @@ class UserPreferences @Inject constructor(
     private val keyNotificationsEnabled = booleanPreferencesKey("notifications_enabled")
     private val keyNotificationSound = stringPreferencesKey("notification_sound")
     private val keyReminderLeadTime = intPreferencesKey("reminder_lead_time")
+    private val keyReminderRecurrence = stringPreferencesKey("reminder_recurrence")
     private val keyChannelGridMode = booleanPreferencesKey("channel_grid_mode")
     private val keyAppLanguage = stringPreferencesKey("app_language")
     private val keySyncFrequencyHours = intPreferencesKey("sync_frequency_hours")
@@ -83,7 +84,11 @@ class UserPreferences @Inject constructor(
     }
 
     val reminderLeadTimeMinutes: Flow<Int> = context.dataStore.data.map { preferences ->
-        preferences[keyReminderLeadTime] ?: 10
+        preferences[keyReminderLeadTime] ?: 0
+    }
+
+    val reminderRecurrence: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyReminderRecurrence] ?: "once"
     }
 
     val themeMode: Flow<String> = context.dataStore.data.map { preferences ->
@@ -153,6 +158,12 @@ class UserPreferences @Inject constructor(
     suspend fun setReminderLeadTime(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[keyReminderLeadTime] = minutes
+        }
+    }
+
+    suspend fun setReminderRecurrence(recurrence: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyReminderRecurrence] = recurrence
         }
     }
 

@@ -1,13 +1,7 @@
 package com.music4music.tvguide.ui.settings
 
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
-import androidx.compose.ui.graphics.Color
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 import android.app.Activity
+import androidx.compose.ui.graphics.Color
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -95,7 +89,7 @@ fun SettingsScreen(
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsStateWithLifecycle()
     val notificationSound by viewModel.notificationSound.collectAsStateWithLifecycle()
     val reminderLeadTime by viewModel.reminderLeadTime.collectAsStateWithLifecycle()
-    val customNotificationDateTime by viewModel.customNotificationDateTime.collectAsStateWithLifecycle()
+    val reminderRecurrence by viewModel.reminderRecurrence.collectAsStateWithLifecycle()
     val syncFrequencyHours by viewModel.syncFrequencyHours.collectAsStateWithLifecycle()
     val syncWifiOnly by viewModel.syncWifiOnly.collectAsStateWithLifecycle()
     val syncChargingOnly by viewModel.syncChargingOnly.collectAsStateWithLifecycle()
@@ -104,8 +98,6 @@ fun SettingsScreen(
     val cacheSizeText by viewModel.cacheSizeText.collectAsStateWithLifecycle()
 
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val displayDensity by viewModel.displayDensity.collectAsStateWithLifecycle()
-    val fontSizeScale by viewModel.fontSizeScale.collectAsStateWithLifecycle()
     val hideReruns by viewModel.hideReruns.collectAsStateWithLifecycle()
     val channelSortOrder by viewModel.channelSortOrder.collectAsStateWithLifecycle()
     val favoriteChannels by viewModel.favoriteChannels.collectAsStateWithLifecycle()
@@ -118,7 +110,6 @@ fun SettingsScreen(
 
     var showFavoritesDialog by remember { mutableStateOf(false) }
     var showHiddenDialog by remember { mutableStateOf(false) }
-    var showTimezoneDialog by remember { mutableStateOf(false) }
 
     val soundDisplayName = remember(notificationSound) {
         if (notificationSound != null) {
@@ -254,69 +245,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showTimezoneDialog) {
-        AlertDialog(
-            onDismissRequest = { showTimezoneDialog = false },
-            title = {
-                Text(
-                    text = stringResource(R.string.dialog_select_timezone_title),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(350.dp)
-                ) {
-                    items(com.music4music.tvguide.util.TimezoneUtils.AVAILABLE_TIMEZONES) { tz ->
-                        val isSelected = displayTimezone == tz
-                        val label = when (tz) {
-                            "origin" -> stringResource(R.string.timezone_origin)
-                            "system" -> stringResource(R.string.timezone_system)
-                            else -> tz
-                        }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.setDisplayTimezone(tz)
-                                    showTimezoneDialog = false
-                                }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            androidx.compose.material3.RadioButton(
-                                selected = isSelected,
-                                onClick = {
-                                    viewModel.setDisplayTimezone(tz)
-                                    showTimezoneDialog = false
-                                },
-                                colors = androidx.compose.material3.RadioButtonDefaults.colors(
-                                    selectedColor = AccentRed
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = label,
-                                color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showTimezoneDialog = false }) {
-                    Text(text = stringResource(R.string.action_cancel), color = AccentRed)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -372,72 +300,6 @@ fun SettingsScreen(
                             FilterChip(
                                 selected = themeMode == mode,
                                 onClick = { viewModel.setThemeMode(mode) },
-                                label = { Text(text = label) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AccentRed,
-                                    selectedLabelColor = Color.White,
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.settings_density_title),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            "comfort" to stringResource(R.string.density_comfort),
-                            "compact" to stringResource(R.string.density_compact)
-                        ).forEach { (density, label) ->
-                            FilterChip(
-                                selected = displayDensity == density,
-                                onClick = { viewModel.setDisplayDensity(density) },
-                                label = { Text(text = label) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AccentRed,
-                                    selectedLabelColor = Color.White,
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.settings_font_scale_title),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            "normal" to stringResource(R.string.font_scale_normal),
-                            "large" to stringResource(R.string.font_scale_large)
-                        ).forEach { (scale, label) ->
-                            FilterChip(
-                                selected = fontSizeScale == scale,
-                                onClick = { viewModel.setFontSizeScale(scale) },
                                 label = { Text(text = label) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = AccentRed,
@@ -634,45 +496,49 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Card(
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp)
                     ) {
-                        listOf(
-                            "origin" to stringResource(R.string.timezone_origin),
-                            "system" to stringResource(R.string.timezone_system),
-                            "GMT+1" to "GMT+1",
-                            "GMT+2" to "GMT+2"
-                        ).forEach { (tz, label) ->
-                            FilterChip(
-                                selected = displayTimezone == tz,
-                                onClick = { viewModel.setDisplayTimezone(tz) },
-                                label = { Text(text = label) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AccentRed,
-                                    selectedLabelColor = Color.White,
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(8.dp)
-                            )
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            items(com.music4music.tvguide.util.TimezoneUtils.AVAILABLE_TIMEZONES) { tz ->
+                                val isSelected = displayTimezone == tz
+                                val label = when (tz) {
+                                    "origin" -> stringResource(R.string.timezone_origin)
+                                    "system" -> stringResource(R.string.timezone_system)
+                                    else -> tz
+                                }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { viewModel.setDisplayTimezone(tz) }
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    androidx.compose.material3.RadioButton(
+                                        selected = isSelected,
+                                        onClick = { viewModel.setDisplayTimezone(tz) },
+                                        colors = androidx.compose.material3.RadioButtonDefaults.colors(
+                                            selectedColor = AccentRed
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = label,
+                                        color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurface,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                            }
                         }
-                        val isCustomTz = displayTimezone !in listOf("origin", "system", "GMT+1", "GMT+2")
-                        FilterChip(
-                            selected = isCustomTz,
-                            onClick = { showTimezoneDialog = true },
-                            label = { Text(text = if (isCustomTz) displayTimezone else stringResource(R.string.label_more_timezones)) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AccentRed,
-                                selectedLabelColor = Color.White,
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            border = null,
-                            shape = RoundedCornerShape(8.dp)
-                        )
                     }
                 }
             }
@@ -782,8 +648,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        val presetLeadTimes = listOf(0, 5, 10, 15, 30)
-                        val isCustomSelected = customNotificationDateTime != null || (!presetLeadTimes.contains(reminderLeadTime) && reminderLeadTime != 10)
+                        val presetLeadTimes = listOf(0, 30, 60)
 
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
@@ -797,11 +662,8 @@ fun SettingsScreen(
                                     stringResource(R.string.minutes_short, minutes)
                                 }
                                 FilterChip(
-                                    selected = reminderLeadTime == minutes && customNotificationDateTime == null,
-                                    onClick = {
-                                        viewModel.setLeadTime(minutes)
-                                        viewModel.setCustomNotificationDateTime(null)
-                                    },
+                                    selected = reminderLeadTime == minutes,
+                                    onClick = { viewModel.setLeadTime(minutes) },
                                     label = { Text(text = label) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = AccentRed,
@@ -813,68 +675,41 @@ fun SettingsScreen(
                                     shape = RoundedCornerShape(8.dp)
                                 )
                             }
+                        }
 
-                            val customFormatter = remember { SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()) }
-                            val customChipLabel = if (customNotificationDateTime != null) {
-                                "${stringResource(R.string.label_custom)} (${customFormatter.format(Date(customNotificationDateTime!!))})"
-                            } else {
-                                stringResource(R.string.label_custom)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.settings_reminder_recurrence),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(
+                                "once" to stringResource(R.string.reminder_recurrence_once),
+                                "daily" to stringResource(R.string.reminder_recurrence_daily),
+                                "weekly" to stringResource(R.string.reminder_recurrence_weekly),
+                                "monthly" to stringResource(R.string.reminder_recurrence_monthly)
+                            ).forEach { (recurrenceKey, label) ->
+                                FilterChip(
+                                    selected = reminderRecurrence == recurrenceKey,
+                                    onClick = { viewModel.setReminderRecurrence(recurrenceKey) },
+                                    label = { Text(text = label) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = AccentRed,
+                                        selectedLabelColor = Color.White,
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    border = null,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
                             }
-
-                            FilterChip(
-                                selected = isCustomSelected,
-                                onClick = {
-                                    val currentCal = Calendar.getInstance()
-                                    if (customNotificationDateTime != null && customNotificationDateTime!! > System.currentTimeMillis()) {
-                                        currentCal.timeInMillis = customNotificationDateTime!!
-                                    }
-                                    val initYear = currentCal.get(Calendar.YEAR)
-                                    val initMonth = currentCal.get(Calendar.MONTH)
-                                    val initDay = currentCal.get(Calendar.DAY_OF_MONTH)
-                                    val initHour = currentCal.get(Calendar.HOUR_OF_DAY)
-                                    val initMinute = currentCal.get(Calendar.MINUTE)
-
-                                    val datePicker = DatePickerDialog(
-                                        context,
-                                        { _, year, month, dayOfMonth ->
-                                            val timePicker = TimePickerDialog(
-                                                context,
-                                                { _, hourOfDay, minute ->
-                                                    val pickedCal = Calendar.getInstance().apply {
-                                                        set(Calendar.YEAR, year)
-                                                        set(Calendar.MONTH, month)
-                                                        set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                                                        set(Calendar.HOUR_OF_DAY, hourOfDay)
-                                                        set(Calendar.MINUTE, minute)
-                                                        set(Calendar.SECOND, 0)
-                                                        set(Calendar.MILLISECOND, 0)
-                                                    }
-                                                    viewModel.setCustomNotificationDateTime(pickedCal.timeInMillis)
-                                                    viewModel.setLeadTime(-1)
-                                                },
-                                                initHour,
-                                                initMinute,
-                                                true
-                                            )
-                                            timePicker.show()
-                                        },
-                                        initYear,
-                                        initMonth,
-                                        initDay
-                                    )
-                                    datePicker.datePicker.minDate = System.currentTimeMillis()
-                                    datePicker.show()
-                                },
-                                label = { Text(text = customChipLabel) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = AccentRed,
-                                    selectedLabelColor = Color.White,
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                border = null,
-                                shape = RoundedCornerShape(8.dp)
-                            )
                         }
                     }
                 }
@@ -1005,7 +840,8 @@ fun SettingsScreen(
                         listOf(
                             3 to stringResource(R.string.retention_3_days),
                             7 to stringResource(R.string.retention_7_days),
-                            14 to stringResource(R.string.retention_14_days)
+                            14 to stringResource(R.string.retention_14_days),
+                            -1 to stringResource(R.string.retention_permanent)
                         ).forEach { (days, label) ->
                             FilterChip(
                                 selected = retentionDays == days,

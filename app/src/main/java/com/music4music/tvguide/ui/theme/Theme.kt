@@ -88,7 +88,7 @@ fun TvGuideTheme(
     val colorScheme = when (themeMode) {
         "oled" -> OledColorScheme
         "light" -> LightColorScheme
-        "system" -> if (isSystemDark) DarkColorScheme else LightColorScheme
+        "system" -> if (isSystemDark) OledColorScheme else LightColorScheme
         else -> DarkColorScheme
     }
 
