@@ -299,7 +299,21 @@ class EpgRepositoryImpl @Inject constructor(
 
     private suspend fun preloadFromAssetsIfEmpty(channelPackage: ChannelPackage) {
         try {
-            val assetStream = context.assets.open("epg_tnt.xml.gz")
+            val assetNames = context.assets.list("") ?: emptyArray()
+            val targetName = when {
+                "epg_tnt.xml.gz" in assetNames -> "epg_tnt.xml.gz"
+                "epg_tnt.xml" in assetNames -> "epg_tnt.xml"
+                else -> "epg_tnt.xml.gz"
+            }
+            val rawStream = context.assets.open(targetName)
+            val buffered = if (rawStream is java.io.BufferedInputStream) rawStream else java.io.BufferedInputStream(rawStream)
+            buffered.mark(2)
+            val header = ByteArray(2)
+            val count = buffered.read(header)
+            buffered.reset()
+            val isGzip = count == 2 && header[0] == 0x1f.toByte() && header[1] == 0x8b.toByte()
+            val assetStream = if (isGzip) java.util.zip.GZIPInputStream(buffered) else buffered
+
             var totalPrograms = 0
             val imageList = mutableListOf<String>()
 
@@ -340,7 +354,8 @@ class EpgRepositoryImpl @Inject constructor(
 
             imageList.addAll(ChannelCatalog.getAllLogoUrls())
             prefetchImages(imageList)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.e("EpgRepository", "Failed to preload from assets", e)
         }
     }
 
