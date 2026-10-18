@@ -227,13 +227,35 @@ class EpgRepositoryImpl @Inject constructor(
                                 }
                             }
                             if (programs.isNotEmpty()) {
-                                if (isFirstBatch) {
-                                    programDao.clearAll()
-                                    isFirstBatch = false
+                                val enrichedPrograms = programs.map { incoming ->
+                                    val existing = programDao.getProgramByChannelAndStart(incoming.channelId, incoming.startTimestamp)
+                                    if (existing != null) {
+                                        val incomingTruncated = incoming.description.endsWith("...") || incoming.description.endsWith("…")
+                                        val existingFull = !existing.description.endsWith("...") && !existing.description.endsWith("…") && existing.description.length > incoming.description.length
+                                        val bestDesc = if (incomingTruncated && existingFull) existing.description else incoming.description
+                                        val bestSecondary = incoming.secondaryDescription ?: existing.secondaryDescription
+                                        val bestSeason = incoming.seasonNumber ?: existing.seasonNumber
+                                        val bestEpisode = incoming.episodeNumber ?: existing.episodeNumber
+                                        val bestYear = incoming.productionYear ?: existing.productionYear
+                                        val bestSeriesYear = incoming.seriesYear ?: existing.seriesYear
+                                        val bestCountry = incoming.country ?: existing.country
+                                        incoming.copy(
+                                            id = existing.id,
+                                            description = bestDesc,
+                                            secondaryDescription = bestSecondary,
+                                            seasonNumber = bestSeason,
+                                            episodeNumber = bestEpisode,
+                                            productionYear = bestYear,
+                                            seriesYear = bestSeriesYear,
+                                            country = bestCountry
+                                        )
+                                    } else {
+                                        incoming
+                                    }
                                 }
-                                programDao.insertPrograms(programs)
-                                totalPrograms += programs.size
-                                programs.forEach { p ->
+                                programDao.insertPrograms(enrichedPrograms)
+                                totalPrograms += enrichedPrograms.size
+                                enrichedPrograms.forEach { p ->
                                     val icon = p.iconUrl
                                     if (!icon.isNullOrBlank() && !icon.startsWith("data:")) {
                                         imageList.add(icon)

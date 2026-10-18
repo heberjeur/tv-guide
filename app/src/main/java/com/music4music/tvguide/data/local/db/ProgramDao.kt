@@ -21,6 +21,9 @@ interface ProgramDao {
     @Query("SELECT * FROM programs WHERE id = :id LIMIT 1")
     suspend fun getProgramByIdDirect(id: Long): ProgramEntity?
 
+    @Query("SELECT * FROM programs WHERE channelId = :channelId AND startTimestamp = :startTimestamp LIMIT 1")
+    suspend fun getProgramByChannelAndStart(channelId: String, startTimestamp: Long): ProgramEntity?
+
     @Query("SELECT * FROM programs WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY startTimestamp ASC LIMIT 100")
     fun searchPrograms(query: String): Flow<List<ProgramEntity>>
 
