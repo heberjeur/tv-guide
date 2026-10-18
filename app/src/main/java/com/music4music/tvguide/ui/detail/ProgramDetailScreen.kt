@@ -250,6 +250,9 @@ fun ProgramDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        currentProgram.categories.forEach { category ->
+                            BadgeItem(text = category, color = TextSecondary)
+                        }
                         if (currentProgram.seasonNumber != null && currentProgram.episodeNumber != null) {
                             BadgeItem(
                                 text = stringResource(

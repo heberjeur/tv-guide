@@ -15,7 +15,7 @@ import com.music4music.tvguide.data.local.entity.SyncMetadataEntity
         ReminderEntity::class,
         SyncMetadataEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
