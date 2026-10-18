@@ -313,9 +313,19 @@ fun ProgramDetailScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             if (currentProgram.seasonNumber != null) {
+                                val epText = if (currentProgram.episodeNumber != null) {
+                                    stringResource(R.string.label_season_episode_short, currentProgram.seasonNumber, currentProgram.episodeNumber)
+                                } else {
+                                    stringResource(R.string.label_season_value, currentProgram.seasonNumber)
+                                }
                                 InfoRow(
                                     label = stringResource(R.string.label_season),
-                                    value = stringResource(R.string.label_season_value, currentProgram.seasonNumber)
+                                    value = epText
+                                )
+                            } else if (currentProgram.episodeNumber != null) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_episode),
+                                    value = stringResource(R.string.label_episode_value, currentProgram.episodeNumber)
                                 )
                             }
 
@@ -349,6 +359,19 @@ fun ProgramDetailScreen(
                                 )
                             }
 
+                            val broadcastType = when {
+                                currentProgram.isLiveBroadcast || currentProgram.isNowPlaying -> stringResource(R.string.status_live)
+                                currentProgram.isUnreleasedResolved -> stringResource(R.string.status_unreleased)
+                                currentProgram.isRerun -> stringResource(R.string.status_rerun)
+                                else -> null
+                            }
+                            if (broadcastType != null) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_broadcast_type),
+                                    value = broadcastType
+                                )
+                            }
+
                             if (currentProgram.credit.directors.isNotEmpty()) {
                                 InfoRow(
                                     label = if (currentProgram.credit.directors.size > 1) {
@@ -357,6 +380,62 @@ fun ProgramDetailScreen(
                                         stringResource(R.string.label_director)
                                     },
                                     value = currentProgram.credit.directors.joinToString(", ")
+                                )
+                            }
+
+                            if (currentProgram.credit.presenters.isNotEmpty()) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_presented_by),
+                                    value = currentProgram.credit.presenters.joinToString(", ")
+                                )
+                            }
+
+                            if (currentProgram.credit.guests.isNotEmpty()) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_guests),
+                                    value = currentProgram.credit.guests.joinToString(", ")
+                                )
+                            }
+
+                            val accessibilityText = when {
+                                currentProgram.hasSubtitlesResolved && currentProgram.hasAudioDescription -> {
+                                    stringResource(R.string.accessibility_subtitles_and_ad)
+                                }
+                                currentProgram.hasSubtitlesResolved -> {
+                                    stringResource(R.string.badge_subtitles_long)
+                                }
+                                currentProgram.hasAudioDescription -> {
+                                    stringResource(R.string.badge_ad_long)
+                                }
+                                else -> null
+                            }
+                            if (accessibilityText != null) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_accessibility),
+                                    value = accessibilityText
+                                )
+                            }
+
+                            if (!currentProgram.contentRating.isNullOrBlank()) {
+                                val ratingClean = currentProgram.contentRating.trim()
+                                val ratingDisplay = when (ratingClean) {
+                                    "-10", "10" -> stringResource(R.string.csa_under_10)
+                                    "-12", "12", "13" -> stringResource(R.string.csa_under_12)
+                                    "-16", "16" -> stringResource(R.string.csa_under_16)
+                                    "-18", "18" -> stringResource(R.string.csa_under_18)
+                                    "Tout public", "TP", "G", "Tous publics" -> stringResource(R.string.csa_all_audiences)
+                                    else -> ratingClean
+                                }
+                                InfoRow(
+                                    label = stringResource(R.string.label_parental_rating),
+                                    value = ratingDisplay
+                                )
+                            }
+
+                            if (currentProgram.isHd) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_video_format),
+                                    value = stringResource(R.string.video_format_hd)
                                 )
                             }
 
@@ -772,40 +851,6 @@ fun ProgramDetailScreen(
                         }
                     }
 
-                    val credits = currentProgram.credit
-                    if (credits.presenters.isNotEmpty() || credits.guests.isNotEmpty() || credits.directors.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Text(
-                            text = stringResource(R.string.section_credits),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        if (credits.presenters.isNotEmpty()) {
-                            CreditSection(
-                                label = stringResource(R.string.label_presented_by),
-                                names = credits.presenters
-                            )
-                        }
-                        if (credits.guests.isNotEmpty()) {
-                            CreditSection(
-                                label = stringResource(R.string.label_guests),
-                                names = credits.guests
-                            )
-                        }
-                        if (credits.directors.isNotEmpty()) {
-                            CreditSection(
-                                label = if (credits.directors.size > 1) {
-                                    stringResource(R.string.label_directors)
-                                } else {
-                                    stringResource(R.string.label_director)
-                                },
-                                names = credits.directors
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -969,19 +1014,3 @@ private fun BadgeItem(text: String, color: Color) {
     }
 }
 
-@Composable
-private fun CreditSection(label: String, names: List<String>) {
-    Column(modifier = Modifier.padding(bottom = 8.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = TextSecondary,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = names.joinToString(", "),
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextPrimary
-        )
-    }
-}

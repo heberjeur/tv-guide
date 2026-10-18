@@ -191,7 +191,7 @@ class GuideViewModel @Inject constructor(
             val notHidden = !prefs.hiddenChannels.any {
                 ChannelCatalog.normalizeId(it) == ChannelCatalog.normalizeId(program.channelId)
             }
-            val notRerun = if (prefs.hideReruns) program.isUnreleased else true
+            val notRerun = if (prefs.hideReruns) !program.isRerun else true
             val matchesQuery = query.isBlank() ||
                     program.title.contains(query, ignoreCase = true) ||
                     program.description.contains(query, ignoreCase = true) ||

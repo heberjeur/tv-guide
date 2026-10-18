@@ -44,6 +44,38 @@ data class Program(
                 (subTitle?.contains("malentendant", ignoreCase = true) == true) ||
                 (subTitle?.contains("VOST", ignoreCase = true) == true)
 
+    val isRerun: Boolean
+        get() = !isUnreleased && (
+            title.contains("rediffusion", ignoreCase = true) ||
+            title.contains("(rediff", ignoreCase = true) ||
+            title.contains("[rediff", ignoreCase = true) ||
+            title.contains("(r)", ignoreCase = true) ||
+            title.contains("[r]", ignoreCase = true) ||
+            (subTitle?.contains("rediffusion", ignoreCase = true) == true) ||
+            (subTitle?.contains("(rediff", ignoreCase = true) == true) ||
+            (subTitle?.contains("[rediff", ignoreCase = true) == true) ||
+            (subTitle?.contains("(r)", ignoreCase = true) == true) ||
+            description.contains("rediffusion", ignoreCase = true) ||
+            description.contains("(rediff", ignoreCase = true) ||
+            description.contains("[rediff", ignoreCase = true) ||
+            categories.any { it.contains("rediffusion", ignoreCase = true) }
+        )
+
+    val isUnreleasedResolved: Boolean
+        get() = isUnreleased ||
+            title.contains("inédit", ignoreCase = true) ||
+            (subTitle?.contains("inédit", ignoreCase = true) == true) ||
+            description.contains("inédit", ignoreCase = true) ||
+            description.contains("inédite", ignoreCase = true) ||
+            categories.any { it.contains("inédit", ignoreCase = true) }
+
+    val isLiveBroadcast: Boolean
+        get() = title.contains("en direct", ignoreCase = true) ||
+            title.contains("[direct]", ignoreCase = true) ||
+            title.contains("(direct)", ignoreCase = true) ||
+            (subTitle?.contains("en direct", ignoreCase = true) == true) ||
+            categories.any { it.equals("direct", ignoreCase = true) }
+
     val isNowPlaying: Boolean
         get() {
             val now = System.currentTimeMillis()

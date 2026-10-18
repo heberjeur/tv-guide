@@ -219,6 +219,10 @@ class XmltvParser @Inject constructor() {
                     isUnreleased = true
                     skipElement(parser)
                 }
+                "previously-shown" -> {
+                    categories.add("Rediffusion")
+                    skipElement(parser)
+                }
                 "subtitles" -> {
                     hasSubtitles = true
                     skipElement(parser)

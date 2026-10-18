@@ -201,7 +201,7 @@ async function loadXmltvReference() {
     return map;
   };
 
-  const registerEntry = (channel, start, stop, desc, subTitle, title, rating, category, credits, season, episode, year, seriesYear, country, icon, channelMap) => {
+  const registerEntry = (channel, start, stop, desc, subTitle, title, rating, category, credits, season, episode, year, seriesYear, country, icon, channelMap, isUnreleased = false, isRerun = false, hasSubtitles = false, isHd = false) => {
     if (!channel || !start || !title) return;
     const entry = {
       channelId: channel,
@@ -217,6 +217,10 @@ async function loadXmltvReference() {
       seriesYear,
       country,
       icon,
+      isUnreleased,
+      isRerun,
+      hasSubtitles,
+      isHd,
       start: parseXmltvDate(start),
       stop: parseXmltvDate(stop)
     };
@@ -289,7 +293,12 @@ async function loadXmltvReference() {
       const actors = $xml(el).find('credits actor').map((_, a) => $xml(a).text().trim()).get();
       const directors = $xml(el).find('credits director').map((_, d) => $xml(d).text().trim()).get();
 
-      registerEntry(channel, start, stop, desc, subTitle, title, rating, category, { presenters, actors, directors }, season, episode, year, seriesYear, country, icon, channelMap);
+      const isUnreleased = $xml(el).find('premiere').length > 0;
+      const isRerun = $xml(el).find('previously-shown').length > 0;
+      const hasSubtitles = $xml(el).find('subtitles').length > 0;
+      const isHd = $xml(el).find('video quality').text().toUpperCase().includes('HD');
+
+      registerEntry(channel, start, stop, desc, subTitle, title, rating, category, { presenters, actors, directors }, season, episode, year, seriesYear, country, icon, channelMap, isUnreleased, isRerun, hasSubtitles, isHd);
     });
   } catch (err) {
     process.stderr.write(`Failed to load xmltv_tnt reference: ${err.message}\n`);
@@ -336,7 +345,12 @@ async function loadXmltvReference() {
         const actors = $xml(el).find('credits actor').map((_, a) => $xml(a).text().trim()).get();
         const directors = $xml(el).find('credits director').map((_, d) => $xml(d).text().trim()).get();
 
-        registerEntry(channel, start, stop, desc, subTitle, title, rating, category, { presenters, actors, directors }, season, episode, year, seriesYear, country, icon, channelMap);
+        const isUnreleased = $xml(el).find('premiere').length > 0;
+        const isRerun = $xml(el).find('previously-shown').length > 0;
+        const hasSubtitles = $xml(el).find('subtitles').length > 0;
+        const isHd = $xml(el).find('video quality').text().toUpperCase().includes('HD');
+
+        registerEntry(channel, start, stop, desc, subTitle, title, rating, category, { presenters, actors, directors }, season, episode, year, seriesYear, country, icon, channelMap, isUnreleased, isRerun, hasSubtitles, isHd);
       }
     });
   } catch (err) {
@@ -433,8 +447,25 @@ async function fetchDetailPageData(link) {
       season = parseInt(seasonMatch[1], 10);
     }
 
-    $page('.overview-stickerListItem').each((_, li) => {
+    let detailIsUnreleased = false;
+    let detailIsRerun = false;
+    let detailIsLive = false;
+    let detailHasSubtitles = false;
+    let detailHasAudioDescription = false;
+    let detailIsHd = false;
+    let detailRating = null;
+
+    $page('.overview-stickerListItem, .program-badges, [class*="sticker"], [class*="badge"], [class*="c-badge"]').each((_, li) => {
       const text = $page(li).text().replace(/\s+/g, ' ').trim();
+      if (/in[ée]dit/i.test(text)) detailIsUnreleased = true;
+      if (/rediff/i.test(text)) detailIsRerun = true;
+      if (/\bdirect\b/i.test(text)) detailIsLive = true;
+      if (/\b(st|sous[- ]titr|malentendant)\b/i.test(text)) detailHasSubtitles = true;
+      if (/\b(ad|audiodescription)\b/i.test(text)) detailHasAudioDescription = true;
+      if (/\b(hd|4k|uhd)\b/i.test(text)) detailIsHd = true;
+      const m = text.match(/(-10|-12|-16|-18)/);
+      if (m && !detailRating) detailRating = m[1];
+
       if (text.startsWith('Format :') && !format) {
         format = text.replace('Format :', '').trim();
       }
@@ -456,6 +487,14 @@ async function fetchDetailPageData(link) {
         }
       }
     });
+
+    if (!detailRating) {
+      const csaAlt = $page('img[alt*="déconseillé"], img[src*="csa"], [class*="csa"]').attr('alt') || '';
+      if (/moins de 10/i.test(csaAlt)) detailRating = '-10';
+      else if (/moins de 12/i.test(csaAlt)) detailRating = '-12';
+      else if (/moins de 16/i.test(csaAlt)) detailRating = '-16';
+      else if (/moins de 18/i.test(csaAlt)) detailRating = '-18';
+    }
 
     if (cleanLink.includes('/saisons/')) {
       const parentSeriesLink = cleanLink.replace(/\/saisons\/\d+.*$/, '/');
@@ -505,7 +544,7 @@ async function fetchDetailPageData(link) {
     }
 
     const uniqueDirectors = Array.from(new Set(directors));
-    const result = { desc, seriesDesc, season, format, genre, year, seriesYear, country, episodeNumber, directors: uniqueDirectors };
+    const result = { desc, seriesDesc, season, format, genre, year, seriesYear, country, episodeNumber, directors: uniqueDirectors, isUnreleased: detailIsUnreleased, isRerun: detailIsRerun, isLive: detailIsLive, hasSubtitles: detailHasSubtitles, hasAudioDescription: detailHasAudioDescription, isHd: detailIsHd, rating: detailRating };
     detailCache.set(cleanLink, result);
     return result;
   } catch {
@@ -565,6 +604,32 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
     const imageSrc = extractImageSrc($el);
     const link = $el.find('a[href*="/programme/"], a[href*="/cinema/"], a[href*="/series/"]').first().attr('href');
 
+    const stickers = [];
+    $el.find('.mainBroadcastCard-sticker, .gridBroadcastCard-sticker, [class*="sticker"], [class*="badge"], [class*="c-badge"], .tag').each((_, s) => {
+      const txt = $(s).text().trim();
+      if (txt) stickers.push(txt);
+    });
+
+    const isUnreleased = stickers.some(s => /in[ée]dit/i.test(s));
+    const isRerun = stickers.some(s => /rediff/i.test(s));
+    const isLive = stickers.some(s => /\bdirect\b/i.test(s));
+    const hasSubtitles = stickers.some(s => /\b(st|sous[- ]titr|malentendant)\b/i.test(s));
+    const hasAudioDescription = stickers.some(s => /\b(ad|audiodescription)\b/i.test(s));
+    const isHd = stickers.some(s => /\bhd\b/i.test(s));
+
+    let cardRating = null;
+    for (const s of stickers) {
+      const m = s.match(/(-10|-12|-16|-18)/);
+      if (m) { cardRating = m[1]; break; }
+    }
+    if (!cardRating) {
+      const csaAlt = $el.find('img[alt*="déconseillé"], img[src*="csa"], [class*="csa"]').attr('alt') || '';
+      if (/moins de 10/i.test(csaAlt)) cardRating = '-10';
+      else if (/moins de 12/i.test(csaAlt)) cardRating = '-12';
+      else if (/moins de 16/i.test(csaAlt)) cardRating = '-16';
+      else if (/moins de 18/i.test(csaAlt)) cardRating = '-18';
+    }
+
     const timeMatch = timeText.match(/(\d{1,2})[h:](\d{2})/i);
     if (!timeMatch) return;
 
@@ -583,7 +648,14 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       startTime,
       imageSrc,
       link,
-      hours
+      hours,
+      isUnreleased,
+      isRerun,
+      isLive,
+      hasSubtitles,
+      hasAudioDescription,
+      isHd,
+      rating: cardRating
     });
   });
 
@@ -691,6 +763,14 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       directors: finalDirectors
     };
 
+    const isUnreleased = (detailData && detailData.isUnreleased) || item.isUnreleased || (refEntry && refEntry.isUnreleased) || false;
+    const isRerun = !isUnreleased && ((detailData && detailData.isRerun) || item.isRerun || (refEntry && refEntry.isRerun) || false);
+    const isLive = (detailData && detailData.isLive) || item.isLive || false;
+    const hasSubtitles = (detailData && detailData.hasSubtitles) || item.hasSubtitles || (refEntry && refEntry.hasSubtitles) || false;
+    const hasAudioDescription = (detailData && detailData.hasAudioDescription) || item.hasAudioDescription || false;
+    const isHd = (detailData && detailData.isHd) || item.isHd || (refEntry && refEntry.isHd) || false;
+    const finalRating = (detailData && detailData.rating) || item.rating || matchedRating || null;
+
     programs.push({
       channelId: channel.id,
       title: item.title,
@@ -708,8 +788,14 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       start: item.startTime,
       stop: item.startTime.add(60, 'minute'),
       image: item.imageSrc,
-      rating: matchedRating,
-      credits: finalCredits
+      rating: finalRating,
+      credits: finalCredits,
+      isUnreleased,
+      isRerun,
+      isLive,
+      hasSubtitles,
+      hasAudioDescription,
+      isHd
     });
   }
 
@@ -841,6 +927,9 @@ function buildXml(channels, programs) {
     if (program.category && program.category !== 'General') rawCategories.push(program.category);
     if (program.format && !rawCategories.includes(program.format)) rawCategories.push(program.format);
     if (program.genre && !rawCategories.includes(program.genre)) rawCategories.push(program.genre);
+    if (program.isRerun && !rawCategories.includes('Rediffusion')) rawCategories.push('Rediffusion');
+    if (program.isLive && !rawCategories.includes('Direct')) rawCategories.push('Direct');
+    if (program.hasAudioDescription && !rawCategories.includes('Audiodescription')) rawCategories.push('Audiodescription');
 
     const primaryParent = resolvePrimaryParent(rawCategories, program.title || '', program.desc || '', program.season, program.episode);
     const categories = sanitizeCategories(rawCategories, primaryParent);
@@ -850,6 +939,18 @@ function buildXml(channels, programs) {
     }
     if (program.image) {
       xml += `    <icon src="${escapeXml(program.image)}" />\n`;
+    }
+    if (program.isUnreleased) {
+      xml += `    <premiere />\n`;
+    }
+    if (program.isRerun) {
+      xml += `    <previously-shown />\n`;
+    }
+    if (program.hasSubtitles) {
+      xml += `    <subtitles type="teletext" />\n`;
+    }
+    if (program.isHd) {
+      xml += `    <video>\n      <quality>HD</quality>\n    </video>\n`;
     }
     if (program.rating) {
       xml += `    <rating system="CSA">\n`;

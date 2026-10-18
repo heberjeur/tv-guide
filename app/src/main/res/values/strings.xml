@@ -228,4 +228,19 @@
     <string name="timezone_origin">Original Time</string>
     <string name="dialog_select_timezone_title">Select Timezone</string>
     <string name="label_more_timezones">Other...</string>
+
+    <string name="label_broadcast_type">Broadcast</string>
+    <string name="status_unreleased">Premiere</string>
+    <string name="status_rerun">Rerun</string>
+    <string name="label_accessibility">Accessibility</string>
+    <string name="accessibility_subtitles_and_ad">Subtitles, Audio description</string>
+    <string name="label_parental_rating">Parental Rating</string>
+    <string name="label_video_format">Video Quality</string>
+    <string name="video_format_hd">High Definition (HD)</string>
+    <string name="csa_all_audiences">All audiences</string>
+    <string name="csa_under_10">Not recommended for under 10</string>
+    <string name="csa_under_12">Not recommended for under 12</string>
+    <string name="csa_under_16">Prohibited for under 16</string>
+    <string name="csa_under_18">Prohibited for under 18</string>
+    <string name="label_episode">Episode</string>
 </resources>

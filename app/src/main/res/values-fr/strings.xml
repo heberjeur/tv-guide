@@ -228,4 +228,19 @@
     <string name="timezone_origin">Heure d\'origine</string>
     <string name="dialog_select_timezone_title">Choisir le fuseau horaire</string>
     <string name="label_more_timezones">Autre fuseau...</string>
+
+    <string name="label_broadcast_type">Diffusion</string>
+    <string name="status_unreleased">Inédit</string>
+    <string name="status_rerun">Rediffusion</string>
+    <string name="label_accessibility">Accessibilité</string>
+    <string name="accessibility_subtitles_and_ad">Sous-titres, Audiodescription</string>
+    <string name="label_parental_rating">Signalétique</string>
+    <string name="label_video_format">Qualité vidéo</string>
+    <string name="video_format_hd">Haute Définition (HD)</string>
+    <string name="csa_all_audiences">Tout public</string>
+    <string name="csa_under_10">Déconseillé aux -10 ans</string>
+    <string name="csa_under_12">Déconseillé aux -12 ans</string>
+    <string name="csa_under_16">Interdit aux -16 ans</string>
+    <string name="csa_under_18">Interdit aux -18 ans</string>
+    <string name="label_episode">Épisode</string>
 </resources>
