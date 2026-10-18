@@ -243,4 +243,9 @@
     <string name="csa_under_16">Prohibited for under 16</string>
     <string name="csa_under_18">Prohibited for under 18</string>
     <string name="label_episode">Episode</string>
+    <string name="programs_found_count">%1$d programs</string>
+    <string name="subcategories_count">%1$d subcategories</string>
+    <string name="search_categories_hint">Search category, subcategory...</string>
+    <string name="no_programs_in_category">No programs in this category</string>
+    <string name="subcategories_title">Subcategories</string>
 </resources>

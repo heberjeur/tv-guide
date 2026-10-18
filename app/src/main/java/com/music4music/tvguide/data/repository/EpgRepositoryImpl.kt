@@ -128,6 +128,13 @@ class EpgRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getAllActivePrograms(): Flow<List<Program>> {
+        val fromTime = System.currentTimeMillis() - 2 * 3600 * 1000L
+        return programDao.getAllActivePrograms(fromTime).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
     override suspend fun toggleFavoriteChannel(channelId: String, isFavorite: Boolean) {
         channelDao.updateFavoriteStatus(channelId, isFavorite)
     }

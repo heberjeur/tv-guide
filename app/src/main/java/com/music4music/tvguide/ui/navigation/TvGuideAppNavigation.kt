@@ -29,6 +29,7 @@ import androidx.navigation.navArgument
 import androidx.compose.material3.MaterialTheme
 import com.music4music.tvguide.R
 import com.music4music.tvguide.ui.calendar.CalendarScreen
+import com.music4music.tvguide.ui.categories.CategoriesScreen
 import com.music4music.tvguide.ui.channels.ChannelListScreen
 import com.music4music.tvguide.ui.detail.ProgramDetailScreen
 import com.music4music.tvguide.ui.guide.GuideScreen
@@ -39,8 +40,9 @@ import com.music4music.tvguide.ui.theme.AccentRed
 sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
     data object Now : Screen("now", R.string.tab_programs, Icons.Default.Tv)
     data object Guide : Screen("guide", R.string.tab_guide, Icons.Default.Schedule)
-    data object Calendar : Screen("calendar", R.string.tab_calendar, Icons.Default.CalendarMonth)
+    data object Categories : Screen("categories", R.string.tab_categories, Icons.Default.Category)
     data object Channels : Screen("channels", R.string.tab_channels, Icons.AutoMirrored.Filled.List)
+    data object Calendar : Screen("calendar", R.string.tab_calendar, Icons.Default.CalendarMonth)
     data object Settings : Screen("settings", R.string.tab_settings, Icons.Default.Settings)
 }
 
@@ -53,12 +55,15 @@ fun TvGuideAppNavigation() {
     val bottomNavItems = listOf(
         Screen.Now,
         Screen.Guide,
+        Screen.Categories,
         Screen.Channels,
         Screen.Calendar
     )
 
     val showBottomBar = bottomNavItems.any { screen ->
-        currentRoute == screen.route || (screen == Screen.Guide && currentRoute?.startsWith("guide") == true)
+        currentRoute == screen.route ||
+            (screen == Screen.Guide && currentRoute?.startsWith("guide") == true) ||
+            (screen == Screen.Categories && currentRoute?.startsWith("categories") == true)
     }
 
     Scaffold(
@@ -69,7 +74,8 @@ fun TvGuideAppNavigation() {
                 ) {
                     bottomNavItems.forEach { screen ->
                         val isSelected = currentRoute == screen.route ||
-                            (screen == Screen.Guide && currentRoute?.startsWith("guide") == true)
+                            (screen == Screen.Guide && currentRoute?.startsWith("guide") == true) ||
+                            (screen == Screen.Categories && currentRoute?.startsWith("categories") == true)
                         NavigationBarItem(
                             selected = isSelected,
                             onClick = {
@@ -138,8 +144,8 @@ fun TvGuideAppNavigation() {
                     initialChannelId = channelId
                 )
             }
-            composable("categories") {
-                GuideScreen(
+            composable(Screen.Categories.route) {
+                CategoriesScreen(
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
                     },

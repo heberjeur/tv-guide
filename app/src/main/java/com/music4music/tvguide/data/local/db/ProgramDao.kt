@@ -39,6 +39,9 @@ interface ProgramDao {
     @Query("SELECT * FROM programs WHERE stopTimestamp > :startTime AND startTimestamp < :endTime ORDER BY channelId ASC, startTimestamp ASC")
     fun getProgramsByTimeRange(startTime: Long, endTime: Long): Flow<List<ProgramEntity>>
 
+    @Query("SELECT * FROM programs WHERE stopTimestamp > :fromTime ORDER BY startTimestamp ASC")
+    fun getAllActivePrograms(fromTime: Long): Flow<List<ProgramEntity>>
+
     @Query("SELECT COUNT(*) FROM programs")
     suspend fun getProgramCount(): Int
 
