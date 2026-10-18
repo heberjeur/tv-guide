@@ -25,6 +25,25 @@ data class Program(
     val seriesYear: Int? = null,
     val country: String? = null
 ) {
+    val hasAudioDescription: Boolean
+        get() = description.contains("audiodescription", ignoreCase = true) ||
+                description.contains("audio-description", ignoreCase = true) ||
+                (subTitle?.contains("audiodescription", ignoreCase = true) == true) ||
+                (subTitle?.contains("audio-description", ignoreCase = true) == true) ||
+                categories.any { it.contains("audiodescription", ignoreCase = true) }
+
+    val hasSubtitlesResolved: Boolean
+        get() = hasSubtitles ||
+                description.contains("sous-titr", ignoreCase = true) ||
+                description.contains("malentendant", ignoreCase = true) ||
+                description.contains("VOST", ignoreCase = true) ||
+                description.contains("SME", ignoreCase = false) ||
+                description.contains("[ST]", ignoreCase = true) ||
+                description.contains("(ST)", ignoreCase = true) ||
+                (subTitle?.contains("sous-titr", ignoreCase = true) == true) ||
+                (subTitle?.contains("malentendant", ignoreCase = true) == true) ||
+                (subTitle?.contains("VOST", ignoreCase = true) == true)
+
     val isNowPlaying: Boolean
         get() {
             val now = System.currentTimeMillis()

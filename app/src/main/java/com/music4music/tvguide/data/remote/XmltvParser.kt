@@ -270,6 +270,19 @@ class XmltvParser @Inject constructor() {
             country = cRegex.find(secondaryDescription)?.groupValues?.get(1)?.trim()
         }
 
+        if (!hasSubtitles) {
+            val scanText = "$title ${subTitle ?: ""} $description ${secondaryDescription ?: ""}"
+            if (scanText.contains("sous-titr", ignoreCase = true) ||
+                scanText.contains("malentendant", ignoreCase = true) ||
+                scanText.contains("VOST", ignoreCase = true) ||
+                scanText.contains("SME", ignoreCase = false) ||
+                scanText.contains("[ST]", ignoreCase = true) ||
+                scanText.contains("(ST)", ignoreCase = true)
+            ) {
+                hasSubtitles = true
+            }
+        }
+
         val cleanedPrimary = ProgramDescriptionUtils.clean(description) ?: ""
         val cleanedSecondary = ProgramDescriptionUtils.clean(secondaryDescription)
         val finalSecondary = if (ProgramDescriptionUtils.isRedundant(cleanedPrimary, cleanedSecondary)) {

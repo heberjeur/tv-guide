@@ -167,7 +167,8 @@ fun ProgramCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    val hasMeta = program.durationMinutes > 0 || (highlightAccessibility && (program.isHd || program.hasSubtitles || program.isUnreleased))
+                    val showAccessibility = highlightAccessibility && (program.hasSubtitlesResolved || program.hasAudioDescription)
+                    val hasMeta = program.durationMinutes > 0 || program.isHd || program.isUnreleased || showAccessibility
                     if (hasMeta) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -180,16 +181,24 @@ fun ProgramCard(
                                     color = TextSecondary
                                 )
                             }
+                            if (program.isHd) {
+                                Text(
+                                    text = stringResource(R.string.badge_hd),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = IndicatorGreen,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            if (program.isUnreleased) {
+                                Text(
+                                    text = stringResource(R.string.badge_unreleased),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = AccentRed,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                             if (highlightAccessibility) {
-                                if (program.isHd) {
-                                    Text(
-                                        text = stringResource(R.string.badge_hd),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = IndicatorGreen,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                if (program.hasSubtitles) {
+                                if (program.hasSubtitlesResolved) {
                                     Text(
                                         text = stringResource(R.string.badge_subtitles),
                                         style = MaterialTheme.typography.labelSmall,
@@ -197,11 +206,11 @@ fun ProgramCard(
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-                                if (program.isUnreleased) {
+                                if (program.hasAudioDescription) {
                                     Text(
-                                        text = stringResource(R.string.badge_unreleased),
+                                        text = stringResource(R.string.badge_audio_description),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = AccentRed,
+                                        color = TextSecondary,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
