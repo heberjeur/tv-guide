@@ -248,9 +248,9 @@
     <string name="search_categories_hint">Search</string>
     <string name="no_programs_in_category">No programs in this category</string>
     <string name="subcategories_title">Subcategories</string>
-    <string name="mode_grid">Grid &amp; Detail</string>
-    <string name="mode_accordion">Accordion</string>
-    <string name="mode_sections">Sections</string>
-    <string name="action_see_all">See all</string>
     <string name="back_to_categories">Back to categories</string>
+    <string name="subcategories_show_all">Show all</string>
+    <string name="subcategories_collapse">Collapse</string>
+    <string name="subcategories_filter_active">Filter: %1$s</string>
+    <string name="more_subcategories_count">+%1$d more</string>
 </resources>

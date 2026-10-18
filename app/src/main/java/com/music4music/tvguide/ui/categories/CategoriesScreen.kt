@@ -2,10 +2,6 @@ package com.music4music.tvguide.ui.categories
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,8 +33,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Movie
@@ -48,6 +46,7 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -60,6 +59,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -159,47 +161,7 @@ fun CategoriesScreen(
             )
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            val modes = listOf(
-                CategoriesDisplayMode.GRID_HUB to stringResource(R.string.mode_grid),
-                CategoriesDisplayMode.ACCORDION to stringResource(R.string.mode_accordion),
-                CategoriesDisplayMode.SECTIONS to stringResource(R.string.mode_sections)
-            )
-
-            modes.forEach { (mode, title) ->
-                val isSelected = uiState.displayMode == mode
-                Surface(
-                    onClick = { viewModel.setDisplayMode(mode) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isSelected) AccentRed else DarkSurfaceVariant,
-                    border = BorderStroke(
-                        1.dp,
-                        if (isSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                    )
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) Color.White else TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (uiState.isLoading) {
             Box(
@@ -209,52 +171,22 @@ fun CategoriesScreen(
                 CircularProgressIndicator(color = AccentRed)
             }
         } else {
-            when (uiState.displayMode) {
-                CategoriesDisplayMode.GRID_HUB -> {
-                    if (uiState.selectedCategory != null) {
-                        CategoryDetailSubView(
-                            uiState = uiState,
-                            onBackClick = { viewModel.selectCategory(null) },
-                            onSubCategoryClick = { viewModel.selectSubCategory(it) },
-                            onProgramClick = onProgramClick
-                        )
-                    } else {
-                        CategoryGridHubView(
-                            sections = uiState.sections,
-                            onCategoryClick = { viewModel.selectCategory(it) },
-                            onSubCategoryClick = { cat, sub ->
-                                viewModel.selectCategory(cat)
-                                viewModel.selectSubCategory(sub)
-                            }
-                        )
+            if (uiState.selectedCategory != null) {
+                CategoryDetailSubView(
+                    uiState = uiState,
+                    onBackClick = { viewModel.selectCategory(null) },
+                    onSubCategoryClick = { viewModel.selectSubCategory(it) },
+                    onProgramClick = onProgramClick
+                )
+            } else {
+                CategoryGridHubView(
+                    categories = uiState.categories,
+                    onCategoryClick = { viewModel.selectCategory(it) },
+                    onSubCategoryClick = { cat, sub ->
+                        viewModel.selectCategory(cat)
+                        viewModel.selectSubCategory(sub)
                     }
-                }
-                CategoriesDisplayMode.ACCORDION -> {
-                    CategoryAccordionView(
-                        sections = uiState.sections,
-                        expandedCategory = uiState.expandedCategory,
-                        selectedSubCategory = uiState.selectedSubCategory,
-                        programs = uiState.programs,
-                        onToggleCategory = { viewModel.toggleExpandedCategory(it) },
-                        onSubCategoryClick = { viewModel.selectSubCategory(it) },
-                        onProgramClick = onProgramClick
-                    )
-                }
-                CategoriesDisplayMode.SECTIONS -> {
-                    CategorySectionsView(
-                        sections = uiState.sections,
-                        onSeeAllClick = {
-                            viewModel.setDisplayMode(CategoriesDisplayMode.GRID_HUB)
-                            viewModel.selectCategory(it)
-                        },
-                        onSubCategoryClick = { cat, sub ->
-                            viewModel.setDisplayMode(CategoriesDisplayMode.GRID_HUB)
-                            viewModel.selectCategory(cat)
-                            viewModel.selectSubCategory(sub)
-                        },
-                        onProgramClick = onProgramClick
-                    )
-                }
+                )
             }
         }
     }
@@ -263,7 +195,7 @@ fun CategoriesScreen(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CategoryGridHubView(
-    sections: List<CategorySectionData>,
+    categories: List<CategoryCardData>,
     onCategoryClick: (TvCategory) -> Unit,
     onSubCategoryClick: (TvCategory, String) -> Unit
 ) {
@@ -274,12 +206,12 @@ private fun CategoryGridHubView(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(sections, key = { it.category.id }) { section ->
-            val icon = getCategoryIcon(section.category)
-            val title = stringResource(section.category.nameRes)
+        items(categories, key = { it.category.id }) { item ->
+            val icon = getCategoryIcon(item.category)
+            val title = stringResource(item.category.nameRes)
 
             Surface(
-                onClick = { onCategoryClick(section.category) },
+                onClick = { onCategoryClick(item.category) },
                 shape = RoundedCornerShape(16.dp),
                 color = DarkSurface,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
@@ -296,27 +228,44 @@ private fun CategoryGridHubView(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
-                                .background(AccentRed.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
+                                .size(40.dp)
+                                .background(AccentRed.copy(alpha = 0.14f), RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = icon,
                                 contentDescription = null,
                                 tint = AccentRed,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                         }
 
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                            contentDescription = null,
-                            tint = TextSecondary.copy(alpha = 0.5f),
-                            modifier = Modifier.size(14.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(DarkSurfaceVariant, RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 7.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "${item.totalProgramsCount}",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextSecondary
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                contentDescription = null,
+                                tint = TextSecondary.copy(alpha = 0.5f),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
                         text = title,
@@ -327,30 +276,24 @@ private fun CategoryGridHubView(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = stringResource(R.string.programs_found_count, section.totalProgramsCount),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
-                    )
-
-                    Text(
-                        text = stringResource(R.string.subcategories_count, section.subCategories.size),
+                        text = stringResource(R.string.subcategories_count, item.subCategories.size),
                         style = MaterialTheme.typography.labelSmall,
                         color = AccentRed
                     )
 
-                    if (section.subCategories.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                    if (item.subCategories.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(10.dp))
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                             maxItemsInEachRow = 2
                         ) {
-                            section.subCategories.take(4).forEach { sub ->
+                            item.subCategories.take(3).forEach { sub ->
                                 Surface(
-                                    onClick = { onSubCategoryClick(section.category, sub.name) },
+                                    onClick = { onSubCategoryClick(item.category, sub.name) },
                                     shape = RoundedCornerShape(6.dp),
                                     color = DarkSurfaceVariant
                                 ) {
@@ -361,6 +304,20 @@ private fun CategoryGridHubView(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            if (item.subCategories.size > 3) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(AccentRed.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "+${item.subCategories.size - 3}",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        fontWeight = FontWeight.Bold,
+                                        color = AccentRed
                                     )
                                 }
                             }
@@ -384,10 +341,12 @@ private fun CategoryDetailSubView(
     val categoryTitle = stringResource(category.nameRes)
     val icon = getCategoryIcon(category)
 
+    var isSubCategoriesExpanded by rememberSaveable { mutableStateOf(false) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Row(
@@ -414,141 +373,248 @@ private fun CategoryDetailSubView(
         }
 
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = DarkSurface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(AccentRed.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = AccentRed,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .background(AccentRed.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = AccentRed,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
 
-                Column {
-                    Text(
-                        text = categoryTitle,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "${stringResource(R.string.programs_found_count, uiState.totalProgramsCount)} • ${stringResource(R.string.subcategories_count, uiState.subCategories.size)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = categoryTitle,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "${stringResource(R.string.programs_found_count, uiState.totalProgramsCount)} • ${stringResource(R.string.subcategories_count, uiState.subCategories.size)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    }
                 }
             }
         }
 
         if (uiState.subCategories.isNotEmpty()) {
             item {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(R.string.subcategories_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        modifier = Modifier.padding(vertical = 6.dp)
-                    )
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val isAllSelected = uiState.selectedSubCategory == null
-                        Surface(
-                            onClick = { onSubCategoryClick(null) },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isAllSelected) AccentRed else DarkSurfaceVariant,
-                            border = BorderStroke(
-                                1.dp,
-                                if (isAllSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                            )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(
-                                text = "${stringResource(R.string.filter_all_channels_short)} (${uiState.totalProgramsCount})",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isAllSelected) Color.White else TextPrimary,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = null,
+                                tint = AccentRed,
+                                modifier = Modifier.size(18.dp)
                             )
-                        }
-
-                        uiState.subCategories.forEach { subItem ->
-                            val isSelected = uiState.selectedSubCategory == subItem.name
-                            Surface(
-                                onClick = { onSubCategoryClick(subItem.name) },
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isSelected) AccentRed else DarkSurfaceVariant,
-                                border = BorderStroke(
-                                1.dp,
-                                    if (isSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                                )
+                            Text(
+                                text = stringResource(R.string.subcategories_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .background(DarkSurfaceVariant, CircleShape)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = "${subItem.name} (${subItem.count})",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) Color.White else TextPrimary,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    text = uiState.subCategories.size.toString(),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+
+                        TextButton(
+                            onClick = { isSubCategoriesExpanded = !isSubCategoriesExpanded },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    if (isSubCategoriesExpanded) R.string.subcategories_collapse else R.string.subcategories_show_all
+                                ),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = AccentRed
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = if (isSubCategoriesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = null,
+                                tint = AccentRed,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    if (!isSubCategoriesExpanded) {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            item {
+                                SubCategoryPill(
+                                    name = stringResource(R.string.filter_all_channels_short),
+                                    count = uiState.totalProgramsCount,
+                                    isSelected = uiState.selectedSubCategory == null,
+                                    onClick = { onSubCategoryClick(null) }
+                                )
+                            }
+
+                            items(uiState.subCategories, key = { it.name }) { subItem ->
+                                SubCategoryPill(
+                                    name = subItem.name,
+                                    count = subItem.count,
+                                    isSelected = uiState.selectedSubCategory == subItem.name,
+                                    onClick = {
+                                        if (uiState.selectedSubCategory == subItem.name) {
+                                            onSubCategoryClick(null)
+                                        } else {
+                                            onSubCategoryClick(subItem.name)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    } else {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            SubCategoryPill(
+                                name = stringResource(R.string.filter_all_channels_short),
+                                count = uiState.totalProgramsCount,
+                                isSelected = uiState.selectedSubCategory == null,
+                                onClick = { onSubCategoryClick(null) }
+                            )
+
+                            uiState.subCategories.forEach { subItem ->
+                                SubCategoryPill(
+                                    name = subItem.name,
+                                    count = subItem.count,
+                                    isSelected = uiState.selectedSubCategory == subItem.name,
+                                    onClick = {
+                                        if (uiState.selectedSubCategory == subItem.name) {
+                                            onSubCategoryClick(null)
+                                        } else {
+                                            onSubCategoryClick(subItem.name)
+                                        }
+                                    }
                                 )
                             }
                         }
                     }
+                }
+            }
+        }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+        if (uiState.selectedSubCategory != null) {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = AccentRed.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, AccentRed.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = AccentRed,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.subcategories_filter_active, uiState.selectedSubCategory ?: ""),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                        }
+
+                        Surface(
+                            onClick = { onSubCategoryClick(null) },
+                            shape = CircleShape,
+                            color = AccentRed.copy(alpha = 0.2f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.action_reset_filter),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AccentRed
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = AccentRed
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
 
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.programs_found_count, uiState.programs.size),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = AccentRed
-                )
-                if (uiState.selectedSubCategory != null) {
-                    Surface(
-                        onClick = { onSubCategoryClick(null) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = DarkSurfaceVariant
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = uiState.selectedSubCategory,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextPrimary
-                            )
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = null,
-                                modifier = Modifier.size(12.dp),
-                                tint = TextSecondary
-                            )
-                        }
-                    }
-                }
-            }
+            Text(
+                text = stringResource(R.string.programs_found_count, uiState.programs.size),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = AccentRed
+            )
         }
 
         if (uiState.programs.isEmpty()) {
@@ -571,285 +637,66 @@ private fun CategoryDetailSubView(
                 ProgramCard(
                     program = program,
                     onClick = { onProgramClick(program.id) },
-                    onCategoryClick = { onSubCategoryClick(it) }
+                    onCategoryClick = { clickedCat ->
+                        onSubCategoryClick(clickedCat)
+                    }
                 )
             }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CategoryAccordionView(
-    sections: List<CategorySectionData>,
-    expandedCategory: TvCategory?,
-    selectedSubCategory: String?,
-    programs: List<Program>,
-    onToggleCategory: (TvCategory) -> Unit,
-    onSubCategoryClick: (String?) -> Unit,
-    onProgramClick: (Long) -> Unit
+private fun SubCategoryPill(
+    name: String,
+    count: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = if (isSelected) AccentRed else DarkSurfaceVariant,
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        ),
+        modifier = modifier
     ) {
-        items(sections, key = { it.category.id }) { section ->
-            val isExpanded = expandedCategory == section.category
-            val icon = getCategoryIcon(section.category)
-            val title = stringResource(section.category.nameRes)
-
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = DarkSurface,
-                border = BorderStroke(
-                    1.dp,
-                    if (isExpanded) AccentRed.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
-                ),
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) Color.White else TextPrimary
+            )
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .animateContentSize()
+                    .background(
+                        if (isSelected) Color.White.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                        CircleShape
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onToggleCategory(section.category) }
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .background(
-                                        if (isExpanded) AccentRed else AccentRed.copy(alpha = 0.15f),
-                                        RoundedCornerShape(8.dp)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = null,
-                                    tint = if (isExpanded) Color.White else AccentRed,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-
-                            Column {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
-                                Text(
-                                    text = "${stringResource(R.string.programs_found_count, section.totalProgramsCount)} • ${stringResource(R.string.subcategories_count, section.subCategories.size)}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = null,
-                            tint = if (isExpanded) AccentRed else TextSecondary
-                        )
-                    }
-
-                    if (isExpanded) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.subcategories_title),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
-                                modifier = Modifier.padding(bottom = 6.dp)
-                            )
-
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                val isAllSelected = selectedSubCategory == null
-                                Surface(
-                                    onClick = { onSubCategoryClick(null) },
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = if (isAllSelected) AccentRed else DarkSurfaceVariant,
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (isAllSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                                    )
-                                ) {
-                                    Text(
-                                        text = "${stringResource(R.string.filter_all_channels_short)} (${section.totalProgramsCount})",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isAllSelected) Color.White else TextPrimary,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-
-                                section.subCategories.forEach { subItem ->
-                                    val isSelected = selectedSubCategory == subItem.name
-                                    Surface(
-                                        onClick = { onSubCategoryClick(subItem.name) },
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = if (isSelected) AccentRed else DarkSurfaceVariant,
-                                        border = BorderStroke(
-                                            1.dp,
-                                            if (isSelected) AccentRed else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                                        )
-                                    ) {
-                                        Text(
-                                            text = "${subItem.name} (${subItem.count})",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (isSelected) Color.White else TextPrimary,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            val displayPrograms = if (selectedSubCategory == null) {
-                                section.previewPrograms
-                            } else {
-                                programs
-                            }
-
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                displayPrograms.take(8).forEach { prog ->
-                                    ProgramCard(
-                                        program = prog,
-                                        onClick = { onProgramClick(prog.id) }
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-                        }
-                    }
-                }
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) Color.White else TextSecondary
+                )
             }
-        }
-    }
-}
-
-@Composable
-private fun CategorySectionsView(
-    sections: List<CategorySectionData>,
-    onSeeAllClick: (TvCategory) -> Unit,
-    onSubCategoryClick: (TvCategory, String) -> Unit,
-    onProgramClick: (Long) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        items(sections, key = { it.category.id }) { section ->
-            val icon = getCategoryIcon(section.category)
-            val title = stringResource(section.category.nameRes)
-
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = AccentRed,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Box(
-                            modifier = Modifier
-                                .background(DarkSurfaceVariant, CircleShape)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = section.totalProgramsCount.toString(),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                fontWeight = FontWeight.Bold,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-
-                    TextButton(onClick = { onSeeAllClick(section.category) }) {
-                        Text(
-                            text = stringResource(R.string.action_see_all),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AccentRed
-                        )
-                    }
-                }
-
-                if (section.subCategories.isNotEmpty()) {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    ) {
-                        items(section.subCategories) { sub ->
-                            Surface(
-                                onClick = { onSubCategoryClick(section.category, sub.name) },
-                                shape = RoundedCornerShape(8.dp),
-                                color = DarkSurfaceVariant
-                            ) {
-                                Text(
-                                    text = "${sub.name} (${sub.count})",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextPrimary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(section.previewPrograms, key = { it.id }) { prog ->
-                        Box(modifier = Modifier.width(280.dp)) {
-                            ProgramCard(
-                                program = prog,
-                                onClick = { onProgramClick(prog.id) }
-                            )
-                        }
-                    }
-                }
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    tint = Color.White
+                )
             }
         }
     }
