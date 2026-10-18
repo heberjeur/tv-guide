@@ -30,7 +30,11 @@ data class Program(
                 description.contains("audio-description", ignoreCase = true) ||
                 (subTitle?.contains("audiodescription", ignoreCase = true) == true) ||
                 (subTitle?.contains("audio-description", ignoreCase = true) == true) ||
-                categories.any { it.contains("audiodescription", ignoreCase = true) }
+                categories.any {
+                    it.contains("audiodescription", ignoreCase = true) ||
+                    it.contains("audio-description", ignoreCase = true) ||
+                    it.contains("audio description", ignoreCase = true)
+                }
 
     val hasSubtitlesResolved: Boolean
         get() = hasSubtitles ||
@@ -42,10 +46,11 @@ data class Program(
                 description.contains("(ST)", ignoreCase = true) ||
                 (subTitle?.contains("sous-titr", ignoreCase = true) == true) ||
                 (subTitle?.contains("malentendant", ignoreCase = true) == true) ||
-                (subTitle?.contains("VOST", ignoreCase = true) == true)
+                (subTitle?.contains("VOST", ignoreCase = true) == true) ||
+                categories.any { it.contains("sous-titre", ignoreCase = true) || it.contains("malentendant", ignoreCase = true) }
 
     val isRerun: Boolean
-        get() = !isUnreleased && (
+        get() = categories.any { it.equals("rediffusion", ignoreCase = true) || it.equals("rediff", ignoreCase = true) } ||
             title.contains("rediffusion", ignoreCase = true) ||
             title.contains("(rediff", ignoreCase = true) ||
             title.contains("[rediff", ignoreCase = true) ||
@@ -57,24 +62,26 @@ data class Program(
             (subTitle?.contains("(r)", ignoreCase = true) == true) ||
             description.contains("rediffusion", ignoreCase = true) ||
             description.contains("(rediff", ignoreCase = true) ||
-            description.contains("[rediff", ignoreCase = true) ||
-            categories.any { it.contains("rediffusion", ignoreCase = true) }
-        )
+            description.contains("[rediff", ignoreCase = true)
 
     val isUnreleasedResolved: Boolean
-        get() = isUnreleased ||
+        get() = !isRerun && (
+            isUnreleased ||
             title.contains("inédit", ignoreCase = true) ||
             (subTitle?.contains("inédit", ignoreCase = true) == true) ||
             description.contains("inédit", ignoreCase = true) ||
             description.contains("inédite", ignoreCase = true) ||
             categories.any { it.contains("inédit", ignoreCase = true) }
+        )
 
     val isLiveBroadcast: Boolean
-        get() = title.contains("en direct", ignoreCase = true) ||
+        get() = !isRerun && (
+            title.contains("en direct", ignoreCase = true) ||
             title.contains("[direct]", ignoreCase = true) ||
             title.contains("(direct)", ignoreCase = true) ||
             (subTitle?.contains("en direct", ignoreCase = true) == true) ||
-            categories.any { it.equals("direct", ignoreCase = true) }
+            categories.any { it.equals("direct", ignoreCase = true) || it.equals("en direct", ignoreCase = true) }
+        )
 
     val isNowPlaying: Boolean
         get() {

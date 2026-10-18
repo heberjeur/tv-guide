@@ -216,15 +216,22 @@ class XmltvParser @Inject constructor() {
                 "rating" -> contentRating = parseRating(parser)
                 "star-rating" -> starRating = parseStarRating(parser)
                 "premiere" -> {
-                    isUnreleased = true
+                    if (!categories.any { it.equals("Rediffusion", ignoreCase = true) }) {
+                        isUnreleased = true
+                    }
                     skipElement(parser)
                 }
                 "previously-shown" -> {
                     categories.add("Rediffusion")
+                    isUnreleased = false
                     skipElement(parser)
                 }
                 "subtitles" -> {
                     hasSubtitles = true
+                    skipElement(parser)
+                }
+                "audio-description", "audiodescription" -> {
+                    categories.add("Audiodescription")
                     skipElement(parser)
                 }
                 "video" -> {

@@ -447,15 +447,15 @@ async function fetchDetailPageData(link) {
       season = parseInt(seasonMatch[1], 10);
     }
 
-    let detailIsUnreleased = $page('[class*="-new"]').length > 0;
-    let detailIsRerun = $page('[class*="-rebroadcast"]').length > 0;
-    let detailIsLive = $page('[class*="-live"]').length > 0;
-    let detailHasSubtitles = $page('[class*="deaf"], [aria-label*="Malentendant"], svg.icon-deaf').length > 0;
-    let detailHasAudioDescription = $page('[class*="audio-description"], [class*="audioDescription"], [aria-label*="Audio description"], svg.icon-audio-description').length > 0;
+    let detailIsUnreleased = false;
+    let detailIsRerun = false;
+    let detailIsLive = false;
+    let detailHasSubtitles = $page('.mainBroadcastCard-deaf, svg.icon-deaf, [aria-label*="Malentendant"]').length > 0 || /deaf/i.test($page('.overview, .synopsis').html() || '');
+    let detailHasAudioDescription = $page('.mainBroadcastCard-audioDescription, svg.icon-audio-description, [aria-label*="Audio description"]').length > 0 || /audio-description|audiodescription/i.test($page('.overview, .synopsis').html() || '');
     let detailIsHd = false;
     let detailRating = null;
 
-    $page('.overview-stickerListItem, .program-badges, [class*="sticker"], [class*="badge"], [class*="c-badge"]').each((_, li) => {
+    $page('.overview-stickerListItem').each((_, li) => {
       const text = $page(li).text().replace(/\s+/g, ' ').trim();
       if (/in[ée]dit/i.test(text)) detailIsUnreleased = true;
       if (/rediff/i.test(text)) detailIsRerun = true;
@@ -610,11 +610,11 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       if (txt) stickers.push(txt);
     });
 
-    const isUnreleased = $el.find('.mainBroadcastCard-new, [class*="-new"]').length > 0 || stickers.some(s => /in[ée]dit/i.test(s));
-    const isRerun = $el.find('.mainBroadcastCard-rebroadcast, [class*="-rebroadcast"]').length > 0 || stickers.some(s => /rediff/i.test(s));
-    const isLive = $el.find('.mainBroadcastCard-live, [class*="-live"]').length > 0 || stickers.some(s => /\bdirect\b/i.test(s));
-    const hasSubtitles = $el.find('.mainBroadcastCard-deaf, [class*="-deaf"], [aria-label*="Malentendant"], svg.icon-deaf').length > 0 || stickers.some(s => /\b(st|sous[- ]titr|malentendant)\b/i.test(s));
-    const hasAudioDescription = $el.find('.mainBroadcastCard-audioDescription, [class*="-audioDescription"], [aria-label*="Audio description"], svg.icon-audio-description').length > 0 || stickers.some(s => /\b(ad|audiodescription)\b/i.test(s));
+    const isRerun = $el.find('.mainBroadcastCard-rebroadcast').length > 0 || /rediff/i.test($el.text()) || stickers.some(s => /rediff/i.test(s));
+    const isLive = $el.find('.mainBroadcastCard-live').length > 0 || stickers.some(s => /\bdirect\b/i.test(s));
+    const isUnreleased = !isRerun && ($el.find('.mainBroadcastCard-new, .c-badge-new').length > 0 || stickers.some(s => /in[ée]dit/i.test(s)));
+    const hasSubtitles = $el.find('.mainBroadcastCard-deaf, [class*="-deaf"], [aria-label*="Malentendant"], svg.icon-deaf').length > 0 || /deaf/i.test($el.html()) || stickers.some(s => /\b(st|sous[- ]titr|malentendant)\b/i.test(s));
+    const hasAudioDescription = $el.find('.mainBroadcastCard-audioDescription, [class*="-audioDescription"], [aria-label*="Audio description"], svg.icon-audio-description').length > 0 || /audio-description|audiodescription/i.test($el.html()) || stickers.some(s => /\b(ad|audiodescription)\b/i.test(s));
     const isHd = stickers.some(s => /\bhd\b/i.test(s)) || /hd|4k|uhd/i.test($el.text());
 
     let cardRating = null;
@@ -763,9 +763,9 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       directors: finalDirectors
     };
 
-    const isUnreleased = (detailData && detailData.isUnreleased) || item.isUnreleased || (refEntry && refEntry.isUnreleased) || false;
-    const isRerun = !isUnreleased && ((detailData && detailData.isRerun) || item.isRerun || (refEntry && refEntry.isRerun) || false);
-    const isLive = (detailData && detailData.isLive) || item.isLive || false;
+    const isRerun = item.isRerun || (detailData && detailData.isRerun) || (refEntry && refEntry.isRerun) || false;
+    const isUnreleased = !isRerun && ((detailData && detailData.isUnreleased) || item.isUnreleased || (refEntry && refEntry.isUnreleased) || false);
+    const isLive = !isRerun && ((detailData && detailData.isLive) || item.isLive || false);
     const hasSubtitles = (detailData && detailData.hasSubtitles) || item.hasSubtitles || (refEntry && refEntry.hasSubtitles) || false;
     const hasAudioDescription = (detailData && detailData.hasAudioDescription) || item.hasAudioDescription || false;
     const isHd = (detailData && detailData.isHd) || item.isHd || (refEntry && refEntry.isHd) || false;
@@ -948,6 +948,9 @@ function buildXml(channels, programs) {
     }
     if (program.hasSubtitles) {
       xml += `    <subtitles type="teletext" />\n`;
+    }
+    if (program.hasAudioDescription) {
+      xml += `    <audio-description />\n`;
     }
     if (program.isHd) {
       xml += `    <video>\n      <quality>HD</quality>\n    </video>\n`;

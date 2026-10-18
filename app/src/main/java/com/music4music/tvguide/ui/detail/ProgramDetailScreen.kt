@@ -290,18 +290,6 @@ fun ProgramDetailScreen(
                                 BadgeItem(text = stringResource(R.string.badge_ad_long), color = TextSecondary)
                             }
                         }
-                        if (currentProgram.contentRating != null) {
-                            val ratingClean = currentProgram.contentRating.trim()
-                            val ratingDisplay = when (ratingClean) {
-                                "-10", "10" -> stringResource(R.string.csa_under_10)
-                                "-12", "12", "13" -> stringResource(R.string.csa_under_12)
-                                "-16", "16" -> stringResource(R.string.csa_under_16)
-                                "-18", "18" -> stringResource(R.string.csa_under_18)
-                                "Tout public", "TP", "G", "Tous publics" -> stringResource(R.string.csa_all_audiences)
-                                else -> ratingClean
-                            }
-                            BadgeItem(text = ratingDisplay, color = TextSecondary)
-                        }
                         if (currentProgram.starRating != null) {
                             BadgeItem(
                                 text = "★ ${"%.1f".format(Locale.US, currentProgram.starRating)}/5",
@@ -343,22 +331,30 @@ fun ProgramDetailScreen(
                                 )
                             }
 
-                            val formatValue = currentProgram.categories.firstOrNull {
-                                it.equals("Culture Infos", ignoreCase = true) ||
-                                it.equals("Série", ignoreCase = true) ||
-                                it.equals("Film", ignoreCase = true) ||
-                                it.equals("Documentaire", ignoreCase = true) ||
-                                it.equals("Magazine", ignoreCase = true) ||
-                                it.equals("Téléfilm", ignoreCase = true) ||
-                                it.equals("Divertissement", ignoreCase = true) ||
-                                it.equals("Journal", ignoreCase = true) ||
-                                it.equals("Sport", ignoreCase = true)
-                            } ?: currentProgram.categories.firstOrNull()
+                            val formatKeywords = listOf(
+                                "Cinéma", "Cinema", "Film", "Téléfilm", "Telefilm", "Court-métrage", "Court-metrage",
+                                "Série", "Serie", "Série TV", "Mini-série", "Feuilleton",
+                                "Documentaire", "Magazine", "Journal", "Divertissement", "Jeu",
+                                "Sport", "Jeunesse", "Musique", "Culture Infos", "Info", "Information", "Autre"
+                            )
+                            val metaKeywords = listOf(
+                                "Rediffusion", "Direct", "En direct", "Inédit", "Inedite", "Inédite",
+                                "Audiodescription", "Sous-titres", "General"
+                            )
 
-                            val genreValue = currentProgram.categories.firstOrNull { it != formatValue && it != "General" }
-                                ?: if (currentProgram.categories.size > 1) {
-                                    currentProgram.categories.drop(1).joinToString(", ")
-                                } else null
+                            val formatValue = currentProgram.categories.firstOrNull { it.equals("Cinéma", ignoreCase = true) }
+                                ?: currentProgram.categories.firstOrNull { cat -> formatKeywords.any { it.equals(cat, ignoreCase = true) } }
+                                ?: currentProgram.categories.firstOrNull { cat -> !metaKeywords.any { it.equals(cat, ignoreCase = true) } }
+
+                            val specificGenres = currentProgram.categories.filter { cat ->
+                                !cat.equals(formatValue, ignoreCase = true) &&
+                                !formatKeywords.any { it.equals(cat, ignoreCase = true) } &&
+                                !metaKeywords.any { it.equals(cat, ignoreCase = true) }
+                            }
+                            val genreValue = when {
+                                specificGenres.isNotEmpty() -> specificGenres.joinToString(", ")
+                                else -> null
+                            }
 
                             if (!formatValue.isNullOrBlank()) {
                                 InfoRow(
@@ -374,15 +370,31 @@ fun ProgramDetailScreen(
                             }
 
                             val broadcastType = when {
-                                currentProgram.isLiveBroadcast || currentProgram.isNowPlaying -> stringResource(R.string.status_live)
-                                currentProgram.isUnreleasedResolved -> stringResource(R.string.status_unreleased)
+                                currentProgram.isLiveBroadcast -> stringResource(R.string.status_live)
                                 currentProgram.isRerun -> stringResource(R.string.status_rerun)
+                                currentProgram.isUnreleasedResolved -> stringResource(R.string.status_unreleased)
                                 else -> null
                             }
                             if (broadcastType != null) {
                                 InfoRow(
                                     label = stringResource(R.string.label_broadcast_type),
                                     value = broadcastType
+                                )
+                            }
+
+                            val ratingDisplay = when (currentProgram.contentRating?.trim()) {
+                                "-10", "10" -> stringResource(R.string.csa_under_10)
+                                "-12", "12", "13" -> stringResource(R.string.csa_under_12)
+                                "-16", "16" -> stringResource(R.string.csa_under_16)
+                                "-18", "18" -> stringResource(R.string.csa_under_18)
+                                "Tout public", "TP", "G", "Tous publics" -> stringResource(R.string.csa_all_audiences)
+                                null, "" -> null
+                                else -> currentProgram.contentRating.trim()
+                            }
+                            if (!ratingDisplay.isNullOrBlank()) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_parental_rating),
+                                    value = ratingDisplay
                                 )
                             }
 
