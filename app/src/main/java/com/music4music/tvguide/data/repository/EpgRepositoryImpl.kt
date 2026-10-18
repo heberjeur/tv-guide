@@ -321,13 +321,15 @@ class EpgRepositoryImpl @Inject constructor(
 
     private suspend fun preloadFromAssetsIfEmpty(channelPackage: ChannelPackage) {
         try {
-            val assetNames = context.assets.list("") ?: emptyArray()
-            val targetName = when {
-                "epg_tnt.xml.gz" in assetNames -> "epg_tnt.xml.gz"
-                "epg_tnt.xml" in assetNames -> "epg_tnt.xml"
-                else -> "epg_tnt.xml.gz"
-            }
-            val rawStream = context.assets.open(targetName)
+            val rawStream = try {
+                context.assets.open("epg_tnt.xml")
+            } catch (_: Exception) {
+                try {
+                    context.assets.open("epg_tnt.xml.gz")
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: return
             val buffered = if (rawStream is java.io.BufferedInputStream) rawStream else java.io.BufferedInputStream(rawStream)
             buffered.mark(2)
             val header = ByteArray(2)

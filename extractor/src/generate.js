@@ -92,6 +92,32 @@ function cleanTitle(str) {
     .replace(/[^a-z0-9]/g, '');
 }
 
+function areTitlesCompatible(titleA, titleB) {
+  if (!titleA || !titleB) return false;
+  const cleanA = cleanTitle(titleA);
+  const cleanB = cleanTitle(titleB);
+  if (!cleanA || !cleanB) return false;
+  if (cleanA === cleanB) return true;
+  if (cleanA.length >= 4 && cleanB.length >= 4) {
+    if (cleanA.includes(cleanB) || cleanB.includes(cleanA)) return true;
+  }
+  const extractWords = (t) => (t || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter(w => w.length >= 3);
+  const wordsA = extractWords(titleA);
+  const wordsB = extractWords(titleB);
+  if (wordsA.length > 0 && wordsB.length > 0) {
+    const common = wordsA.filter(w => wordsB.includes(w));
+    if (common.length >= 2 || (wordsA.length === 1 && common.length === 1 && wordsB.length <= 2)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function escapeXml(unsafe) {
   if (!unsafe) return '';
   return unsafe
@@ -535,14 +561,20 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
 
     const timeKey = `${channel.id}_${item.startTime.format('YYYYMMDDHHmm')}`;
     let refEntry = refData.timeMap.get(timeKey);
+    if (refEntry && !areTitlesCompatible(refEntry.title, item.title)) {
+      refEntry = null;
+    }
 
     if (!refEntry) {
       const offsets = [5, -5, 10, -10, 15, -15];
       for (const offset of offsets) {
         const shiftedKey = `${channel.id}_${item.startTime.add(offset, 'minute').format('YYYYMMDDHHmm')}`;
         if (refData.timeMap.has(shiftedKey)) {
-          refEntry = refData.timeMap.get(shiftedKey);
-          break;
+          const candidate = refData.timeMap.get(shiftedKey);
+          if (areTitlesCompatible(candidate.title, item.title)) {
+            refEntry = candidate;
+            break;
+          }
         }
       }
     }
