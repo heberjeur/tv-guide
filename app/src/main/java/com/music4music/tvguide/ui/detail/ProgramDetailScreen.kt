@@ -29,8 +29,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AlarmOn
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Tv
@@ -250,9 +252,6 @@ fun ProgramDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        currentProgram.categories.forEach { category ->
-                            BadgeItem(text = category, color = TextSecondary)
-                        }
                         if (currentProgram.seasonNumber != null && currentProgram.episodeNumber != null) {
                             BadgeItem(
                                 text = stringResource(
@@ -335,26 +334,42 @@ fun ProgramDetailScreen(
                                 )
                             }
 
-                            val releaseText = when {
-                                currentProgram.productionYear != null && currentProgram.seriesYear != null && currentProgram.productionYear != currentProgram.seriesYear ->
-                                    stringResource(
-                                        R.string.label_release_year_combined,
-                                        currentProgram.productionYear,
-                                        currentProgram.seriesYear
-                                    )
-                                currentProgram.productionYear != null ->
-                                    currentProgram.productionYear.toString()
-                                currentProgram.seriesYear != null ->
-                                    stringResource(R.string.label_series_year_value, currentProgram.seriesYear)
-                                currentProgram.isUnreleased ->
-                                    stringResource(R.string.label_unreleased)
-                                else -> null
-                            }
-                            if (releaseText != null) {
+                            if (currentProgram.credit.directors.isNotEmpty()) {
                                 InfoRow(
-                                    label = stringResource(R.string.label_release_year),
-                                    value = releaseText
+                                    label = if (currentProgram.credit.directors.size > 1) {
+                                        stringResource(R.string.label_directors)
+                                    } else {
+                                        stringResource(R.string.label_director)
+                                    },
+                                    value = currentProgram.credit.directors.joinToString(", ")
                                 )
+                            }
+
+                            val isSeriesProgram = currentProgram.seasonNumber != null ||
+                                currentProgram.seriesYear != null ||
+                                currentProgram.categories.any { it.equals("Série", ignoreCase = true) }
+
+                            if (isSeriesProgram) {
+                                if (currentProgram.productionYear != null) {
+                                    InfoRow(
+                                        label = stringResource(R.string.label_episode_release_year),
+                                        value = currentProgram.productionYear.toString()
+                                    )
+                                }
+                                if (currentProgram.seriesYear != null) {
+                                    InfoRow(
+                                        label = stringResource(R.string.label_series_release_year),
+                                        value = currentProgram.seriesYear.toString()
+                                    )
+                                }
+                            } else {
+                                val releaseYear = currentProgram.productionYear ?: currentProgram.seriesYear
+                                if (releaseYear != null) {
+                                    InfoRow(
+                                        label = stringResource(R.string.label_release_year),
+                                        value = releaseYear.toString()
+                                    )
+                                }
                             }
 
                             val countryText = currentProgram.country
@@ -554,12 +569,23 @@ fun ProgramDetailScreen(
 
                     if (!cleanedDescription.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.section_description),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Description,
+                                contentDescription = null,
+                                tint = AccentRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.section_description),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        }
                         Spacer(modifier = Modifier.height(6.dp))
                         SelectionContainer {
                             Text(
@@ -573,12 +599,23 @@ fun ProgramDetailScreen(
 
                     if (!cleanedSecondaryDescription.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(R.string.section_more_details),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoStories,
+                                contentDescription = null,
+                                tint = AccentRed,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.section_more_details),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        }
                         Spacer(modifier = Modifier.height(6.dp))
                         SelectionContainer {
                             Text(
@@ -723,7 +760,11 @@ fun ProgramDetailScreen(
                         }
                         if (credits.directors.isNotEmpty()) {
                             CreditSection(
-                                label = stringResource(R.string.label_director),
+                                label = if (credits.directors.size > 1) {
+                                    stringResource(R.string.label_directors)
+                                } else {
+                                    stringResource(R.string.label_director)
+                                },
                                 names = credits.directors
                             )
                         }

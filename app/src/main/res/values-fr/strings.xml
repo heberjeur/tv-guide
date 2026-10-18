@@ -63,7 +63,9 @@
     <string name="label_season_with_title">Saison %1$d : %2$s</string>
     <string name="label_format">Format</string>
     <string name="label_category">Genre</string>
-    <string name="label_release_year">Sortie</string>
+    <string name="label_release_year">Année de sortie</string>
+    <string name="label_episode_release_year">Sortie de l\'épisode</string>
+    <string name="label_series_release_year">Sortie de la série</string>
     <string name="label_release_year_combined">%1$d (Série : %2$d)</string>
     <string name="label_series_year_value">Série : %1$d</string>
     <string name="label_country">Pays</string>
@@ -103,6 +105,7 @@
     <string name="label_guests">Participants</string>
     <string name="label_production">Production</string>
     <string name="label_director">Réalisateur</string>
+    <string name="label_directors">Réalisateurs</string>
     <string name="label_rating">Classification</string>
     <string name="label_content_rating">Classification : %1$s</string>
     <string name="label_unreleased">Inédit</string>
