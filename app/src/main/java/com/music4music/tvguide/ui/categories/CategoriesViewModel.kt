@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
+enum class CategoriesDisplayMode {
+    GRID_HUB,
+    ACCORDION,
+    SECTIONS
+}
+
 data class SubCategoryItem(
     val name: String,
     val count: Int
@@ -24,14 +30,24 @@ data class CategoryTabItem(
     val count: Int
 )
 
+data class CategorySectionData(
+    val category: TvCategory,
+    val totalProgramsCount: Int,
+    val subCategories: List<SubCategoryItem>,
+    val previewPrograms: List<Program>
+)
+
 data class CategoriesUiState(
+    val displayMode: CategoriesDisplayMode = CategoriesDisplayMode.GRID_HUB,
     val categories: List<CategoryTabItem> = emptyList(),
+    val sections: List<CategorySectionData> = emptyList(),
     val selectedCategory: TvCategory? = null,
     val subCategories: List<SubCategoryItem> = emptyList(),
     val selectedSubCategory: String? = null,
     val searchQuery: String = "",
     val programs: List<Program> = emptyList(),
     val totalProgramsCount: Int = 0,
+    val expandedCategory: TvCategory? = null,
     val isLoading: Boolean = true
 )
 
@@ -48,8 +64,14 @@ class CategoriesViewModel @Inject constructor(
     private val allActivePrograms: StateFlow<List<Program>> = epgRepository.getAllActivePrograms()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _displayMode = MutableStateFlow(CategoriesDisplayMode.GRID_HUB)
+    val displayMode: StateFlow<CategoriesDisplayMode> = _displayMode.asStateFlow()
+
     private val _selectedCategory = MutableStateFlow<TvCategory?>(null)
     val selectedCategory: StateFlow<TvCategory?> = _selectedCategory.asStateFlow()
+
+    private val _expandedCategory = MutableStateFlow<TvCategory?>(TvCategory.MOVIES)
+    val expandedCategory: StateFlow<TvCategory?> = _expandedCategory.asStateFlow()
 
     private val _selectedSubCategory = MutableStateFlow<String?>(null)
     val selectedSubCategory: StateFlow<String?> = _selectedSubCategory.asStateFlow()
@@ -57,14 +79,31 @@ class CategoriesViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    val uiState: StateFlow<CategoriesUiState> = combine(
-        allActivePrograms,
+    private data class FilterParams(
+        val mode: CategoriesDisplayMode,
+        val selectedCat: TvCategory?,
+        val expandedCat: TvCategory?,
+        val selectedSub: String?,
+        val query: String
+    )
+
+    private val filterParams = combine(
+        _displayMode,
         _selectedCategory,
+        _expandedCategory,
         _selectedSubCategory,
         _searchQuery
-    ) { programs, selectedCat, selectedSub, query ->
+    ) { mode, selectedCat, expandedCat, selectedSub, query ->
+        FilterParams(mode, selectedCat, expandedCat, selectedSub, query)
+    }
+
+    val uiState: StateFlow<CategoriesUiState> = combine(
+        allActivePrograms,
+        filterParams
+    ) { programs, filter ->
+        val (mode, selectedCat, expandedCat, selectedSub, query) = filter
         if (programs.isEmpty()) {
-            return@combine CategoriesUiState(isLoading = true)
+            return@combine CategoriesUiState(displayMode = mode, isLoading = true)
         }
 
         val programParentMap = programs.associateWith { resolveParentCategory(it) }
@@ -84,6 +123,35 @@ class CategoriesViewModel @Inject constructor(
             val count = categoryCounts[cat] ?: 0
             if (count > 0 || cat != TvCategory.OTHER) {
                 categoryTabs.add(CategoryTabItem(category = cat, count = count))
+            }
+        }
+
+        val sectionList = mutableListOf<CategorySectionData>()
+        for (cat in TvCategory.entries) {
+            val catProgs = programs.filter { programParentMap[it] == cat }
+            if (catProgs.isNotEmpty()) {
+                val catSubCounts = mutableMapOf<String, Int>()
+                for (prog in catProgs) {
+                    val subs = extractSubCategories(prog, cat)
+                    for (s in subs) {
+                        catSubCounts[s] = (catSubCounts[s] ?: 0) + 1
+                    }
+                }
+                val subItems = catSubCounts.entries
+                    .map { SubCategoryItem(name = it.key, count = it.value) }
+                    .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+                    .sortedByDescending { it.count }
+                    .toList()
+
+                val preview = catProgs.take(12)
+                sectionList.add(
+                    CategorySectionData(
+                        category = cat,
+                        totalProgramsCount = catProgs.size,
+                        subCategories = subItems,
+                        previewPrograms = preview
+                    )
+                )
             }
         }
 
@@ -123,13 +191,16 @@ class CategoriesViewModel @Inject constructor(
         }
 
         CategoriesUiState(
+            displayMode = mode,
             categories = categoryTabs,
+            sections = sectionList,
             selectedCategory = selectedCat,
             subCategories = sortedSubCategories,
             selectedSubCategory = selectedSub,
             searchQuery = query,
             programs = filteredPrograms,
             totalProgramsCount = programsInParent.size,
+            expandedCategory = expandedCat,
             isLoading = false
         )
     }.stateIn(
@@ -138,8 +209,17 @@ class CategoriesViewModel @Inject constructor(
         CategoriesUiState(isLoading = true)
     )
 
+    fun setDisplayMode(mode: CategoriesDisplayMode) {
+        _displayMode.value = mode
+    }
+
     fun selectCategory(category: TvCategory?) {
         _selectedCategory.value = category
+        _selectedSubCategory.value = null
+    }
+
+    fun toggleExpandedCategory(category: TvCategory) {
+        _expandedCategory.value = if (_expandedCategory.value == category) null else category
         _selectedSubCategory.value = null
     }
 

@@ -201,7 +201,7 @@
     <string name="filter_all_channels">Toutes les chaînes</string>
     <string name="filter_all_days">Tous les jours</string>
     <string name="channels_search_placeholder">Rechercher une chaîne...</string>
-    <string name="categories_search_placeholder">Rechercher une catégorie...</string>
+    <string name="categories_search_placeholder">Rechercher</string>
     <string name="channels_empty">Aucune chaîne trouvée.</string>
     <string name="no_programs_for_date">Aucun programme disponible pour cette date.</string>
     <string name="badge_subtitles">ST</string>
@@ -245,7 +245,12 @@
     <string name="label_episode">Épisode</string>
     <string name="programs_found_count">%1$d programmes</string>
     <string name="subcategories_count">%1$d sous-catégories</string>
-    <string name="search_categories_hint">Rechercher une catégorie, sous-genre...</string>
+    <string name="search_categories_hint">Rechercher</string>
     <string name="no_programs_in_category">Aucun programme dans cette catégorie</string>
     <string name="subcategories_title">Sous-catégories</string>
+    <string name="mode_grid">Grille &amp; Détail</string>
+    <string name="mode_accordion">Accordéon</string>
+    <string name="mode_sections">Sections</string>
+    <string name="action_see_all">Tout voir</string>
+    <string name="back_to_categories">Retour aux catégories</string>
 </resources>

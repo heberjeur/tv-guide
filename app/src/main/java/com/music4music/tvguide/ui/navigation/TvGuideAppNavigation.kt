@@ -93,7 +93,16 @@ fun TvGuideAppNavigation() {
                                     contentDescription = stringResource(screen.titleRes)
                                 )
                             },
-                            label = { Text(text = stringResource(screen.titleRes)) },
+                            label = {
+                                Text(
+                                    text = stringResource(screen.titleRes),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            alwaysShowLabel = true,
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = AccentRed,
                                 selectedTextColor = AccentRed,
