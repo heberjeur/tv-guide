@@ -23,5 +23,7 @@ data class ReminderEntity(
     val isCalendarSyncEnabled: Boolean,
     val calendarEventId: Long?,
     val isNotificationEnabled: Boolean,
-    val soundUri: String?
+    val soundUri: String?,
+    @androidx.room.ColumnInfo(defaultValue = "'once'")
+    val recurrence: String = "once"
 )

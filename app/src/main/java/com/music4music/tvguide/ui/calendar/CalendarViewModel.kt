@@ -40,7 +40,12 @@ class CalendarViewModel @Inject constructor(
     val filteredReminders: StateFlow<List<Reminder>> = combine(allReminders, _selectedDate, _searchQuery, displayZoneFlow) { reminders, date, query, zone ->
         reminders.filter { reminder ->
             val reminderDate = Instant.ofEpochMilli(reminder.startTimestamp).atZone(zone).toLocalDate()
-            val matchesDate = reminderDate == date
+            val matchesDate = when (reminder.recurrence) {
+                "daily" -> date >= reminderDate
+                "weekly" -> date >= reminderDate && java.time.temporal.ChronoUnit.DAYS.between(reminderDate, date) % 7 == 0L
+                "monthly" -> date >= reminderDate && date.dayOfMonth == reminderDate.dayOfMonth
+                else -> reminderDate == date
+            }
             val matchesQuery = query.isBlank() ||
                 reminder.title.contains(query, ignoreCase = true) ||
                 reminder.channelId.contains(query, ignoreCase = true)

@@ -276,9 +276,11 @@ class EpgRepositoryImpl @Inject constructor(
                     )
 
                     val retentionDays = userPreferences.retentionDays.first()
-                    val zone = ZoneId.of("Europe/Paris")
-                    val cutoffTimestamp = LocalDate.now(zone).minusDays(retentionDays.coerceAtLeast(2).toLong()).atStartOfDay(zone).toInstant().toEpochMilli()
-                    programDao.deleteExpiredPrograms(cutoffTimestamp)
+                    if (retentionDays > 0) {
+                        val zone = ZoneId.of("Europe/Paris")
+                        val cutoffTimestamp = LocalDate.now(zone).minusDays(retentionDays.coerceAtLeast(2).toLong()).atStartOfDay(zone).toInstant().toEpochMilli()
+                        programDao.deleteExpiredPrograms(cutoffTimestamp)
+                    }
 
                     _syncProgress.value = SyncProgress(
                         state = SyncState.CACHING_IMAGES,

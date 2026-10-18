@@ -12,7 +12,8 @@ class SetReminderUseCase @Inject constructor(
         program: Program,
         leadTimeMinutes: Int = 10,
         syncToCalendar: Boolean = false,
-        soundUri: String? = null
+        soundUri: String? = null,
+        recurrence: String = "once"
     ): Long {
         val triggerTimestamp = program.startTimestamp - (leadTimeMinutes * 60 * 1000L)
         val reminder = Reminder(
@@ -23,7 +24,8 @@ class SetReminderUseCase @Inject constructor(
             triggerTimestamp = triggerTimestamp,
             leadTimeMinutes = leadTimeMinutes,
             isCalendarSyncEnabled = syncToCalendar,
-            soundUri = soundUri
+            soundUri = soundUri,
+            recurrence = recurrence
         )
         return repository.saveReminder(reminder)
     }

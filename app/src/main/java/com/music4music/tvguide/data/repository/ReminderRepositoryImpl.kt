@@ -25,6 +25,10 @@ class ReminderRepositoryImpl @Inject constructor(
         return reminderDao.getReminderForProgram(programId).map { it?.toDomain() }
     }
 
+    override suspend fun getReminder(programId: Long): Reminder? {
+        return reminderDao.getReminderForProgramDirect(programId)?.toDomain()
+    }
+
     override suspend fun getUpcomingReminders(currentTimestamp: Long): List<Reminder> {
         return reminderDao.getUpcomingReminders(currentTimestamp).map { it.toDomain() }
     }
