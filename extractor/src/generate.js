@@ -261,7 +261,7 @@ async function loadXmltvReference() {
 }
 
 async function fetchDetailPageData(link) {
-  if (!link || !link.startsWith('/programme/')) return null;
+  if (!link || (!link.startsWith('/programme/') && !link.startsWith('/cinema/') && !link.startsWith('/series/'))) return null;
   const cleanLink = link.split('#')[0];
   if (detailCache.has(cleanLink)) return detailCache.get(cleanLink);
 
@@ -283,8 +283,8 @@ async function fetchDetailPageData(link) {
     $page('script[type="application/ld+json"]').each((_, s) => {
       try {
         const json = JSON.parse($page(s).html());
-        if (json.description && json.description.length > 20) {
-          desc = json.description;
+        if (json.description && json.description.length > 20 && !json.description.endsWith('...') && !json.description.endsWith('…')) {
+          desc = json.description.trim();
         }
         if (json.seasonNumber) {
           season = parseInt(json.seasonNumber, 10);
@@ -299,7 +299,9 @@ async function fetchDetailPageData(link) {
             const e = json.episode[i];
             if (anchor && e.url && e.url.includes(anchor)) {
               epIdx = i;
-              if (e.description && e.description.length > 20) desc = e.description;
+              if (e.description && e.description.length > 20 && !e.description.endsWith('...') && !e.description.endsWith('…')) {
+                desc = e.description.trim();
+              }
               if (e.episodeNumber) episodeNumber = parseInt(e.episodeNumber, 10);
               break;
             }
@@ -311,17 +313,22 @@ async function fetchDetailPageData(link) {
       } catch {}
     });
 
-    if (!desc) {
-      const og = $page('meta[property="og:description"]').attr('content');
-      if (og && og.length > 20 && !og.includes('Consultez la grille')) {
-        desc = og;
+    if (!desc || desc.endsWith('...') || desc.endsWith('…')) {
+      let pageSyn = $page('.synopsis-text').first().text().replace(/\s+/g, ' ').trim();
+      if (!pageSyn) {
+        const synEl = $page('.synopsis, .program-summary').first().clone();
+        synEl.find('button, .synopsis-action, a, [class*="action"], [class*="btn"]').remove();
+        pageSyn = synEl.text().replace(/\s+/g, ' ').replace(/^R[ée]sum[ée]\s+[^:]*:\s*/i, '').replace(/Voir plusmoins/gi, '').trim();
+      }
+      if (pageSyn && pageSyn.length > 20 && !pageSyn.endsWith('...') && !pageSyn.endsWith('…')) {
+        desc = pageSyn;
       }
     }
 
     if (!desc) {
-      const syn = $page('.synopsis, .program-summary, [class*="synopsis"]').text().replace(/\s+/g, ' ').trim();
-      if (syn && syn.length > 20) {
-        desc = syn;
+      const og = $page('meta[property="og:description"]').attr('content');
+      if (og && og.length > 20 && !og.includes('Consultez la grille') && !og.endsWith('...') && !og.endsWith('…')) {
+        desc = og.trim();
       }
     }
 
@@ -332,18 +339,18 @@ async function fetchDetailPageData(link) {
     }
 
     $page('.overview-stickerListItem').each((_, li) => {
-      const text = $page(li).text().trim();
-      if (text.includes('Format :') && !format) {
+      const text = $page(li).text().replace(/\s+/g, ' ').trim();
+      if (text.startsWith('Format :') && !format) {
         format = text.replace('Format :', '').trim();
       }
-      if (text.includes('Genre :') && !genre) {
+      if (text.startsWith('Genre :') && !genre) {
         genre = text.replace('Genre :', '').trim();
       }
-      if (text.includes('Sortie :') && !year) {
+      if ((text.startsWith('Sortie :') || text.startsWith('Année :')) && !year) {
         const matchY = text.match(/(\d{4})/);
         if (matchY) year = parseInt(matchY[1], 10);
       }
-      if (text.includes('Pays :') && !country) {
+      if (text.startsWith('Pays :') && !country) {
         country = text.replace('Pays :', '').trim();
       }
     });
@@ -357,15 +364,15 @@ async function fetchDetailPageData(link) {
         });
         const $pPage = cheerio.load(pRes.data);
         $pPage('.overview-stickerListItem').each((_, li) => {
-          const text = $pPage(li).text().trim();
-          if (text.includes('Sortie :') && !seriesYear) {
+          const text = $pPage(li).text().replace(/\s+/g, ' ').trim();
+          if ((text.startsWith('Sortie :') || text.startsWith('Année :')) && !seriesYear) {
             const m = text.match(/(\d{4})/);
             if (m) seriesYear = parseInt(m[1], 10);
           }
-          if (text.includes('Genre :') && !genre) {
+          if (text.startsWith('Genre :') && !genre) {
             genre = text.replace('Genre :', '').trim();
           }
-          if (text.includes('Format :') && !format) {
+          if (text.startsWith('Format :') && !format) {
             format = text.replace('Format :', '').trim();
           }
         });
@@ -418,6 +425,9 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
   const rawItems = $('.mainBroadcastCard, .gridBroadcastCard, [class*="broadcastCard"]');
   const extracted = [];
 
+  let dayOffset = 0;
+  let lastHour = -1;
+
   rawItems.each((_, el) => {
     const $el = $(el);
     const title = $el.find('.mainBroadcastCard-title, .gridBroadcastCard-title, h3, a[title]').first().text().trim();
@@ -427,14 +437,18 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
     const category = $el.find('.mainBroadcastCard-genre, .gridBroadcastCard-genre, .mainBroadcastCard-format, .genre').first().text().trim();
     const timeText = $el.find('.mainBroadcastCard-startingHour, .gridBroadcastCard-startingHour, time, .hour').first().text().trim();
     const imageSrc = extractImageSrc($el);
-    const link = $el.find('a[href*="/programme/"]').first().attr('href');
+    const link = $el.find('a[href*="/programme/"], a[href*="/cinema/"], a[href*="/series/"]').first().attr('href');
 
     const timeMatch = timeText.match(/(\d{1,2})[h:](\d{2})/i);
     if (!timeMatch) return;
 
     const hours = parseInt(timeMatch[1], 10);
     const minutes = parseInt(timeMatch[2], 10);
-    const startTime = baseDate.hour(hours).minute(minutes).second(0);
+    if (lastHour >= 20 && hours < 6) {
+      dayOffset = 1;
+    }
+    lastHour = hours;
+    const startTime = baseDate.add(dayOffset, 'day').hour(hours).minute(minutes).second(0);
 
     extracted.push({
       title,
@@ -499,19 +513,18 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
     }
 
     let detailData = null;
-    if (item.hours >= 20 && item.hours <= 23 && item.link) {
+    const isPrimeTime = item.hours >= 20 && item.hours <= 23;
+    const isTruncated = matchedDesc && (matchedDesc.endsWith('...') || matchedDesc.endsWith('…'));
+    const isSpecial = item.link && (item.link.includes('/cinema/') || item.link.includes('/series/') || item.link.includes('/saisons/'));
+    if (item.link && (isPrimeTime || !matchedDesc || isTruncated || isSpecial)) {
       detailData = await fetchDetailPageData(item.link);
-      if (detailData && detailData.desc && detailData.desc.length > 30) {
+      if (detailData && detailData.desc && detailData.desc.length > 20 && !detailData.desc.endsWith('...') && !detailData.desc.endsWith('…')) {
         matchedDesc = detailData.desc;
       }
-    } else if (item.link) {
-      const clean = item.link.split('#')[0];
-      if (!matchedDesc || clean.includes('/saisons/') || clean.includes('/cinema/')) {
-        detailData = await fetchDetailPageData(item.link);
-        if (detailData && detailData.desc && detailData.desc.length > 20) {
-          matchedDesc = detailData.desc;
-        }
-      }
+    }
+
+    if (matchedDesc && (matchedDesc.endsWith('...') || matchedDesc.endsWith('…'))) {
+      matchedDesc = matchedDesc.replace(/\s*(\.\.\.|…)\s*$/, '').trim();
     }
 
     programs.push({
@@ -525,8 +538,8 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       year: detailData && detailData.year ? detailData.year : matchedYear,
       seriesYear: detailData && detailData.seriesYear ? detailData.seriesYear : matchedSeriesYear,
       country: detailData && detailData.country ? detailData.country : matchedCountry,
-      season: detailData && detailData.season ? detailData.season : matchedSeason,
-      episode: detailData && detailData.episodeNumber ? detailData.episodeNumber : matchedEpisode,
+      season: detailData && detailData.season != null ? detailData.season : matchedSeason,
+      episode: detailData && detailData.episodeNumber != null ? detailData.episodeNumber : matchedEpisode,
       start: item.startTime,
       stop: item.startTime.add(60, 'minute'),
       image: item.imageSrc,
@@ -722,12 +735,28 @@ async function main() {
           channelPrograms.push(...programs);
         }
         channelPrograms.sort((a, b) => a.start.valueOf() - b.start.valueOf());
-        for (let j = 0; j < channelPrograms.length - 1; j++) {
-          if (channelPrograms[j + 1].start.isAfter(channelPrograms[j].start)) {
-            channelPrograms[j].stop = channelPrograms[j + 1].start;
+        const deduped = [];
+        for (const prog of channelPrograms) {
+          if (deduped.length === 0) {
+            deduped.push(prog);
+            continue;
           }
+          const prev = deduped[deduped.length - 1];
+          if (Math.abs(prog.start.diff(prev.start, 'minute')) < 5) {
+            if ((prog.desc || '').length > (prev.desc || '').length) {
+              deduped[deduped.length - 1] = prog;
+            }
+            continue;
+          }
+          if (prog.start.isBefore(prev.start)) {
+            continue;
+          }
+          deduped.push(prog);
         }
-        return channelPrograms;
+        for (let j = 0; j < deduped.length - 1; j++) {
+          deduped[j].stop = deduped[j + 1].start;
+        }
+        return deduped;
       })
     );
     for (const res of batchResults) {

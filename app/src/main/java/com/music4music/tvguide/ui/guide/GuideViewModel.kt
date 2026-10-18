@@ -198,7 +198,7 @@ class GuideViewModel @Inject constructor(
             }
             notHidden && notRerun && matchesQuery && isCurrentOrUpcoming
         }
-        when (prefs.channelSortOrder) {
+        val sorted = when (prefs.channelSortOrder) {
             "popular" -> filtered.sortedWith(
                 compareBy<Program> { ChannelCatalog.getPopularityRank(it.channelId) }
                     .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
@@ -217,6 +217,25 @@ class GuideViewModel @Inject constructor(
                 compareBy<Program> { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
                     .thenBy { it.startTimestamp }
             )
+        }
+        if (_selectedChannelId.value != null) {
+            val sequential = mutableListOf<Program>()
+            for (item in sorted) {
+                if (sequential.isEmpty()) {
+                    sequential.add(item)
+                } else {
+                    val last = sequential.last()
+                    if (item.startTimestamp >= last.stopTimestamp) {
+                        sequential.add(item)
+                    } else if (item.startTimestamp > last.startTimestamp) {
+                        sequential[sequential.lastIndex] = last.copy(stopTimestamp = item.startTimestamp)
+                        sequential.add(item)
+                    }
+                }
+            }
+            sequential
+        } else {
+            sorted
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

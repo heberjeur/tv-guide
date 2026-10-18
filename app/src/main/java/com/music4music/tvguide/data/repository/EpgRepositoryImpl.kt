@@ -213,6 +213,7 @@ class EpgRepositoryImpl @Inject constructor(
                     )
 
                     var totalPrograms = 0
+                    var isFirstBatch = true
 
                     stream.use { input ->
                         parser.parse(input, channelPackage.id) { channels, programs ->
@@ -226,6 +227,10 @@ class EpgRepositoryImpl @Inject constructor(
                                 }
                             }
                             if (programs.isNotEmpty()) {
+                                if (isFirstBatch) {
+                                    programDao.clearAll()
+                                    isFirstBatch = false
+                                }
                                 programDao.insertPrograms(programs)
                                 totalPrograms += programs.size
                                 programs.forEach { p ->

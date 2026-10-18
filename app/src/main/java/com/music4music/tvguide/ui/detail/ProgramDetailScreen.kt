@@ -143,7 +143,7 @@ fun ProgramDetailScreen(
                 CircularProgressIndicator(color = AccentRed)
             }
         } else {
-            val zone = ZoneId.systemDefault()
+            val zone = ZoneId.of("Europe/Paris")
             val startTime = Instant.ofEpochMilli(currentProgram.startTimestamp).atZone(zone).format(timeFormatter)
             val stopTime = Instant.ofEpochMilli(currentProgram.stopTimestamp).atZone(zone).format(timeFormatter)
             val broadcastDate = Instant.ofEpochMilli(currentProgram.startTimestamp).atZone(zone).format(dateFormatter)
@@ -294,11 +294,12 @@ fun ProgramDetailScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            InfoRow(
-                                label = stringResource(R.string.label_season),
-                                value = currentProgram.seasonNumber?.let { stringResource(R.string.label_season_value, it) }
-                                    ?: stringResource(R.string.label_not_specified)
-                            )
+                            if (currentProgram.seasonNumber != null) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_season),
+                                    value = stringResource(R.string.label_season_value, currentProgram.seasonNumber)
+                                )
+                            }
 
                             val formatValue = currentProgram.categories.firstOrNull {
                                 it.equals("Culture Infos", ignoreCase = true) ||
@@ -317,14 +318,18 @@ fun ProgramDetailScreen(
                                     currentProgram.categories.drop(1).joinToString(", ")
                                 } else null
 
-                            InfoRow(
-                                label = stringResource(R.string.label_format),
-                                value = formatValue ?: stringResource(R.string.label_not_specified)
-                            )
-                            InfoRow(
-                                label = stringResource(R.string.label_category),
-                                value = genreValue ?: stringResource(R.string.label_not_specified)
-                            )
+                            if (!formatValue.isNullOrBlank()) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_format),
+                                    value = formatValue
+                                )
+                            }
+                            if (!genreValue.isNullOrBlank()) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_category),
+                                    value = genreValue
+                                )
+                            }
 
                             val releaseText = when {
                                 currentProgram.productionYear != null && currentProgram.seriesYear != null && currentProgram.productionYear != currentProgram.seriesYear ->
@@ -339,22 +344,26 @@ fun ProgramDetailScreen(
                                     stringResource(R.string.label_series_year_value, currentProgram.seriesYear)
                                 currentProgram.isUnreleased ->
                                     stringResource(R.string.label_unreleased)
-                                else ->
-                                    stringResource(R.string.label_not_specified)
+                                else -> null
                             }
-                            InfoRow(
-                                label = stringResource(R.string.label_release_year),
-                                value = releaseText
-                            )
-                            InfoRow(
-                                label = stringResource(R.string.label_country),
-                                value = currentProgram.country
-                                    ?: if (currentProgram.channelId.endsWith(".fr")) {
-                                        stringResource(R.string.default_country)
-                                    } else {
-                                        stringResource(R.string.label_not_specified)
-                                    }
-                            )
+                            if (releaseText != null) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_release_year),
+                                    value = releaseText
+                                )
+                            }
+
+                            val countryText = currentProgram.country
+                                ?: if (currentProgram.channelId.endsWith(".fr")) {
+                                    stringResource(R.string.default_country)
+                                } else null
+
+                            if (!countryText.isNullOrBlank()) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_country),
+                                    value = countryText
+                                )
+                            }
                         }
                     }
 
