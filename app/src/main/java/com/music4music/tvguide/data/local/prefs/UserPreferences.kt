@@ -44,7 +44,7 @@ class UserPreferences @Inject constructor(
     private val keyDisplayTimezone = stringPreferencesKey("display_timezone")
 
     val displayTimezone: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[keyDisplayTimezone] ?: "origin"
+        preferences[keyDisplayTimezone] ?: "system"
     }
 
     val customNotificationDateTime: Flow<Long?> = context.dataStore.data.map { preferences ->

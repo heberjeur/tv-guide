@@ -136,7 +136,8 @@ class NowPlayingViewModel @Inject constructor(
     ) { period, part, _, zone ->
         Triple(period, part, zone)
     }.flatMapLatest { (period, part, zone) ->
-        val today = LocalDate.now(zone)
+        val originZone = com.music4music.tvguide.util.TimezoneUtils.ORIGIN_ZONE
+        val today = LocalDate.now(originZone)
         val now = System.currentTimeMillis()
 
         val (startTime, endTime) = when (period) {
@@ -145,36 +146,36 @@ class NowPlayingViewModel @Inject constructor(
             }
             BroadcastPeriod.TONIGHT -> {
                 if (part == EveningPart.PART_1) {
-                    val s = today.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = today.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    val s = today.atTime(19, 30).atZone(originZone).toInstant().toEpochMilli()
+                    val e = today.atTime(23, 45).atZone(originZone).toInstant().toEpochMilli()
                     s to e
                 } else {
-                    val s = today.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
-                    val e = today.plusDays(1).atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
+                    val s = today.atTime(22, 15).atZone(originZone).toInstant().toEpochMilli()
+                    val e = today.plusDays(1).atTime(2, 30).atZone(originZone).toInstant().toEpochMilli()
                     s to e
                 }
             }
             BroadcastPeriod.YESTERDAY -> {
                 val yesterday = today.minusDays(1)
                 if (part == EveningPart.PART_1) {
-                    val s = yesterday.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = yesterday.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    val s = yesterday.atTime(19, 30).atZone(originZone).toInstant().toEpochMilli()
+                    val e = yesterday.atTime(23, 45).atZone(originZone).toInstant().toEpochMilli()
                     s to e
                 } else {
-                    val s = yesterday.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
-                    val e = today.atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
+                    val s = yesterday.atTime(22, 15).atZone(originZone).toInstant().toEpochMilli()
+                    val e = today.atTime(2, 30).atZone(originZone).toInstant().toEpochMilli()
                     s to e
                 }
             }
             BroadcastPeriod.TOMORROW -> {
                 val tomorrow = today.plusDays(1)
                 if (part == EveningPart.PART_1) {
-                    val s = tomorrow.atTime(19, 30).atZone(zone).toInstant().toEpochMilli()
-                    val e = tomorrow.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    val s = tomorrow.atTime(19, 30).atZone(originZone).toInstant().toEpochMilli()
+                    val e = tomorrow.atTime(23, 45).atZone(originZone).toInstant().toEpochMilli()
                     s to e
                 } else {
-                    val s = tomorrow.atTime(22, 15).atZone(zone).toInstant().toEpochMilli()
-                    val e = tomorrow.plusDays(1).atTime(2, 30).atZone(zone).toInstant().toEpochMilli()
+                    val s = tomorrow.atTime(22, 15).atZone(originZone).toInstant().toEpochMilli()
+                    val e = tomorrow.plusDays(1).atTime(2, 30).atZone(originZone).toInstant().toEpochMilli()
                     s to e
                 }
             }
@@ -198,31 +199,32 @@ class NowPlayingViewModel @Inject constructor(
         currentTimeFlow,
         paramsFlow
     ) { rawList, currentTime, (period, part, query, tag, prefs, zone) ->
-        val today = LocalDate.now(zone)
+        val originZone = com.music4music.tvguide.util.TimezoneUtils.ORIGIN_ZONE
+        val today = LocalDate.now(originZone)
 
         val targetTime = when (period) {
             BroadcastPeriod.NOW -> currentTime
             BroadcastPeriod.TONIGHT -> {
                 if (part == EveningPart.PART_1) {
-                    today.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
+                    today.atTime(21, 10).atZone(originZone).toInstant().toEpochMilli()
                 } else {
-                    today.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
+                    today.atTime(23, 0).atZone(originZone).toInstant().toEpochMilli()
                 }
             }
             BroadcastPeriod.YESTERDAY -> {
                 val yesterday = today.minusDays(1)
                 if (part == EveningPart.PART_1) {
-                    yesterday.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
+                    yesterday.atTime(21, 10).atZone(originZone).toInstant().toEpochMilli()
                 } else {
-                    yesterday.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
+                    yesterday.atTime(23, 0).atZone(originZone).toInstant().toEpochMilli()
                 }
             }
             BroadcastPeriod.TOMORROW -> {
                 val tomorrow = today.plusDays(1)
                 if (part == EveningPart.PART_1) {
-                    tomorrow.atTime(21, 10).atZone(zone).toInstant().toEpochMilli()
+                    tomorrow.atTime(21, 10).atZone(originZone).toInstant().toEpochMilli()
                 } else {
-                    tomorrow.atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
+                    tomorrow.atTime(23, 0).atZone(originZone).toInstant().toEpochMilli()
                 }
             }
         }

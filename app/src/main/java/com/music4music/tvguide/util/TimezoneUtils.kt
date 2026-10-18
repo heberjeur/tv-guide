@@ -5,7 +5,7 @@ import java.time.ZoneId
 object TimezoneUtils {
     val ORIGIN_ZONE: ZoneId = ZoneId.of("Europe/Paris")
 
-    const val DEFAULT_TIMEZONE_PREF = "origin"
+    const val DEFAULT_TIMEZONE_PREF = "system"
 
     val AVAILABLE_TIMEZONES = listOf(
         "origin",

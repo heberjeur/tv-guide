@@ -83,7 +83,7 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "comfort")
 
     val displayTimezone: StateFlow<String> = userPreferences.displayTimezone
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "origin")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "system")
 
     val fontSizeScale: StateFlow<String> = userPreferences.fontSizeScale
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "normal")

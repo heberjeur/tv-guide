@@ -217,6 +217,10 @@ class EpgRepositoryImpl @Inject constructor(
 
                     stream.use { input ->
                         parser.parse(input, channelPackage.id) { channels, programs ->
+                            if (isFirstBatch && forceRefresh) {
+                                isFirstBatch = false
+                                programDao.clearAll()
+                            }
                             if (channels.isNotEmpty()) {
                                 channelDao.insertChannels(channels)
                                 channels.forEach { c ->
