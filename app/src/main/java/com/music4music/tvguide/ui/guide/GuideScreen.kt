@@ -510,6 +510,19 @@ private fun CategoryFilterBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var categoryQuery by remember { mutableStateOf("") }
+
+    val filteredCategories = remember(categoryQuery) {
+        if (categoryQuery.isBlank()) {
+            TvCategory.entries
+        } else {
+            TvCategory.entries.filter { cat ->
+                context.getString(cat.nameRes).contains(categoryQuery, ignoreCase = true)
+            }
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -525,7 +538,7 @@ private fun CategoryFilterBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -552,24 +565,66 @@ private fun CategoryFilterBottomSheet(
                 }
             }
 
+            OutlinedTextField(
+                value = categoryQuery,
+                onValueChange = { categoryQuery = it },
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.categories_search_placeholder),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                trailingIcon = {
+                    if (categoryQuery.isNotEmpty()) {
+                        IconButton(onClick = { categoryQuery = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentRed,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
+
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                item(span = { GridItemSpan(2) }) {
-                    CategoryItemCard(
-                        category = null,
-                        isSelected = selectedCategory == null,
-                        onClick = {
-                            onCategorySelect(null)
-                            onSubCategorySelect(null)
-                            scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
-                        }
-                    )
+                if (categoryQuery.isBlank()) {
+                    item(span = { GridItemSpan(2) }) {
+                        CategoryItemCard(
+                            category = null,
+                            isSelected = selectedCategory == null,
+                            onClick = {
+                                onCategorySelect(null)
+                                onSubCategorySelect(null)
+                                scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                            }
+                        )
+                    }
                 }
-                items(TvCategory.entries) { category ->
+                items(filteredCategories) { category ->
                     CategoryItemCard(
                         category = category,
                         isSelected = selectedCategory == category,

@@ -518,6 +518,46 @@ fun ProgramDetailScreen(
                                             border = null
                                         )
                                     }
+
+                                    SuggestionChip(
+                                        onClick = {
+                                            val cal = java.util.Calendar.getInstance().apply {
+                                                timeInMillis = currentProgram.startTimestamp
+                                            }
+                                            android.app.DatePickerDialog(
+                                                context,
+                                                { _, year, month, day ->
+                                                    android.app.TimePickerDialog(
+                                                        context,
+                                                        { _, hour, minute ->
+                                                            val picked = java.util.Calendar.getInstance().apply {
+                                                                set(year, month, day, hour, minute, 0)
+                                                            }
+                                                            viewModel.setCustomDateTimeReminder(picked.timeInMillis, selectedRecurrence)
+                                                            showLeadTimeOptions = false
+                                                        },
+                                                        cal.get(java.util.Calendar.HOUR_OF_DAY),
+                                                        cal.get(java.util.Calendar.MINUTE),
+                                                        true
+                                                    ).show()
+                                                },
+                                                cal.get(java.util.Calendar.YEAR),
+                                                cal.get(java.util.Calendar.MONTH),
+                                                cal.get(java.util.Calendar.DAY_OF_MONTH)
+                                            ).show()
+                                        },
+                                        label = {
+                                            Text(
+                                                text = stringResource(R.string.action_pick_datetime),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = AccentRed
+                                            )
+                                        },
+                                        colors = SuggestionChipDefaults.suggestionChipColors(
+                                            containerColor = DarkSurfaceVariant
+                                        ),
+                                        border = null
+                                    )
                                 }
 
                                 Spacer(modifier = Modifier.height(10.dp))

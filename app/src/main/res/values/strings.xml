@@ -201,6 +201,7 @@
     <string name="filter_all_channels">All channels</string>
     <string name="filter_all_days">All days</string>
     <string name="channels_search_placeholder">Search for a channel...</string>
+    <string name="categories_search_placeholder">Search for a category...</string>
     <string name="channels_empty">No channels found.</string>
     <string name="no_programs_for_date">No programs available for this date.</string>
     <string name="badge_subtitles">ST</string>
@@ -223,7 +224,7 @@
 
     <string name="settings_timezone_title">Timezone Selection</string>
     <string name="settings_timezone_desc">Choose display timezone for broadcast hours and timeline</string>
-    <string name="timezone_system">Device Time (Auto)</string>
+    <string name="timezone_system">Device Time</string>
     <string name="timezone_origin">Original Time</string>
     <string name="dialog_select_timezone_title">Select Timezone</string>
     <string name="label_more_timezones">Other...</string>

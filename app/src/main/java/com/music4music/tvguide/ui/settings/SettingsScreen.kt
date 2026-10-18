@@ -30,8 +30,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -47,6 +55,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -110,6 +120,7 @@ fun SettingsScreen(
 
     var showFavoritesDialog by remember { mutableStateOf(false) }
     var showHiddenDialog by remember { mutableStateOf(false) }
+    var showTimezoneDialog by remember { mutableStateOf(false) }
 
     val soundDisplayName = remember(notificationSound) {
         if (notificationSound != null) {
@@ -245,6 +256,79 @@ fun SettingsScreen(
         )
     }
 
+    if (showTimezoneDialog) {
+        AlertDialog(
+            onDismissRequest = { showTimezoneDialog = false },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = AccentRed
+                    )
+                    Text(
+                        text = stringResource(R.string.dialog_select_timezone_title),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            text = {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(350.dp)
+                ) {
+                    items(com.music4music.tvguide.util.TimezoneUtils.AVAILABLE_TIMEZONES) { tz ->
+                        val isSelected = displayTimezone == tz
+                        val label = when (tz) {
+                            "system" -> stringResource(R.string.timezone_system)
+                            "origin" -> stringResource(R.string.timezone_origin)
+                            else -> tz
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setDisplayTimezone(tz)
+                                    showTimezoneDialog = false
+                                }
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    viewModel.setDisplayTimezone(tz)
+                                    showTimezoneDialog = false
+                                },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = AccentRed
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = label,
+                                color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTimezoneDialog = false }) {
+                    Text(text = stringResource(R.string.action_cancel), color = AccentRed)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -279,23 +363,21 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.settings_theme_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    SettingsCardHeader(
+                        icon = Icons.Default.Palette,
+                        title = stringResource(R.string.settings_theme_title)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
+                            "system" to stringResource(R.string.theme_system),
                             "dark" to stringResource(R.string.theme_dark),
                             "oled" to stringResource(R.string.theme_oled),
-                            "light" to stringResource(R.string.theme_light),
-                            "system" to stringResource(R.string.theme_system)
+                            "light" to stringResource(R.string.theme_light)
                         ).forEach { (mode, label) ->
                             FilterChip(
                                 selected = themeMode == mode,
@@ -322,7 +404,8 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_hide_reruns),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Switch(
                             checked = hideReruns,
@@ -344,8 +427,10 @@ fun SettingsScreen(
                             Text(
                                 text = stringResource(R.string.settings_highlight_accessibility),
                                 style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = stringResource(R.string.settings_highlight_accessibility_desc),
                                 style = MaterialTheme.typography.bodySmall,
@@ -369,18 +454,16 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.settings_channel_management_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    SettingsCardHeader(
+                        icon = Icons.Default.Tune,
+                        title = stringResource(R.string.settings_channel_management_title)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = stringResource(R.string.settings_channel_sort_title),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
@@ -444,13 +527,11 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.settings_language_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    SettingsCardHeader(
+                        icon = Icons.Default.Language,
+                        title = stringResource(R.string.settings_language_title)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -483,61 +564,43 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.settings_timezone_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    SettingsCardHeader(
+                        icon = Icons.Default.Schedule,
+                        title = stringResource(R.string.settings_timezone_title)
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = stringResource(R.string.settings_timezone_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Card(
+                    Spacer(modifier = Modifier.height(14.dp))
+                    val selectedTzLabel = when (displayTimezone) {
+                        "system" -> stringResource(R.string.timezone_system)
+                        "origin" -> stringResource(R.string.timezone_origin)
+                        else -> displayTimezone
+                    }
+                    OutlinedButton(
+                        onClick = { showTimezoneDialog = true },
                         shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(260.dp)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            items(com.music4music.tvguide.util.TimezoneUtils.AVAILABLE_TIMEZONES) { tz ->
-                                val isSelected = displayTimezone == tz
-                                val label = when (tz) {
-                                    "origin" -> stringResource(R.string.timezone_origin)
-                                    "system" -> stringResource(R.string.timezone_system)
-                                    else -> tz
-                                }
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { viewModel.setDisplayTimezone(tz) }
-                                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    androidx.compose.material3.RadioButton(
-                                        selected = isSelected,
-                                        onClick = { viewModel.setDisplayTimezone(tz) },
-                                        colors = androidx.compose.material3.RadioButtonDefaults.colors(
-                                            selectedColor = AccentRed
-                                        )
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = label,
-                                        color = if (isSelected) AccentRed else MaterialTheme.colorScheme.onSurface,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                            }
+                            Text(
+                                text = selectedTzLabel,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = AccentRed
+                            )
                         }
                     }
                 }
@@ -548,13 +611,11 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.settings_notifications_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    SettingsCardHeader(
+                        icon = Icons.Default.Notifications,
+                        title = stringResource(R.string.settings_notifications_title)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -563,7 +624,8 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_notifications_enable),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Switch(
                             checked = isNotificationsEnabled,
@@ -627,7 +689,8 @@ fun SettingsScreen(
                             Text(
                                 text = stringResource(R.string.settings_vibration_enable),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Switch(
                                 checked = vibrationEnabled,
@@ -643,8 +706,8 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_reminder_lead_time),
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -681,8 +744,8 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_reminder_recurrence),
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         FlowRow(
@@ -720,18 +783,16 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.settings_sync_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    SettingsCardHeader(
+                        icon = Icons.Default.Sync,
+                        title = stringResource(R.string.settings_sync_title)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     Text(
                         text = stringResource(R.string.settings_sync_frequency),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
@@ -770,7 +831,8 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_sync_auto_background),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Switch(
                             checked = autoSyncEnabled,
@@ -791,7 +853,8 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_sync_wifi_only),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Switch(
                             checked = syncWifiOnly,
@@ -812,7 +875,8 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_sync_charging_only),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Switch(
                             checked = syncChargingOnly,
@@ -828,8 +892,8 @@ fun SettingsScreen(
                     Text(
                         text = stringResource(R.string.settings_retention_days_title),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
@@ -891,13 +955,11 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.settings_storage_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    SettingsCardHeader(
+                        icon = Icons.Default.Storage,
+                        title = stringResource(R.string.settings_storage_title)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = stringResource(R.string.settings_cache_size, cacheSizeText),
                         style = MaterialTheme.typography.bodyMedium,
@@ -914,5 +976,31 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SettingsCardHeader(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = AccentRed,
+            modifier = Modifier.size(22.dp)
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

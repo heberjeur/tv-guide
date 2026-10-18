@@ -201,6 +201,7 @@
     <string name="filter_all_channels">Toutes les chaînes</string>
     <string name="filter_all_days">Tous les jours</string>
     <string name="channels_search_placeholder">Rechercher une chaîne...</string>
+    <string name="categories_search_placeholder">Rechercher une catégorie...</string>
     <string name="channels_empty">Aucune chaîne trouvée.</string>
     <string name="no_programs_for_date">Aucun programme disponible pour cette date.</string>
     <string name="badge_subtitles">ST</string>
@@ -223,7 +224,7 @@
 
     <string name="settings_timezone_title">Choix du fuseau horaire</string>
     <string name="settings_timezone_desc">Choisissez le fuseau horaire d\'affichage des heures de diffusion</string>
-    <string name="timezone_system">Heure de l\'appareil (Auto)</string>
+    <string name="timezone_system">Heure de l\'appareil</string>
     <string name="timezone_origin">Heure d\'origine</string>
     <string name="dialog_select_timezone_title">Choisir le fuseau horaire</string>
     <string name="label_more_timezones">Autre fuseau...</string>

@@ -92,7 +92,7 @@ class ProgramDetailViewModel @Inject constructor(
         }
     }
 
-    fun setCustomDateTimeReminder(triggerTimestamp: Long) {
+    fun setCustomDateTimeReminder(triggerTimestamp: Long, recurrence: String = "once") {
         val currentProgram = program.value ?: return
         viewModelScope.launch {
             val existingReminder = reminder.value
@@ -107,7 +107,8 @@ class ProgramDetailViewModel @Inject constructor(
                 program = currentProgram,
                 leadTimeMinutes = leadTime,
                 syncToCalendar = false,
-                soundUri = soundUri
+                soundUri = soundUri,
+                recurrence = recurrence
             )
 
             scheduleAlarm(
