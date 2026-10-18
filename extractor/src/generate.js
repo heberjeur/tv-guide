@@ -447,11 +447,11 @@ async function fetchDetailPageData(link) {
       season = parseInt(seasonMatch[1], 10);
     }
 
-    let detailIsUnreleased = false;
-    let detailIsRerun = false;
-    let detailIsLive = false;
-    let detailHasSubtitles = false;
-    let detailHasAudioDescription = false;
+    let detailIsUnreleased = $page('[class*="-new"]').length > 0;
+    let detailIsRerun = $page('[class*="-rebroadcast"]').length > 0;
+    let detailIsLive = $page('[class*="-live"]').length > 0;
+    let detailHasSubtitles = $page('[class*="deaf"], [aria-label*="Malentendant"], svg.icon-deaf').length > 0;
+    let detailHasAudioDescription = $page('[class*="audio-description"], [class*="audioDescription"], [aria-label*="Audio description"], svg.icon-audio-description').length > 0;
     let detailIsHd = false;
     let detailRating = null;
 
@@ -610,12 +610,12 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       if (txt) stickers.push(txt);
     });
 
-    const isUnreleased = stickers.some(s => /in[ée]dit/i.test(s));
-    const isRerun = stickers.some(s => /rediff/i.test(s));
-    const isLive = stickers.some(s => /\bdirect\b/i.test(s));
-    const hasSubtitles = stickers.some(s => /\b(st|sous[- ]titr|malentendant)\b/i.test(s));
-    const hasAudioDescription = stickers.some(s => /\b(ad|audiodescription)\b/i.test(s));
-    const isHd = stickers.some(s => /\bhd\b/i.test(s));
+    const isUnreleased = $el.find('.mainBroadcastCard-new, [class*="-new"]').length > 0 || stickers.some(s => /in[ée]dit/i.test(s));
+    const isRerun = $el.find('.mainBroadcastCard-rebroadcast, [class*="-rebroadcast"]').length > 0 || stickers.some(s => /rediff/i.test(s));
+    const isLive = $el.find('.mainBroadcastCard-live, [class*="-live"]').length > 0 || stickers.some(s => /\bdirect\b/i.test(s));
+    const hasSubtitles = $el.find('.mainBroadcastCard-deaf, [class*="-deaf"], [aria-label*="Malentendant"], svg.icon-deaf').length > 0 || stickers.some(s => /\b(st|sous[- ]titr|malentendant)\b/i.test(s));
+    const hasAudioDescription = $el.find('.mainBroadcastCard-audioDescription, [class*="-audioDescription"], [aria-label*="Audio description"], svg.icon-audio-description').length > 0 || stickers.some(s => /\b(ad|audiodescription)\b/i.test(s));
+    const isHd = stickers.some(s => /\bhd\b/i.test(s)) || /hd|4k|uhd/i.test($el.text());
 
     let cardRating = null;
     for (const s of stickers) {

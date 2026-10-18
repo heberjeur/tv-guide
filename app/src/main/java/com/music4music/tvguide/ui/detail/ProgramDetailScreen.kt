@@ -270,8 +270,13 @@ fun ProgramDetailScreen(
                         } else if (!currentProgram.episodeDisplay.isNullOrBlank()) {
                             BadgeItem(text = currentProgram.episodeDisplay, color = TextPrimary)
                         }
-                        if (currentProgram.isUnreleased) {
+                        if (currentProgram.isUnreleasedResolved) {
                             BadgeItem(text = stringResource(R.string.label_unreleased), color = IndicatorGreen)
+                        } else if (currentProgram.isRerun) {
+                            BadgeItem(text = stringResource(R.string.status_rerun), color = TextSecondary)
+                        }
+                        if (currentProgram.isLiveBroadcast) {
+                            BadgeItem(text = stringResource(R.string.status_live), color = AccentRed)
                         }
                         if (currentProgram.isHd) {
                             BadgeItem(text = stringResource(R.string.label_hd), color = AccentRed)
@@ -286,7 +291,16 @@ fun ProgramDetailScreen(
                             }
                         }
                         if (currentProgram.contentRating != null) {
-                            BadgeItem(text = currentProgram.contentRating, color = TextSecondary)
+                            val ratingClean = currentProgram.contentRating.trim()
+                            val ratingDisplay = when (ratingClean) {
+                                "-10", "10" -> stringResource(R.string.csa_under_10)
+                                "-12", "12", "13" -> stringResource(R.string.csa_under_12)
+                                "-16", "16" -> stringResource(R.string.csa_under_16)
+                                "-18", "18" -> stringResource(R.string.csa_under_18)
+                                "Tout public", "TP", "G", "Tous publics" -> stringResource(R.string.csa_all_audiences)
+                                else -> ratingClean
+                            }
+                            BadgeItem(text = ratingDisplay, color = TextSecondary)
                         }
                         if (currentProgram.starRating != null) {
                             BadgeItem(
@@ -413,22 +427,6 @@ fun ProgramDetailScreen(
                                 InfoRow(
                                     label = stringResource(R.string.label_accessibility),
                                     value = accessibilityText
-                                )
-                            }
-
-                            if (!currentProgram.contentRating.isNullOrBlank()) {
-                                val ratingClean = currentProgram.contentRating.trim()
-                                val ratingDisplay = when (ratingClean) {
-                                    "-10", "10" -> stringResource(R.string.csa_under_10)
-                                    "-12", "12", "13" -> stringResource(R.string.csa_under_12)
-                                    "-16", "16" -> stringResource(R.string.csa_under_16)
-                                    "-18", "18" -> stringResource(R.string.csa_under_18)
-                                    "Tout public", "TP", "G", "Tous publics" -> stringResource(R.string.csa_all_audiences)
-                                    else -> ratingClean
-                                }
-                                InfoRow(
-                                    label = stringResource(R.string.label_parental_rating),
-                                    value = ratingDisplay
                                 )
                             }
 
