@@ -87,6 +87,11 @@
     <string name="section_credits">Distribution et Équipe</string>
     <string name="label_season_episode_badge">Saison %1$d • Ép. %2$d</string>
     <string name="label_season_episode_short">S%1$d • Ép. %2$d</string>
+    <string name="title_season_episodes">Saisons et épisodes</string>
+    <string name="label_other_episodes">Autres épisodes</string>
+    <string name="empty_season_episodes">Aucun épisode disponible pour cette saison</string>
+    <string name="episodes_count_format">%1$d épisodes</string>
+    <string name="episodes_count_single_format">%1$d épisode</string>
 
     <string name="channel_selection">Sélectionner une chaîne</string>
     <string name="action_refresh">Actualiser</string>

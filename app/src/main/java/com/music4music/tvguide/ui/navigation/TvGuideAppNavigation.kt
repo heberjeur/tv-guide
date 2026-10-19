@@ -32,6 +32,7 @@ import com.music4music.tvguide.ui.calendar.CalendarScreen
 import com.music4music.tvguide.ui.categories.CategoriesScreen
 import com.music4music.tvguide.ui.channels.ChannelListScreen
 import com.music4music.tvguide.ui.detail.ProgramDetailScreen
+import com.music4music.tvguide.ui.series.SeriesEpisodesScreen
 import com.music4music.tvguide.ui.guide.GuideScreen
 import com.music4music.tvguide.ui.now.NowPlayingScreen
 import com.music4music.tvguide.ui.settings.SettingsScreen
@@ -206,7 +207,26 @@ fun TvGuideAppNavigation() {
             ) {
                 ProgramDetailScreen(
                     onBackClick = { navController.popBackStack() },
-                    onChannelClick = navigateToChannelGuide
+                    onChannelClick = navigateToChannelGuide,
+                    onProgramClick = { id -> navController.navigate("program/$id") },
+                    onSeasonClick = { id, season ->
+                        navController.navigate("series_episodes/$id?season=$season")
+                    }
+                )
+            }
+            composable(
+                route = "series_episodes/{programId}?season={season}",
+                arguments = listOf(
+                    navArgument("programId") { type = NavType.LongType },
+                    navArgument("season") {
+                        type = NavType.IntType
+                        defaultValue = 1
+                    }
+                )
+            ) {
+                SeriesEpisodesScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onProgramClick = { id -> navController.navigate("program/$id") }
                 )
             }
         }

@@ -102,6 +102,12 @@ class EpgRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getProgramsByTitle(title: String): Flow<List<Program>> {
+        return programDao.getProgramsByTitle(title).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
     override fun getProgramsByCategory(category: String): Flow<List<Program>> {
         val fromTime = System.currentTimeMillis() - 2 * 3600 * 1000L
         return programDao.getProgramsByCategory(category, fromTime).map { list ->

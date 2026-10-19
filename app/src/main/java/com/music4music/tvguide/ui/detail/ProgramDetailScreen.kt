@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AlarmOn
@@ -102,6 +103,8 @@ private val dateFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ge
 fun ProgramDetailScreen(
     onBackClick: () -> Unit,
     onChannelClick: (String) -> Unit = {},
+    onProgramClick: (Long) -> Unit = {},
+    onSeasonClick: (Long, Int) -> Unit = { _, _ -> },
     viewModel: ProgramDetailViewModel = hiltViewModel()
 ) {
     val program by viewModel.program.collectAsStateWithLifecycle()
@@ -311,12 +314,18 @@ fun ProgramDetailScreen(
                         ) {
                             if (hasEpisodeButton) {
                                 DetailBadgeButton(
-                                    text = stringResource(R.string.label_episode_value, currentProgram.episodeNumber!!)
+                                    text = stringResource(R.string.label_episode_value, currentProgram.episodeNumber!!),
+                                    onClick = {
+                                        onSeasonClick(currentProgram.id, currentProgram.seasonNumber ?: 1)
+                                    }
                                 )
                             }
                             if (hasSeasonButton) {
                                 DetailBadgeButton(
-                                    text = stringResource(R.string.label_season_value, currentProgram.seasonNumber!!)
+                                    text = stringResource(R.string.label_season_value, currentProgram.seasonNumber!!),
+                                    onClick = {
+                                        onSeasonClick(currentProgram.id, currentProgram.seasonNumber!!)
+                                    }
                                 )
                             }
                         }
@@ -854,7 +863,8 @@ fun ProgramDetailScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
+                                    .padding(vertical = 4.dp)
+                                    .clickable { onProgramClick(upcoming.id) },
                                 colors = CardDefaults.cardColors(containerColor = DarkSurface),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
@@ -869,16 +879,27 @@ fun ProgramDetailScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = upcoming.channelId,
+                                            text = ChannelCatalog.getDisplayName(upcoming.channelId),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = AccentRed,
                                             fontWeight = FontWeight.Bold
                                         )
-                                        Text(
-                                            text = stringResource(R.string.broadcast_at_time, upDate, upStart),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextSecondary
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.broadcast_at_time, upDate, upStart),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = TextSecondary
+                                            )
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                                                contentDescription = null,
+                                                tint = TextSecondary,
+                                                modifier = Modifier.size(10.dp)
+                                            )
+                                        }
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
@@ -1043,18 +1064,35 @@ private fun InfoRow(label: String, value: String) {
 }
 
 @Composable
-private fun DetailBadgeButton(text: String) {
+private fun DetailBadgeButton(
+    text: String,
+    onClick: (() -> Unit)? = null
+) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = DarkSurfaceVariant
+        color = DarkSurfaceVariant,
+        modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-        )
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            if (onClick != null) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(10.dp)
+                )
+            }
+        }
     }
 }
 
