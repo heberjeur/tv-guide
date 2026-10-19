@@ -266,17 +266,44 @@ fun ProgramDetailScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     val displaySubtitle = when {
-                        currentProgram.subTitle.isNullOrEmpty() -> {
-                            if (currentProgram.episodeNumber != null) {
-                                stringResource(R.string.label_episode_value, currentProgram.episodeNumber)
-                            } else null
+                        currentProgram.seasonNumber != null && currentProgram.episodeNumber != null -> {
+                            val cleanSub = currentProgram.subTitle?.trim()
+                            val strippedSub = cleanSub?.replace(Regex("""^(?:[ÉéE]pisode|[ÉéE]p\.?)\s*\d+\s*[:\-•]?\s*""", RegexOption.IGNORE_CASE), "")?.trim()
+                            val isTitleRepeat = strippedSub != null && strippedSub.equals(currentProgram.title.trim(), ignoreCase = true)
+                            if (!strippedSub.isNullOrEmpty() && !isTitleRepeat) {
+                                stringResource(
+                                    R.string.label_episode_season_with_title,
+                                    currentProgram.episodeNumber,
+                                    currentProgram.seasonNumber,
+                                    strippedSub
+                                )
+                            } else {
+                                stringResource(
+                                    R.string.label_episode_season_format,
+                                    currentProgram.episodeNumber,
+                                    currentProgram.seasonNumber
+                                )
+                            }
                         }
-                        currentProgram.episodeNumber != null && !currentProgram.subTitle.contains("épisode", ignoreCase = true) && !currentProgram.subTitle.contains("ep.", ignoreCase = true) -> {
-                            stringResource(
-                                R.string.label_episode_with_title,
-                                currentProgram.episodeNumber,
-                                currentProgram.subTitle
-                            )
+                        currentProgram.seasonNumber != null -> {
+                            val cleanSub = currentProgram.subTitle?.trim()
+                            val strippedSub = cleanSub?.replace(Regex("""^(?:Saison|Season|S)\s*\d+\s*[:\-•]?\s*""", RegexOption.IGNORE_CASE), "")?.trim()
+                            val isTitleRepeat = strippedSub != null && strippedSub.equals(currentProgram.title.trim(), ignoreCase = true)
+                            if (!strippedSub.isNullOrEmpty() && !isTitleRepeat) {
+                                stringResource(R.string.label_season_with_title, currentProgram.seasonNumber, strippedSub)
+                            } else {
+                                stringResource(R.string.label_season_value, currentProgram.seasonNumber)
+                            }
+                        }
+                        currentProgram.episodeNumber != null -> {
+                            val cleanSub = currentProgram.subTitle?.trim()
+                            val strippedSub = cleanSub?.replace(Regex("""^(?:[ÉéE]pisode|[ÉéE]p\.?)\s*\d+\s*[:\-•]?\s*""", RegexOption.IGNORE_CASE), "")?.trim()
+                            val isTitleRepeat = strippedSub != null && strippedSub.equals(currentProgram.title.trim(), ignoreCase = true)
+                            if (!strippedSub.isNullOrEmpty() && !isTitleRepeat) {
+                                stringResource(R.string.label_episode_with_title, currentProgram.episodeNumber, strippedSub)
+                            } else {
+                                stringResource(R.string.label_episode_value, currentProgram.episodeNumber)
+                            }
                         }
                         else -> currentProgram.subTitle
                     }
@@ -298,52 +325,6 @@ fun ProgramDetailScreen(
                                     color = TextSecondary
                                 )
                             }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (currentProgram.seasonNumber != null && currentProgram.episodeNumber != null) {
-                            BadgeItem(
-                                text = stringResource(
-                                    R.string.label_season_episode_badge,
-                                    currentProgram.seasonNumber,
-                                    currentProgram.episodeNumber
-                                ),
-                                color = TextPrimary
-                            )
-                        } else if (!currentProgram.episodeDisplay.isNullOrBlank()) {
-                            BadgeItem(text = currentProgram.episodeDisplay, color = TextPrimary)
-                        }
-                        if (currentProgram.isUnreleasedResolved) {
-                            BadgeItem(text = stringResource(R.string.label_unreleased), color = IndicatorGreen)
-                        } else if (currentProgram.isRerun) {
-                            BadgeItem(text = stringResource(R.string.status_rerun), color = TextSecondary)
-                        }
-                        if (currentProgram.isLiveBroadcast) {
-                            BadgeItem(text = stringResource(R.string.status_live), color = AccentRed)
-                        }
-                        if (currentProgram.isHd) {
-                            BadgeItem(text = stringResource(R.string.label_hd), color = AccentRed)
-                        }
-                        val highlightAccessibility = com.music4music.tvguide.ui.theme.LocalHighlightAccessibility.current
-                        if (highlightAccessibility) {
-                            if (currentProgram.hasSubtitlesResolved) {
-                                BadgeItem(text = stringResource(R.string.badge_subtitles_long), color = TextSecondary)
-                            }
-                            if (currentProgram.hasAudioDescription) {
-                                BadgeItem(text = stringResource(R.string.badge_ad_long), color = TextSecondary)
-                            }
-                        }
-                        if (currentProgram.starRating != null) {
-                            BadgeItem(
-                                text = "★ ${"%.1f".format(Locale.US, currentProgram.starRating)}/5",
-                                color = Color(0xFFFFD54F)
-                            )
                         }
                     }
 
@@ -413,9 +394,32 @@ fun ProgramDetailScreen(
                             }
                             if (!genreValue.isNullOrBlank()) {
                                 InfoRow(
-                                    label = stringResource(R.string.label_category),
+                                    label = stringResource(R.string.label_genre),
                                     value = genreValue
                                 )
+                            }
+
+                            if (isSeriesProgram) {
+                                if (currentProgram.productionYear != null) {
+                                    InfoRow(
+                                        label = stringResource(R.string.label_episode_release_year),
+                                        value = currentProgram.productionYear.toString()
+                                    )
+                                }
+                                if (currentProgram.seriesYear != null) {
+                                    InfoRow(
+                                        label = stringResource(R.string.label_series_release_year),
+                                        value = currentProgram.seriesYear.toString()
+                                    )
+                                }
+                            } else {
+                                val releaseYear = currentProgram.productionYear ?: currentProgram.seriesYear
+                                if (releaseYear != null) {
+                                    InfoRow(
+                                        label = stringResource(R.string.label_release_year),
+                                        value = releaseYear.toString()
+                                    )
+                                }
                             }
 
                             val broadcastType = when {
@@ -428,6 +432,25 @@ fun ProgramDetailScreen(
                                 InfoRow(
                                     label = stringResource(R.string.label_broadcast_type),
                                     value = broadcastType
+                                )
+                            }
+
+                            val accessibilityText = when {
+                                currentProgram.hasSubtitlesResolved && currentProgram.hasAudioDescription -> {
+                                    stringResource(R.string.accessibility_subtitles_and_ad)
+                                }
+                                currentProgram.hasSubtitlesResolved -> {
+                                    stringResource(R.string.badge_subtitles_long)
+                                }
+                                currentProgram.hasAudioDescription -> {
+                                    stringResource(R.string.badge_ad_long)
+                                }
+                                else -> null
+                            }
+                            if (accessibilityText != null) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_accessibility),
+                                    value = accessibilityText
                                 )
                             }
 
@@ -444,6 +467,18 @@ fun ProgramDetailScreen(
                                 InfoRow(
                                     label = stringResource(R.string.label_parental_rating),
                                     value = ratingDisplay
+                                )
+                            }
+
+                            val countryText = currentProgram.country
+                                ?: if (currentProgram.channelId.endsWith(".fr")) {
+                                    stringResource(R.string.default_country)
+                                } else null
+
+                            if (!countryText.isNullOrBlank()) {
+                                InfoRow(
+                                    label = stringResource(R.string.label_country),
+                                    value = countryText
                                 )
                             }
 
@@ -472,25 +507,6 @@ fun ProgramDetailScreen(
                                 )
                             }
 
-                            val accessibilityText = when {
-                                currentProgram.hasSubtitlesResolved && currentProgram.hasAudioDescription -> {
-                                    stringResource(R.string.accessibility_subtitles_and_ad)
-                                }
-                                currentProgram.hasSubtitlesResolved -> {
-                                    stringResource(R.string.badge_subtitles_long)
-                                }
-                                currentProgram.hasAudioDescription -> {
-                                    stringResource(R.string.badge_ad_long)
-                                }
-                                else -> null
-                            }
-                            if (accessibilityText != null) {
-                                InfoRow(
-                                    label = stringResource(R.string.label_accessibility),
-                                    value = accessibilityText
-                                )
-                            }
-
                             if (currentProgram.isHd) {
                                 InfoRow(
                                     label = stringResource(R.string.label_video_format),
@@ -498,38 +514,10 @@ fun ProgramDetailScreen(
                                 )
                             }
 
-                            if (isSeriesProgram) {
-                                if (currentProgram.productionYear != null) {
-                                    InfoRow(
-                                        label = stringResource(R.string.label_episode_release_year),
-                                        value = currentProgram.productionYear.toString()
-                                    )
-                                }
-                                if (currentProgram.seriesYear != null) {
-                                    InfoRow(
-                                        label = stringResource(R.string.label_series_release_year),
-                                        value = currentProgram.seriesYear.toString()
-                                    )
-                                }
-                            } else {
-                                val releaseYear = currentProgram.productionYear ?: currentProgram.seriesYear
-                                if (releaseYear != null) {
-                                    InfoRow(
-                                        label = stringResource(R.string.label_release_year),
-                                        value = releaseYear.toString()
-                                    )
-                                }
-                            }
-
-                            val countryText = currentProgram.country
-                                ?: if (currentProgram.channelId.endsWith(".fr")) {
-                                    stringResource(R.string.default_country)
-                                } else null
-
-                            if (!countryText.isNullOrBlank()) {
+                            if (currentProgram.starRating != null) {
                                 InfoRow(
-                                    label = stringResource(R.string.label_country),
-                                    value = countryText
+                                    label = stringResource(R.string.label_rating),
+                                    value = "★ ${"%.1f".format(Locale.US, currentProgram.starRating)}/5"
                                 )
                             }
                         }
@@ -1052,23 +1040,6 @@ private fun InfoRow(label: String, value: String) {
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
             color = TextPrimary
-        )
-    }
-}
-
-@Composable
-private fun BadgeItem(text: String, color: Color) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(DarkSurfaceVariant)
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            fontWeight = FontWeight.Bold
         )
     }
 }

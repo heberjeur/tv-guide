@@ -61,8 +61,11 @@
     <string name="label_episode_value">Épisode %1$d</string>
     <string name="label_episode_with_title">Épisode %1$d : %2$s</string>
     <string name="label_season_with_title">Saison %1$d : %2$s</string>
+    <string name="label_episode_season_format">Épisode %1$d - Saison %2$d</string>
+    <string name="label_episode_season_with_title">Épisode %1$d - Saison %2$d • %3$s</string>
     <string name="label_format">Format</string>
-    <string name="label_category">Genre</string>
+    <string name="label_genre">Genre</string>
+    <string name="label_category">Catégorie</string>
     <string name="label_release_year">Année de sortie</string>
     <string name="label_episode_release_year">Sortie de l\'épisode</string>
     <string name="label_series_release_year">Sortie de la série</string>
