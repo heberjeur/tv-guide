@@ -23,6 +23,7 @@ const HTTP_HEADERS = {
 };
 
 const detailCache = new Map();
+const pageHtmlCache = new Map();
 
 const BOILERPLATE_PHRASES = [
   'Chaque jour, Laurent Mariotte propose des recettes simples',
@@ -196,6 +197,7 @@ async function loadXmltvReference() {
   const timeMap = new Map();
   const titleMap = new Map();
   const channelProgramsMap = new Map();
+  const latestSeasonMap = new Map();
 
   const resolveChannelMap = ($root) => {
     const map = new Map();
@@ -237,6 +239,12 @@ async function loadXmltvReference() {
       start: parseXmltvDate(start),
       stop: parseXmltvDate(stop)
     };
+
+    if (season) {
+      const cTitle = cleanTitle(title);
+      const currentMax = latestSeasonMap.get(cTitle) || 0;
+      if (season > currentMax) latestSeasonMap.set(cTitle, season);
+    }
 
     const targetChannels = [channel];
     const mapped = channelMap.get(channel);
@@ -377,18 +385,23 @@ async function loadXmltvReference() {
     process.stderr.write(`Failed to load extended xmltv reference: ${err.message}\n`);
   }
 
-  return { timeMap, titleMap, channelProgramsMap };
+  return { timeMap, titleMap, channelProgramsMap, latestSeasonMap };
 }
 
 async function fetchDetailPageData(link) {
   if (!link || (!link.startsWith('/programme/') && !link.startsWith('/cinema/') && !link.startsWith('/series/'))) return null;
-  const cleanLink = link.split('#')[0];
-  if (detailCache.has(cleanLink)) return detailCache.get(cleanLink);
+  if (detailCache.has(link)) return detailCache.get(link);
 
+  const cleanLink = link.split('#')[0];
   const fullUrl = `https://www.programme-tv.net${cleanLink}`;
   try {
-    const res = await axios.get(fullUrl, { headers: HTTP_HEADERS, timeout: 8000 });
-    const $page = cheerio.load(res.data);
+    let pageHtml = pageHtmlCache.get(cleanLink);
+    if (!pageHtml) {
+      const res = await axios.get(fullUrl, { headers: HTTP_HEADERS, timeout: 8000 });
+      pageHtml = res.data;
+      pageHtmlCache.set(cleanLink, pageHtml);
+    }
+    const $page = cheerio.load(pageHtml);
     let desc = null;
     let season = null;
     let format = null;
@@ -565,10 +578,10 @@ async function fetchDetailPageData(link) {
 
     const uniqueDirectors = Array.from(new Set(directors));
     const result = { desc, seriesDesc, season, format, genre, year, seriesYear, country, episodeNumber, directors: uniqueDirectors, isUnreleased: detailIsUnreleased, isRerun: detailIsRerun, isLive: detailIsLive, hasSubtitles: detailHasSubtitles, hasAudioDescription: detailHasAudioDescription, isHd: detailIsHd, rating: detailRating };
-    detailCache.set(cleanLink, result);
+    detailCache.set(link, result);
     return result;
   } catch {
-    detailCache.set(cleanLink, null);
+    detailCache.set(link, null);
     return null;
   }
 }
@@ -823,6 +836,13 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
     const seasonMatch = (item.subTitle || matchedSubtitle || '').match(/saisons?\s*(\d+)/i) || (item.title || '').match(/saisons?\s*(\d+)/i);
     if (seasonMatch) {
       finalSeason = parseInt(seasonMatch[1], 10);
+    }
+
+    if (item.isUnreleased && finalSeason == null) {
+      const latestSeason = refData.latestSeasonMap ? refData.latestSeasonMap.get(cleanTitle(item.title)) : null;
+      if (latestSeason) {
+        finalSeason = latestSeason;
+      }
     }
 
     const isNewsOrWeather = (matchedCategory && /info|journal|m[ée]t[ée]o/i.test(matchedCategory)) && /\b(journal|m[ée]t[ée]o|jt|1945|1245)\b/i.test(item.title);

@@ -35,24 +35,84 @@ object SeriesUtils {
             }
         }
 
-        val result = mutableListOf<Program>()
-        for (p in baseMapped) {
-            if (result.isNotEmpty()) {
-                val prev = result.last()
-                val sameChannel = prev.channelId == p.channelId
-                val sameSeason = prev.seasonNumber != null && prev.seasonNumber == p.seasonNumber
-                val diffSubtitle = !prev.subTitle.isNullOrBlank() && !p.subTitle.isNullOrBlank() &&
-                    !prev.subTitle.trim().equals(p.subTitle.trim(), ignoreCase = true)
-                val consecutiveTime = (p.startTimestamp - prev.stopTimestamp) in -300_000L..1_800_000L
-                val prevEp = prev.episodeNumber
-                val currEp = p.episodeNumber
-                if (sameChannel && sameSeason && diffSubtitle && consecutiveTime && prevEp != null && (currEp == null || currEp <= prevEp)) {
-                    result.add(p.copy(episodeNumber = prevEp + 1))
-                    continue
+        val seasonGroups = baseMapped.groupBy { it.seasonNumber }
+        val adjustedEpisodes = mutableMapOf<Long, Program>()
+
+        for ((season, group) in seasonGroups) {
+            if (season == null) {
+                var prev: Program? = null
+                for (p in group) {
+                    var current = p
+                    if (prev != null &&
+                        prev.channelId == p.channelId &&
+                        (p.startTimestamp - prev.stopTimestamp) in -300_000L..1_800_000L
+                    ) {
+                        val prevEp = prev.episodeNumber
+                        val currEp = p.episodeNumber
+                        if (prevEp != null && (currEp == null || currEp <= prevEp)) {
+                            current = p.copy(episodeNumber = prevEp + 1)
+                        }
+                    }
+                    adjustedEpisodes[current.id] = current
+                    prev = current
+                }
+            } else {
+                val seenSubtitles = mutableMapOf<String, Int>()
+                var maxEp = 0
+                var prev: Program? = null
+
+                for (p in group) {
+                    val cleanSub = cleanSubtitle(p.subTitle, p.title)?.lowercase()
+                    val assignedEp: Int?
+
+                    if (!cleanSub.isNullOrBlank()) {
+                        if (seenSubtitles.containsKey(cleanSub)) {
+                            assignedEp = seenSubtitles[cleanSub]
+                        } else {
+                            val origEp = p.episodeNumber
+                            maxEp = if (origEp != null && origEp > maxEp) {
+                                origEp
+                            } else if (maxEp > 0) {
+                                maxEp + 1
+                            } else {
+                                origEp ?: 1
+                            }
+                            seenSubtitles[cleanSub] = maxEp
+                            assignedEp = maxEp
+                        }
+                    } else {
+                        val prevEp = prev?.episodeNumber
+                        val currEp = p.episodeNumber
+                        val isConsecutive = prev != null &&
+                            prev.channelId == p.channelId &&
+                            (p.startTimestamp - prev.stopTimestamp) in -300_000L..1_800_000L
+                        if (isConsecutive && prevEp != null && (currEp == null || currEp <= prevEp)) {
+                            maxEp = maxOf(maxEp, prevEp) + 1
+                            assignedEp = maxEp
+                        } else if (currEp != null && currEp > maxEp) {
+                            maxEp = currEp
+                            assignedEp = currEp
+                        } else if (currEp != null) {
+                            assignedEp = currEp
+                        } else if (maxEp > 0) {
+                            maxEp += 1
+                            assignedEp = maxEp
+                        } else {
+                            assignedEp = null
+                        }
+                    }
+
+                    val updated = if (assignedEp != p.episodeNumber) {
+                        p.copy(episodeNumber = assignedEp)
+                    } else {
+                        p
+                    }
+                    adjustedEpisodes[updated.id] = updated
+                    prev = updated
                 }
             }
-            result.add(p)
         }
-        return result
+
+        return baseMapped.map { adjustedEpisodes[it.id] ?: it }
     }
 }
