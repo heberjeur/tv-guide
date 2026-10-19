@@ -25,6 +25,12 @@ data class Program(
     val seriesYear: Int? = null,
     val country: String? = null
 ) {
+    val contentCategories: List<String>
+        get() = categories.filter { cat ->
+            val c = cat.trim().lowercase()
+            c.isNotEmpty() && !isSignaletique(c)
+        }.distinctBy { it.trim().lowercase() }
+
     val hasAudioDescription: Boolean
         get() = description.contains("audiodescription", ignoreCase = true) ||
                 description.contains("audio-description", ignoreCase = true) ||
@@ -112,4 +118,26 @@ fun formatDuration(minutes: Int): String {
         hours > 0 -> "$hours h"
         else -> "$remainingMinutes min"
     }
+}
+
+fun isSignaletique(category: String): Boolean {
+    val clean = category.trim().lowercase()
+    if (clean.isBlank()) return true
+    val exactMatches = setOf(
+        "rediffusion", "rediff", "r", "(r)", "[r]",
+        "audiodescription", "audio-description", "audio description", "ad",
+        "sous-titres", "sous-titres sourds et malentendants", "sous-titrage", "sous-titré", "sous-titrée",
+        "st", "sme", "vost", "vostfr",
+        "inédit", "inedit", "inédite", "inedite",
+        "direct", "en direct", "live",
+        "hd", "haute définition", "haute definition",
+        "tout public", "tous publics", "tp", "u", "g", "csa", "-10", "-12", "-16", "-18",
+        "general", "autre", "divers", "programme indéterminé"
+    )
+    if (clean in exactMatches) return true
+    if (clean.startsWith("csa") || clean.startsWith("déconseillé") || clean.startsWith("interdit")) return true
+    if (clean.contains("audiodescription") || clean.contains("audio-description")) return true
+    if (clean.contains("rediffusion")) return true
+    if (clean.contains("sous-titr") || clean.contains("malentendant")) return true
+    return false
 }

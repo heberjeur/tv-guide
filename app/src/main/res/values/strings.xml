@@ -209,7 +209,8 @@
     <string name="badge_audio_description">AD</string>
     <string name="badge_ad_long">Audio description</string>
     <string name="badge_hd">HD</string>
-    <string name="badge_unreleased">Inédit</string>
+    <string name="badge_unreleased">New</string>
+    <string name="badge_rerun">RE</string>
     <string name="filter_today">Today</string>
     <string name="filter_tomorrow">Tomorrow</string>
     <string name="filter_today_prefix">Today • %1$s</string>

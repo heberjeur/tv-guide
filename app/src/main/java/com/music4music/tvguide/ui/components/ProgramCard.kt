@@ -182,12 +182,22 @@ fun ProgramCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    val showAccessibility = highlightAccessibility && (program.hasSubtitlesResolved || program.hasAudioDescription)
-                    val hasMeta = program.durationMinutes > 0 || program.isHd || program.isUnreleased || showAccessibility
+                    val csaBadge = when (program.contentRating?.trim()) {
+                        "-10", "10" -> "-10"
+                        "-12", "12", "13" -> "-12"
+                        "-16", "16" -> "-16"
+                        "-18", "18" -> "-18"
+                        else -> null
+                    }
+                    val hasSignaletique = program.isLiveBroadcast || program.isUnreleasedResolved || program.isRerun ||
+                        program.isHd || program.hasSubtitlesResolved || program.hasAudioDescription || csaBadge != null
+                    val hasMeta = program.durationMinutes > 0 || hasSignaletique
+
                     if (hasMeta) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (program.durationMinutes > 0) {
                                 Text(
@@ -195,24 +205,45 @@ fun ProgramCard(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextSecondary
                                 )
+                            } else {
+                                Spacer(modifier = Modifier.width(1.dp))
                             }
-                            if (program.isHd) {
-                                Text(
-                                    text = stringResource(R.string.badge_hd),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = IndicatorGreen,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            if (program.isUnreleased) {
-                                Text(
-                                    text = stringResource(R.string.badge_unreleased),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = AccentRed,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            if (highlightAccessibility) {
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (program.isLiveBroadcast) {
+                                    Text(
+                                        text = stringResource(R.string.status_live),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = IndicatorGreen,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                if (program.isUnreleasedResolved) {
+                                    Text(
+                                        text = stringResource(R.string.badge_unreleased),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = AccentRed,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                } else if (program.isRerun) {
+                                    Text(
+                                        text = stringResource(R.string.badge_rerun),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                if (program.isHd) {
+                                    Text(
+                                        text = stringResource(R.string.badge_hd),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                                 if (program.hasSubtitlesResolved) {
                                     Text(
                                         text = stringResource(R.string.badge_subtitles),
@@ -229,76 +260,91 @@ fun ProgramCard(
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
+                                if (csaBadge != null) {
+                                    Text(
+                                        text = csaBadge,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                     }
 
-                    Text(
-                        text = program.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = program.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
 
-                    if (!program.subTitle.isNullOrEmpty() || episodeLabel != null) {
-                        val subText = buildString {
-                            if (episodeLabel != null) append(episodeLabel)
-                            if (!program.subTitle.isNullOrEmpty()) {
-                                if (isNotEmpty()) append(" • ")
-                                append(program.subTitle)
+                            if (!program.subTitle.isNullOrEmpty() || episodeLabel != null) {
+                                val subText = buildString {
+                                    if (episodeLabel != null) append(episodeLabel)
+                                    if (!program.subTitle.isNullOrEmpty()) {
+                                        if (isNotEmpty()) append(" • ")
+                                        append(program.subTitle)
+                                    }
+                                }
+                                Text(
+                                    text = subText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
-                        }
-                        Text(
-                            text = subText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
 
-                    if (program.categories.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            program.categories.distinctBy { it.trim().lowercase() }.forEach { category ->
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = DarkSurfaceVariant,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .clickable(enabled = onCategoryClick != null) {
-                                            onCategoryClick?.invoke(category)
-                                        }
+                            if (program.contentCategories.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Text(
-                                        text = category,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = TextSecondary,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp)
-                                    )
+                                    program.contentCategories.forEach { category ->
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = DarkSurfaceVariant,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .clickable(enabled = onCategoryClick != null) {
+                                                    onCategoryClick?.invoke(category)
+                                                }
+                                        ) {
+                                            Text(
+                                                text = category,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = TextSecondary,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                }
 
-                if (!program.iconUrl.isNullOrBlank() && !program.iconUrl.startsWith("data:")) {
-                    Spacer(modifier = Modifier.width(10.dp))
-                    AsyncImage(
-                        model = program.iconUrl,
-                        contentDescription = program.title,
-                        modifier = Modifier
-                            .size(imageSize)
-                            .align(Alignment.CenterVertically)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
+                        if (!program.iconUrl.isNullOrBlank() && !program.iconUrl.startsWith("data:")) {
+                            Spacer(modifier = Modifier.width(10.dp))
+                            AsyncImage(
+                                model = program.iconUrl,
+                                contentDescription = program.title,
+                                modifier = Modifier
+                                    .size(imageSize)
+                                    .align(Alignment.CenterVertically)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
                 }
             }
 

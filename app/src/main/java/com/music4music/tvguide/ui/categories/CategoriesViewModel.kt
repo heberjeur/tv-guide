@@ -221,10 +221,9 @@ class CategoriesViewModel @Inject constructor(
 
     private fun extractSubCategories(program: Program, parent: TvCategory): List<String> {
         val parentSearch = parent.searchKeyword.lowercase()
-        return program.categories.filter { cat ->
+        return program.contentCategories.filter { cat ->
             val c = cat.trim().lowercase()
             c.isNotEmpty() &&
-                !metaKeywords.contains(c) &&
                 c != parentSearch &&
                 c != "autre"
         }
