@@ -21,6 +21,43 @@ object ProgramDescriptionUtils {
 
         var cleaned = text.trim()
 
+        if (cleaned.contains('<') && cleaned.contains('>')) {
+            cleaned = cleaned
+                .replace(Regex("""(?i)<br\s*/?>"""), "\n")
+                .replace(Regex("""(?i)</(?:p|div|tr|li|h[1-6])>"""), "\n")
+                .replace(Regex("""<[^>]+>"""), "")
+        }
+
+        if (cleaned.contains('&') && cleaned.contains(';')) {
+            cleaned = cleaned
+                .replace("&amp;", "&")
+                .replace("&quot;", "\"")
+                .replace("&apos;", "'")
+                .replace("&#39;", "'")
+                .replace("&#039;", "'")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&nbsp;", " ")
+                .replace("&eacute;", "é")
+                .replace("&egrave;", "è")
+                .replace("&agrave;", "à")
+                .replace("&ecirc;", "ê")
+                .replace("&ocirc;", "ô")
+                .replace("&icirc;", "î")
+                .replace("&ucirc;", "û")
+                .replace("&ccedil;", "ç")
+                .replace("&euml;", "ë")
+                .replace("&iuml;", "ï")
+                .replace("&ouml;", "ö")
+                .replace("&uuml;", "ü")
+        }
+
+        cleaned = cleaned
+            .replace(Regex("""\r\n|\r"""), "\n")
+            .replace(Regex("""[ \t]+"""), " ")
+            .replace(Regex("""\n{3,}"""), "\n\n")
+            .trim()
+
         if (boilerplatePhrases.any { cleaned.contains(it, ignoreCase = true) }) {
             for (phrase in boilerplatePhrases) {
                 if (cleaned.contains(phrase, ignoreCase = true)) {

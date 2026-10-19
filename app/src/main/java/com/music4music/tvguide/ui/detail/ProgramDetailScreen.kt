@@ -274,14 +274,26 @@ fun ProgramDetailScreen(
                         if (clean.isNullOrEmpty()) {
                             null
                         } else {
-                            val stripped = clean.replace(
-                                Regex("""^(?:(?:Saison|Season|S)\s*\d+\s*[-:•]?\s*|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+\s*[-:•]?\s*)+""", RegexOption.IGNORE_CASE),
-                                ""
-                            ).trim()
+                            val stripped = clean
+                                .replace(Regex("""^(?:(?:Saison|Season|S)\s*\d+\s*[-:•]?\s*|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+\s*[-:•]?\s*)+""", RegexOption.IGNORE_CASE), "")
+                                .replace(Regex("""\s*[-:•(]?\s*(?:(?:Saison|Season|S)\s*\d+|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+)\s*\)?$""", RegexOption.IGNORE_CASE), "")
+                                .trim()
                             val isRepeat = stripped.equals(currentProgram.title.trim(), ignoreCase = true)
                             if (stripped.isNotEmpty() && !isRepeat) stripped else null
                         }
                     }
+
+                    val parsedEpFromSub = remember(currentProgram.subTitle) {
+                        Regex("""(?:[ÉéE]pisode|[ÉéE]p\.?)\s*(\d+)""", RegexOption.IGNORE_CASE)
+                            .find(currentProgram.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+                    }
+                    val effectiveEpisodeNumber = parsedEpFromSub ?: currentProgram.episodeNumber
+
+                    val parsedSeasonFromSub = remember(currentProgram.subTitle) {
+                        Regex("""Saisons?\s*(\d+)""", RegexOption.IGNORE_CASE)
+                            .find(currentProgram.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+                    }
+                    val effectiveSeasonNumber = parsedSeasonFromSub ?: currentProgram.seasonNumber
 
                     SelectionContainer {
                         Column {
@@ -303,8 +315,8 @@ fun ProgramDetailScreen(
                         }
                     }
 
-                    val hasEpisodeButton = currentProgram.episodeNumber != null
-                    val hasSeasonButton = currentProgram.seasonNumber != null
+                    val hasEpisodeButton = effectiveEpisodeNumber != null
+                    val hasSeasonButton = effectiveSeasonNumber != null
 
                     if (hasEpisodeButton || hasSeasonButton) {
                         Spacer(modifier = Modifier.height(10.dp))
@@ -314,17 +326,17 @@ fun ProgramDetailScreen(
                         ) {
                             if (hasEpisodeButton) {
                                 DetailBadgeButton(
-                                    text = stringResource(R.string.label_episode_value, currentProgram.episodeNumber!!),
+                                    text = stringResource(R.string.label_episode_value, effectiveEpisodeNumber!!),
                                     onClick = {
-                                        onSeasonClick(currentProgram.id, currentProgram.seasonNumber ?: 1)
+                                        onSeasonClick(currentProgram.id, effectiveSeasonNumber ?: 1)
                                     }
                                 )
                             }
                             if (hasSeasonButton) {
                                 DetailBadgeButton(
-                                    text = stringResource(R.string.label_season_value, currentProgram.seasonNumber!!),
+                                    text = stringResource(R.string.label_season_value, effectiveSeasonNumber!!),
                                     onClick = {
-                                        onSeasonClick(currentProgram.id, currentProgram.seasonNumber!!)
+                                        onSeasonClick(currentProgram.id, effectiveSeasonNumber!!)
                                     }
                                 )
                             }
@@ -347,20 +359,20 @@ fun ProgramDetailScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            if (currentProgram.seasonNumber != null) {
-                                val epText = if (currentProgram.episodeNumber != null) {
-                                    stringResource(R.string.label_season_episode_short, currentProgram.seasonNumber, currentProgram.episodeNumber)
+                            if (effectiveSeasonNumber != null) {
+                                val epText = if (effectiveEpisodeNumber != null) {
+                                    stringResource(R.string.label_season_episode_short, effectiveSeasonNumber, effectiveEpisodeNumber)
                                 } else {
-                                    stringResource(R.string.label_season_value, currentProgram.seasonNumber)
+                                    stringResource(R.string.label_season_value, effectiveSeasonNumber)
                                 }
                                 InfoRow(
                                     label = stringResource(R.string.label_season),
                                     value = epText
                                 )
-                            } else if (currentProgram.episodeNumber != null) {
+                            } else if (effectiveEpisodeNumber != null) {
                                 InfoRow(
                                     label = stringResource(R.string.label_episode),
-                                    value = stringResource(R.string.label_episode_value, currentProgram.episodeNumber)
+                                    value = stringResource(R.string.label_episode_value, effectiveEpisodeNumber)
                                 )
                             }
 
@@ -850,14 +862,41 @@ fun ProgramDetailScreen(
                         upcomingBroadcasts.take(5).forEach { upcoming ->
                             val upStart = Instant.ofEpochMilli(upcoming.startTimestamp).atZone(zone).format(timeFormatter)
                             val upDate = Instant.ofEpochMilli(upcoming.startTimestamp).atZone(zone).format(dateFormatter)
-                            val fullTitle = if (upcoming.seasonNumber != null) {
-                                stringResource(
-                                    R.string.label_season_with_title,
-                                    upcoming.seasonNumber,
-                                    upcoming.subTitle ?: upcoming.title
-                                )
-                            } else {
-                                upcoming.subTitle ?: upcoming.title
+
+                            val parsedEp = remember(upcoming.subTitle) {
+                                Regex("""(?:[ÉéE]pisode|[ÉéE]p\.?)\s*(\d+)""", RegexOption.IGNORE_CASE)
+                                    .find(upcoming.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+                            }
+                            val epNum = parsedEp ?: upcoming.episodeNumber
+                            val parsedSeason = remember(upcoming.subTitle) {
+                                Regex("""Saisons?\s*(\d+)""", RegexOption.IGNORE_CASE)
+                                    .find(upcoming.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+                            }
+                            val seasonNum = parsedSeason ?: upcoming.seasonNumber
+
+                            val cleanSub = remember(upcoming.subTitle, upcoming.title) {
+                                val raw = upcoming.subTitle?.trim()
+                                if (raw.isNullOrBlank()) null else {
+                                    val stripped = raw
+                                        .replace(Regex("""^(?:(?:Saison|Season|S)\s*\d+\s*[-:•]?\s*|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+\s*[-:•]?\s*)+""", RegexOption.IGNORE_CASE), "")
+                                        .replace(Regex("""\s*[-:•(]?\s*(?:(?:Saison|Season|S)\s*\d+|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+)\s*\)?$""", RegexOption.IGNORE_CASE), "")
+                                        .trim()
+                                    if (stripped.isNotEmpty() && !stripped.equals(upcoming.title.trim(), ignoreCase = true)) stripped else null
+                                }
+                            }
+                            val displayTitle = cleanSub ?: upcoming.title
+
+                            val fullTitle = when {
+                                seasonNum != null && epNum != null -> {
+                                    stringResource(R.string.label_season_episode_broadcast_title, seasonNum, epNum, displayTitle)
+                                }
+                                seasonNum != null -> {
+                                    stringResource(R.string.label_season_with_title, seasonNum, displayTitle)
+                                }
+                                epNum != null -> {
+                                    stringResource(R.string.label_episode_with_title, epNum, displayTitle)
+                                }
+                                else -> displayTitle
                             }
 
                             Card(

@@ -40,6 +40,19 @@ const BOILERPLATE_PHRASES = [
 function sanitizeDescriptionText(text) {
   if (!text) return null;
   let cleaned = text.trim();
+  if (cleaned.includes('<') && cleaned.includes('>')) {
+    cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|div|li|h[1-6])>/gi, '\n').replace(/<[^>]+>/g, ' ');
+  }
+  if (cleaned.includes('&')) {
+    cleaned = cleaned
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;|&#39;|&#039;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ');
+  }
+  cleaned = cleaned.replace(/\r\n|\r/g, '\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
   for (const phrase of BOILERPLATE_PHRASES) {
     if (cleaned.toLowerCase().includes(phrase.toLowerCase())) {
       const reg = new RegExp('[^.\\n]*' + phrase.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&') + '[^.\\n]*\\.?', 'gi');
@@ -698,19 +711,23 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       refEntry = refData.titleMap.get(dayKey);
     }
 
+    let isGeneralMatch = false;
     if (!refEntry) {
       const generalKey = `${channel.id}_${cleanTitle(item.title)}`;
       refEntry = refData.titleMap.get(generalKey);
+      if (refEntry) isGeneralMatch = true;
     }
 
     if (refEntry) {
-      matchedDesc = refEntry.desc;
-      if (!matchedSubtitle && refEntry.subTitle) matchedSubtitle = refEntry.subTitle;
+      if (!isGeneralMatch) {
+        matchedDesc = refEntry.desc;
+        if (!matchedSubtitle && refEntry.subTitle) matchedSubtitle = refEntry.subTitle;
+        matchedSeason = refEntry.season;
+        matchedEpisode = refEntry.episode;
+      }
       if (item.category === 'General' && refEntry.category) matchedCategory = refEntry.category;
       matchedRating = refEntry.rating;
       matchedCredits = refEntry.credits;
-      matchedSeason = refEntry.season;
-      matchedEpisode = refEntry.episode;
       matchedYear = refEntry.year;
       matchedSeriesYear = refEntry.seriesYear;
       matchedCountry = refEntry.country;
@@ -771,6 +788,24 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
     const isHd = (detailData && detailData.isHd) || item.isHd || (refEntry && refEntry.isHd) || false;
     const finalRating = (detailData && detailData.rating) || item.rating || matchedRating || null;
 
+    let finalSeason = detailData && detailData.season != null ? detailData.season : matchedSeason;
+    let finalEpisode = detailData && detailData.episodeNumber != null ? detailData.episodeNumber : matchedEpisode;
+
+    const epMatch = (item.subTitle || matchedSubtitle || '').match(/(?:[ée]pisode|ep\.?)\s*(\d+)/i) || (item.title || '').match(/(?:[ée]pisode|ep\.?)\s*(\d+)/i);
+    if (epMatch) {
+      finalEpisode = parseInt(epMatch[1], 10);
+    }
+    const seasonMatch = (item.subTitle || matchedSubtitle || '').match(/saisons?\s*(\d+)/i) || (item.title || '').match(/saisons?\s*(\d+)/i);
+    if (seasonMatch) {
+      finalSeason = parseInt(seasonMatch[1], 10);
+    }
+
+    const isNewsOrWeather = (matchedCategory && /info|journal|m[ée]t[ée]o/i.test(matchedCategory)) && /\b(journal|m[ée]t[ée]o|jt|1945|1245)\b/i.test(item.title);
+    if (isNewsOrWeather) {
+      finalSeason = null;
+      finalEpisode = null;
+    }
+
     programs.push({
       channelId: channel.id,
       title: item.title,
@@ -783,8 +818,8 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       year: detailData && detailData.year ? detailData.year : matchedYear,
       seriesYear: detailData && detailData.seriesYear ? detailData.seriesYear : matchedSeriesYear,
       country: detailData && detailData.country ? detailData.country : matchedCountry,
-      season: detailData && detailData.season != null ? detailData.season : matchedSeason,
-      episode: detailData && detailData.episodeNumber != null ? detailData.episodeNumber : matchedEpisode,
+      season: finalSeason,
+      episode: finalEpisode,
       start: item.startTime,
       stop: item.startTime.add(60, 'minute'),
       image: item.imageSrc,

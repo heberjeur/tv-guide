@@ -59,8 +59,23 @@ class SeriesEpisodesViewModel @Inject constructor(
         if (baseProgram == null) {
             SeriesEpisodesUiState(isLoading = false)
         } else {
-            val seasons = allEpisodes.mapNotNull { it.seasonNumber }.distinct().sorted()
-            val hasUnnumbered = allEpisodes.any { it.seasonNumber == null }
+            val epRegex = Regex("""(?:[ÉéE]pisode|[ÉéE]p\.?)\s*(\d+)""", RegexOption.IGNORE_CASE)
+            val seasonRegex = Regex("""Saisons?\s*(\d+)""", RegexOption.IGNORE_CASE)
+            val effectiveEpisodes = allEpisodes.map { p ->
+                val epFromSub = epRegex.find(p.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+                val seasonFromSub = seasonRegex.find(p.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+                if (epFromSub != null || seasonFromSub != null) {
+                    p.copy(
+                        episodeNumber = epFromSub ?: p.episodeNumber,
+                        seasonNumber = seasonFromSub ?: p.seasonNumber
+                    )
+                } else {
+                    p
+                }
+            }
+
+            val seasons = effectiveEpisodes.mapNotNull { it.seasonNumber }.distinct().sorted()
+            val hasUnnumbered = effectiveEpisodes.any { it.seasonNumber == null }
 
             val effectiveSeason = when {
                 currentSeasonSelection != null && (currentSeasonSelection in seasons || currentSeasonSelection == -1) -> currentSeasonSelection
@@ -71,14 +86,14 @@ class SeriesEpisodesViewModel @Inject constructor(
 
             val filteredEpisodes = when {
                 effectiveSeason != null && effectiveSeason > 0 -> {
-                    allEpisodes.filter { it.seasonNumber == effectiveSeason }
+                    effectiveEpisodes.filter { it.seasonNumber == effectiveSeason }
                         .sortedWith(compareBy({ it.episodeNumber ?: Int.MAX_VALUE }, { it.startTimestamp }))
                 }
                 effectiveSeason == -1 || (effectiveSeason == null && hasUnnumbered) -> {
-                    allEpisodes.filter { it.seasonNumber == null }
+                    effectiveEpisodes.filter { it.seasonNumber == null }
                         .sortedWith(compareBy({ it.episodeNumber ?: Int.MAX_VALUE }, { it.startTimestamp }))
                 }
-                else -> allEpisodes
+                else -> effectiveEpisodes
             }
 
             SeriesEpisodesUiState(

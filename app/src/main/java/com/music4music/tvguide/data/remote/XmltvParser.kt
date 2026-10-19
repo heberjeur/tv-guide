@@ -241,17 +241,29 @@ class XmltvParser @Inject constructor() {
             }
         }
 
-        if (seasonNumber == null) {
-            val sRegex = Regex("""Saisons?\s*(\d+)""", RegexOption.IGNORE_CASE)
-            seasonNumber = sRegex.find(subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
-                ?: sRegex.find(title)?.groupValues?.get(1)?.toIntOrNull()
-                ?: sRegex.find(description)?.groupValues?.get(1)?.toIntOrNull()
+        val sRegex = Regex("""Saisons?\s*(\d+)""", RegexOption.IGNORE_CASE)
+        val sFromSub = sRegex.find(subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+            ?: sRegex.find(title)?.groupValues?.get(1)?.toIntOrNull()
+        if (sFromSub != null) {
+            seasonNumber = sFromSub
+        } else if (seasonNumber == null) {
+            seasonNumber = sRegex.find(description)?.groupValues?.get(1)?.toIntOrNull()
         }
-        if (episodeNumber == null) {
-            val eRegex = Regex("""(?:Épisode|Episode|Ep\.?)\s*(\d+)""", RegexOption.IGNORE_CASE)
-            episodeNumber = eRegex.find(subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
-                ?: eRegex.find(title)?.groupValues?.get(1)?.toIntOrNull()
-                ?: eRegex.find(description)?.groupValues?.get(1)?.toIntOrNull()
+
+        val eRegex = Regex("""(?:[ÉéE]pisode|[ÉéE]p\.?)\s*(\d+)""", RegexOption.IGNORE_CASE)
+        val eFromSub = eRegex.find(subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+            ?: eRegex.find(title)?.groupValues?.get(1)?.toIntOrNull()
+        if (eFromSub != null) {
+            episodeNumber = eFromSub
+        } else if (episodeNumber == null) {
+            episodeNumber = eRegex.find(description)?.groupValues?.get(1)?.toIntOrNull()
+        }
+
+        val isNewsOrWeather = categories.any { it.equals("Journal", ignoreCase = true) || it.equals("Météo", ignoreCase = true) } ||
+            Regex("""\b(?:journal|m[ée]t[ée]o|l'info|le 1945|le 1245|jt)\b""", RegexOption.IGNORE_CASE).containsMatchIn(title)
+        if (isNewsOrWeather) {
+            seasonNumber = null
+            episodeNumber = null
         }
         if (productionYear == null) {
             val yRegex = Regex("""(?:Sortie|Année)\s*:\s*(\d{4})""", RegexOption.IGNORE_CASE)

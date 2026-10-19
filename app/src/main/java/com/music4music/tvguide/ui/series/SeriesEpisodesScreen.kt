@@ -35,6 +35,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -256,10 +257,16 @@ private fun EpisodeCard(
     val channelDisplayName = ChannelCatalog.getDisplayName(episode.channelId)
     val channelLogoUrl = ChannelCatalog.getLogoUrl(episode.channelId)
 
-    val cleanEpisodeTitle = episode.subTitle?.trim()?.replace(
-        Regex("""^(?:(?:Saison|Season|S)\s*\d+\s*[-:•]?\s*|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+\s*[-:•]?\s*)+""", RegexOption.IGNORE_CASE),
-        ""
-    )?.trim()
+    val parsedEp = remember(episode.subTitle) {
+        Regex("""(?:[ÉéE]pisode|[ÉéE]p\.?)\s*(\d+)""", RegexOption.IGNORE_CASE)
+            .find(episode.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
+    }
+    val effectiveEpisodeNumber = parsedEp ?: episode.episodeNumber
+
+    val cleanEpisodeTitle = episode.subTitle?.trim()
+        ?.replace(Regex("""^(?:(?:Saison|Season|S)\s*\d+\s*[-:•]?\s*|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+\s*[-:•]?\s*)+""", RegexOption.IGNORE_CASE), "")
+        ?.replace(Regex("""\s*[-:•(]?\s*(?:(?:Saison|Season|S)\s*\d+|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+)\s*\)?$""", RegexOption.IGNORE_CASE), "")
+        ?.trim()
 
     Card(
         modifier = Modifier
@@ -334,13 +341,13 @@ private fun EpisodeCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        if (episode.episodeNumber != null) {
+                        if (effectiveEpisodeNumber != null) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = AccentRed.copy(alpha = 0.15f)
                             ) {
                                 Text(
-                                    text = stringResource(R.string.label_episode_value, episode.episodeNumber),
+                                    text = stringResource(R.string.label_episode_value, effectiveEpisodeNumber),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = AccentRed,
@@ -361,7 +368,7 @@ private fun EpisodeCard(
                         }
                     }
 
-                    if (!cleanEpisodeTitle.isNullOrBlank() && cleanEpisodeTitle.equals(episode.title, ignoreCase = true) && episode.episodeNumber == null) {
+                    if (!cleanEpisodeTitle.isNullOrBlank() && cleanEpisodeTitle.equals(episode.title, ignoreCase = true) && effectiveEpisodeNumber == null) {
                         Text(
                             text = episode.title,
                             style = MaterialTheme.typography.titleMedium,
