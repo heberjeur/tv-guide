@@ -1,5 +1,6 @@
 package com.music4music.tvguide.ui.categories
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,6 +43,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsSoccer
@@ -56,9 +58,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -86,6 +91,7 @@ import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
 import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(
     onProgramClick: (Long) -> Unit,
@@ -95,103 +101,146 @@ fun CategoriesScreen(
     viewModel: CategoriesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    var isSearchActive by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.tab_categories),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
-            IconButton(onClick = onSettingsClick) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(R.string.tab_settings),
-                    tint = TextSecondary
-                )
-            }
+    BackHandler(enabled = isSearchActive || uiState.selectedCategory != null) {
+        if (isSearchActive) {
+            isSearchActive = false
+            viewModel.clearSearch()
+        } else if (uiState.selectedCategory != null) {
+            viewModel.selectCategory(null)
         }
+    }
 
-        OutlinedTextField(
-            value = uiState.searchQuery,
-            onValueChange = { viewModel.updateSearchQuery(it) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            placeholder = {
-                Text(
-                    text = stringResource(R.string.search_categories_hint),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            trailingIcon = {
-                if (uiState.searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { viewModel.clearSearch() }) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    if (isSearchActive) {
+                        OutlinedTextField(
+                            value = uiState.searchQuery,
+                            onValueChange = { viewModel.updateSearchQuery(it) },
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.categories_search_placeholder),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentRed,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.tab_categories),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                }
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AccentRed,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-            )
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = AccentRed)
-            }
-        } else {
-            if (uiState.selectedCategory != null) {
-                CategoryDetailSubView(
-                    uiState = uiState,
-                    onBackClick = { viewModel.selectCategory(null) },
-                    onSubCategoryClick = { viewModel.selectSubCategory(it) },
-                    onProgramClick = onProgramClick,
-                    onChannelClick = onChannelClick
-                )
-            } else {
-                CategoryGridHubView(
-                    categories = uiState.categories,
-                    onCategoryClick = { viewModel.selectCategory(it) },
-                    onSubCategoryClick = { cat, sub ->
-                        viewModel.selectCategory(cat)
-                        viewModel.selectSubCategory(sub)
+                },
+                navigationIcon = {
+                    if (isSearchActive) {
+                        IconButton(onClick = {
+                            isSearchActive = false
+                            viewModel.clearSearch()
+                        }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
-                )
+                },
+                actions = {
+                    if (isSearchActive) {
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.clearSearch() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.action_clear_search),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    } else {
+                        IconButton(onClick = { isSearchActive = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(R.string.action_search),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        IconButton(
+                            onClick = { viewModel.refresh(force = true) },
+                            enabled = !isRefreshing
+                        ) {
+                            if (isRefreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = AccentRed,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = stringResource(R.string.action_refresh),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.tab_settings),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        modifier = modifier
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = AccentRed)
+                }
+            } else {
+                if (uiState.selectedCategory != null) {
+                    CategoryDetailSubView(
+                        uiState = uiState,
+                        onBackClick = { viewModel.selectCategory(null) },
+                        onSubCategoryClick = { viewModel.selectSubCategory(it) },
+                        onProgramClick = onProgramClick,
+                        onChannelClick = onChannelClick
+                    )
+                } else {
+                    CategoryGridHubView(
+                        categories = uiState.categories,
+                        onCategoryClick = { viewModel.selectCategory(it) },
+                        onSubCategoryClick = { cat, sub ->
+                            viewModel.selectCategory(cat)
+                            viewModel.selectSubCategory(sub)
+                        }
+                    )
+                }
             }
         }
     }

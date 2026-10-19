@@ -7,6 +7,7 @@ import com.music4music.tvguide.domain.model.Channel
 import com.music4music.tvguide.domain.model.ChannelPackage
 import com.music4music.tvguide.domain.repository.EpgRepository
 import com.music4music.tvguide.domain.usecase.GetChannelsUseCase
+import com.music4music.tvguide.domain.usecase.SyncEpgUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,8 +25,20 @@ import javax.inject.Inject
 class ChannelListViewModel @Inject constructor(
     getChannelsUseCase: GetChannelsUseCase,
     private val epgRepository: EpgRepository,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val syncEpgUseCase: SyncEpgUseCase
 ) : ViewModel() {
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    fun refresh(force: Boolean = true) {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            syncEpgUseCase(ChannelPackage.COMMUNITY_ENRICHED, forceRefresh = force)
+            _isRefreshing.value = false
+        }
+    }
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()

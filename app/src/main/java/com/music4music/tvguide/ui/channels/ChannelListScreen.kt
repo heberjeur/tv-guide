@@ -1,5 +1,6 @@
 package com.music4music.tvguide.ui.channels
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -23,14 +24,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -45,6 +50,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,31 +79,110 @@ fun ChannelListScreen(
     val channels by viewModel.filteredChannels.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val isGridMode by viewModel.isGridMode.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    var isSearchActive by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = isSearchActive) {
+        isSearchActive = false
+        viewModel.updateSearchQuery("")
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = stringResource(R.string.tab_channels),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                actions = {
-                    IconButton(onClick = viewModel::toggleGridMode) {
-                        Icon(
-                            imageVector = if (isGridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface
+                    if (isSearchActive) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = viewModel::updateSearchQuery,
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.channels_search_placeholder),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = AccentRed,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.tab_channels),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.tab_settings),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                },
+                navigationIcon = {
+                    if (isSearchActive) {
+                        IconButton(onClick = {
+                            isSearchActive = false
+                            viewModel.updateSearchQuery("")
+                        }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    if (isSearchActive) {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.action_clear_search),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    } else {
+                        IconButton(onClick = viewModel::toggleGridMode) {
+                            Icon(
+                                imageVector = if (isGridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        IconButton(onClick = { isSearchActive = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(R.string.action_search),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        IconButton(
+                            onClick = { viewModel.refresh(force = true) },
+                            enabled = !isRefreshing
+                        ) {
+                            if (isRefreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = AccentRed,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = stringResource(R.string.action_refresh),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.tab_settings),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -108,38 +195,6 @@ fun ChannelListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = viewModel::updateSearchQuery,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.action_search),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(R.string.action_search),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    focusedBorderColor = AccentRed,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                ),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
 
             if (isGridMode) {
                 LazyVerticalGrid(

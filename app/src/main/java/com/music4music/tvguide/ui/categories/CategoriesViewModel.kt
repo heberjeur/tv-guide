@@ -2,9 +2,11 @@ package com.music4music.tvguide.ui.categories
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.music4music.tvguide.domain.model.ChannelPackage
 import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.domain.model.TvCategory
 import com.music4music.tvguide.domain.repository.EpgRepository
+import com.music4music.tvguide.domain.usecase.SyncEpgUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -12,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SubCategoryItem(
@@ -38,8 +41,20 @@ data class CategoriesUiState(
 
 @HiltViewModel
 class CategoriesViewModel @Inject constructor(
-    epgRepository: EpgRepository
+    epgRepository: EpgRepository,
+    private val syncEpgUseCase: SyncEpgUseCase
 ) : ViewModel() {
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    fun refresh(force: Boolean = true) {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            syncEpgUseCase(ChannelPackage.COMMUNITY_ENRICHED, forceRefresh = force)
+            _isRefreshing.value = false
+        }
+    }
 
     private val metaKeywords = setOf(
         "rediffusion", "rediff", "direct", "en direct", "inédit", "inedit", "inédite", "inedite",
