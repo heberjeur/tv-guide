@@ -74,6 +74,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -265,47 +266,18 @@ fun ProgramDetailScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    val displaySubtitle = when {
-                        currentProgram.seasonNumber != null && currentProgram.episodeNumber != null -> {
-                            val cleanSub = currentProgram.subTitle?.trim()
-                            val strippedSub = cleanSub?.replace(Regex("""^(?:[ÉéE]pisode|[ÉéE]p\.?)\s*\d+\s*[:\-•]?\s*""", RegexOption.IGNORE_CASE), "")?.trim()
-                            val isTitleRepeat = strippedSub != null && strippedSub.equals(currentProgram.title.trim(), ignoreCase = true)
-                            if (!strippedSub.isNullOrEmpty() && !isTitleRepeat) {
-                                stringResource(
-                                    R.string.label_episode_season_with_title,
-                                    currentProgram.episodeNumber,
-                                    currentProgram.seasonNumber,
-                                    strippedSub
-                                )
-                            } else {
-                                stringResource(
-                                    R.string.label_episode_season_format,
-                                    currentProgram.episodeNumber,
-                                    currentProgram.seasonNumber
-                                )
-                            }
+                    val episodeTitle = remember(currentProgram.subTitle, currentProgram.title) {
+                        val clean = currentProgram.subTitle?.trim()
+                        if (clean.isNullOrEmpty()) {
+                            null
+                        } else {
+                            val stripped = clean.replace(
+                                Regex("""^(?:(?:Saison|Season|S)\s*\d+\s*[-:•]?\s*|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+\s*[-:•]?\s*)+""", RegexOption.IGNORE_CASE),
+                                ""
+                            ).trim()
+                            val isRepeat = stripped.equals(currentProgram.title.trim(), ignoreCase = true)
+                            if (stripped.isNotEmpty() && !isRepeat) stripped else null
                         }
-                        currentProgram.seasonNumber != null -> {
-                            val cleanSub = currentProgram.subTitle?.trim()
-                            val strippedSub = cleanSub?.replace(Regex("""^(?:Saison|Season|S)\s*\d+\s*[:\-•]?\s*""", RegexOption.IGNORE_CASE), "")?.trim()
-                            val isTitleRepeat = strippedSub != null && strippedSub.equals(currentProgram.title.trim(), ignoreCase = true)
-                            if (!strippedSub.isNullOrEmpty() && !isTitleRepeat) {
-                                stringResource(R.string.label_season_with_title, currentProgram.seasonNumber, strippedSub)
-                            } else {
-                                stringResource(R.string.label_season_value, currentProgram.seasonNumber)
-                            }
-                        }
-                        currentProgram.episodeNumber != null -> {
-                            val cleanSub = currentProgram.subTitle?.trim()
-                            val strippedSub = cleanSub?.replace(Regex("""^(?:[ÉéE]pisode|[ÉéE]p\.?)\s*\d+\s*[:\-•]?\s*""", RegexOption.IGNORE_CASE), "")?.trim()
-                            val isTitleRepeat = strippedSub != null && strippedSub.equals(currentProgram.title.trim(), ignoreCase = true)
-                            if (!strippedSub.isNullOrEmpty() && !isTitleRepeat) {
-                                stringResource(R.string.label_episode_with_title, currentProgram.episodeNumber, strippedSub)
-                            } else {
-                                stringResource(R.string.label_episode_value, currentProgram.episodeNumber)
-                            }
-                        }
-                        else -> currentProgram.subTitle
                     }
 
                     SelectionContainer {
@@ -317,12 +289,34 @@ fun ProgramDetailScreen(
                                 color = TextPrimary
                             )
 
-                            if (!displaySubtitle.isNullOrEmpty()) {
+                            if (!episodeTitle.isNullOrEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = displaySubtitle,
+                                    text = episodeTitle,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    val hasEpisodeButton = currentProgram.episodeNumber != null
+                    val hasSeasonButton = currentProgram.seasonNumber != null
+
+                    if (hasEpisodeButton || hasSeasonButton) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (hasEpisodeButton) {
+                                DetailBadgeButton(
+                                    text = stringResource(R.string.label_episode_value, currentProgram.episodeNumber!!)
+                                )
+                            }
+                            if (hasSeasonButton) {
+                                DetailBadgeButton(
+                                    text = stringResource(R.string.label_season_value, currentProgram.seasonNumber!!)
                                 )
                             }
                         }
@@ -489,21 +483,21 @@ fun ProgramDetailScreen(
                                     } else {
                                         stringResource(R.string.label_director)
                                     },
-                                    value = currentProgram.credit.directors.joinToString(", ")
+                                    value = currentProgram.credit.directors.map { it.trim() }.distinct().joinToString("\n")
                                 )
                             }
 
                             if (currentProgram.credit.presenters.isNotEmpty()) {
                                 InfoRow(
                                     label = stringResource(R.string.label_presented_by),
-                                    value = currentProgram.credit.presenters.joinToString(", ")
+                                    value = currentProgram.credit.presenters.map { it.trim() }.distinct().joinToString("\n")
                                 )
                             }
 
                             if (currentProgram.credit.guests.isNotEmpty()) {
                                 InfoRow(
                                     label = stringResource(R.string.label_guests),
-                                    value = currentProgram.credit.guests.joinToString(", ")
+                                    value = currentProgram.credit.guests.map { it.trim() }.distinct().joinToString("\n")
                                 )
                             }
 
@@ -1028,18 +1022,38 @@ private fun InfoRow(label: String, value: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary
+            color = TextSecondary,
+            modifier = Modifier.padding(end = 16.dp)
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
-            color = TextPrimary
+            color = TextPrimary,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun DetailBadgeButton(text: String) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = DarkSurfaceVariant
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
     }
 }
