@@ -59,20 +59,7 @@ class SeriesEpisodesViewModel @Inject constructor(
         if (baseProgram == null) {
             SeriesEpisodesUiState(isLoading = false)
         } else {
-            val epRegex = Regex("""(?:[ÉéE]pisode|[ÉéE]p\.?)\s*(\d+)""", RegexOption.IGNORE_CASE)
-            val seasonRegex = Regex("""Saisons?\s*(\d+)""", RegexOption.IGNORE_CASE)
-            val effectiveEpisodes = allEpisodes.map { p ->
-                val epFromSub = epRegex.find(p.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
-                val seasonFromSub = seasonRegex.find(p.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
-                if (epFromSub != null || seasonFromSub != null) {
-                    p.copy(
-                        episodeNumber = epFromSub ?: p.episodeNumber,
-                        seasonNumber = seasonFromSub ?: p.seasonNumber
-                    )
-                } else {
-                    p
-                }
-            }
+            val effectiveEpisodes = com.music4music.tvguide.util.SeriesUtils.normalizeEpisodes(allEpisodes)
 
             val seasons = effectiveEpisodes.mapNotNull { it.seasonNumber }.distinct().sorted()
             val hasUnnumbered = effectiveEpisodes.any { it.seasonNumber == null }

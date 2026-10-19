@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -56,7 +57,9 @@ class ProgramDetailViewModel @Inject constructor(
 
     val upcomingBroadcasts: StateFlow<List<Program>> = program.flatMapLatest { prog ->
         if (prog != null && prog.title.isNotBlank()) {
-            epgRepository.getUpcomingBroadcasts(prog.title)
+            epgRepository.getUpcomingBroadcasts(prog.title).map { list ->
+                com.music4music.tvguide.util.SeriesUtils.normalizeEpisodes(list)
+            }
         } else {
             flowOf(emptyList())
         }

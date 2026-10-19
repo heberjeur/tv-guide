@@ -867,22 +867,15 @@ fun ProgramDetailScreen(
                                 Regex("""(?:[ÉéE]pisode|[ÉéE]p\.?)\s*(\d+)""", RegexOption.IGNORE_CASE)
                                     .find(upcoming.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
                             }
-                            val epNum = parsedEp ?: upcoming.episodeNumber
+                            val epNum = upcoming.episodeNumber ?: parsedEp
                             val parsedSeason = remember(upcoming.subTitle) {
                                 Regex("""Saisons?\s*(\d+)""", RegexOption.IGNORE_CASE)
                                     .find(upcoming.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
                             }
-                            val seasonNum = parsedSeason ?: upcoming.seasonNumber
+                            val seasonNum = upcoming.seasonNumber ?: parsedSeason
 
                             val cleanSub = remember(upcoming.subTitle, upcoming.title) {
-                                val raw = upcoming.subTitle?.trim()
-                                if (raw.isNullOrBlank()) null else {
-                                    val stripped = raw
-                                        .replace(Regex("""^(?:(?:Saison|Season|S)\s*\d+\s*[-:•]?\s*|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+\s*[-:•]?\s*)+""", RegexOption.IGNORE_CASE), "")
-                                        .replace(Regex("""\s*[-:•(]?\s*(?:(?:Saison|Season|S)\s*\d+|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+)\s*\)?$""", RegexOption.IGNORE_CASE), "")
-                                        .trim()
-                                    if (stripped.isNotEmpty() && !stripped.equals(upcoming.title.trim(), ignoreCase = true)) stripped else null
-                                }
+                                com.music4music.tvguide.util.SeriesUtils.cleanSubtitle(upcoming.subTitle, upcoming.title)
                             }
                             val displayTitle = cleanSub ?: upcoming.title
 

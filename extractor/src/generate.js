@@ -247,8 +247,15 @@ async function loadXmltvReference() {
         const timeKey = `${ch}_${start.substring(0, 12)}`;
         timeMap.set(timeKey, entry);
 
+        if (entry.subTitle) {
+          const daySubKey = `${ch}_${start.substring(0, 8)}_${cleanTitle(title)}_${cleanTitle(entry.subTitle)}`;
+          titleMap.set(daySubKey, entry);
+        }
+
         const dayKey = `${ch}_${start.substring(0, 8)}_${cleanTitle(title)}`;
-        titleMap.set(dayKey, entry);
+        if (!titleMap.has(dayKey)) {
+          titleMap.set(dayKey, entry);
+        }
 
         const generalKey = `${ch}_${cleanTitle(title)}`;
         if (!titleMap.has(generalKey)) {
@@ -706,9 +713,16 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
       }
     }
 
+    if (!refEntry && item.subTitle) {
+      const daySubKey = `${channel.id}_${item.startTime.format('YYYYMMDD')}_${cleanTitle(item.title)}_${cleanTitle(item.subTitle)}`;
+      refEntry = refData.titleMap.get(daySubKey);
+    }
+
+    let isDayFallback = false;
     if (!refEntry) {
       const dayKey = `${channel.id}_${item.startTime.format('YYYYMMDD')}_${cleanTitle(item.title)}`;
       refEntry = refData.titleMap.get(dayKey);
+      if (refEntry) isDayFallback = true;
     }
 
     let isGeneralMatch = false;
@@ -719,11 +733,22 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
     }
 
     if (refEntry) {
-      if (!isGeneralMatch) {
+      if (!isGeneralMatch && !isDayFallback) {
         matchedDesc = refEntry.desc;
         if (!matchedSubtitle && refEntry.subTitle) matchedSubtitle = refEntry.subTitle;
         matchedSeason = refEntry.season;
         matchedEpisode = refEntry.episode;
+      } else if (isDayFallback) {
+        const cleanItemSub = cleanTitle(item.subTitle || '');
+        const cleanRefSub = cleanTitle(refEntry.subTitle || '');
+        if ((cleanItemSub && cleanRefSub && cleanItemSub === cleanRefSub) || (!cleanItemSub && !cleanRefSub)) {
+          matchedDesc = refEntry.desc;
+          if (!matchedSubtitle && refEntry.subTitle) matchedSubtitle = refEntry.subTitle;
+          matchedSeason = refEntry.season;
+          matchedEpisode = refEntry.episode;
+        } else {
+          if (refEntry.season != null && matchedSeason == null) matchedSeason = refEntry.season;
+        }
       }
       if (item.category === 'General' && refEntry.category) matchedCategory = refEntry.category;
       matchedRating = refEntry.rating;
@@ -836,6 +861,16 @@ async function parseHtmlSchedule(channel, html, baseDate, refData) {
 
   for (let i = 0; i < programs.length - 1; i++) {
     programs[i].stop = programs[i + 1].start;
+
+    const prev = programs[i];
+    const curr = programs[i + 1];
+    if (areTitlesCompatible(prev.title, curr.title) &&
+        prev.season != null && curr.season != null && prev.season === curr.season &&
+        prev.subTitle && curr.subTitle && cleanTitle(prev.subTitle) !== cleanTitle(curr.subTitle)) {
+      if (prev.episode != null && (curr.episode == null || curr.episode <= prev.episode)) {
+        curr.episode = prev.episode + 1;
+      }
+    }
   }
 
   return programs;

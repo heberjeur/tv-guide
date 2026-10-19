@@ -34,6 +34,7 @@ class XmltvParser @Inject constructor() {
         val channelsBatch = mutableListOf<ChannelEntity>()
         val programsBatch = mutableListOf<ProgramEntity>()
         val batchLimit = 500
+        var lastProgram: ProgramEntity? = null
 
         var eventType = parser.eventType
         while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -48,7 +49,26 @@ class XmltvParser @Inject constructor() {
                     XML_TAG_PROGRAM -> {
                         val program = parseProgram(parser)
                         if (program != null) {
-                            programsBatch.add(program)
+                            var finalProgram = program
+                            val prev = lastProgram
+                            if (prev != null &&
+                                prev.channelId == program.channelId &&
+                                prev.title.equals(program.title, ignoreCase = true) &&
+                                prev.seasonNumber != null &&
+                                prev.seasonNumber == program.seasonNumber &&
+                                !prev.subTitle.isNullOrBlank() &&
+                                !program.subTitle.isNullOrBlank() &&
+                                !prev.subTitle.trim().equals(program.subTitle.trim(), ignoreCase = true) &&
+                                (program.startTimestamp - prev.stopTimestamp) in -300_000L..1_800_000L
+                            ) {
+                                val prevEp = prev.episodeNumber
+                                val currEp = program.episodeNumber
+                                if (prevEp != null && (currEp == null || currEp <= prevEp)) {
+                                    finalProgram = program.copy(episodeNumber = prevEp + 1)
+                                }
+                            }
+                            lastProgram = finalProgram
+                            programsBatch.add(finalProgram)
                             if (programsBatch.size >= batchLimit) {
                                 onBatchParsed(channelsBatch.toList(), programsBatch.toList())
                                 channelsBatch.clear()

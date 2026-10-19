@@ -61,7 +61,7 @@
     <string name="label_episode_value">Épisode %1$d</string>
     <string name="label_episode_with_title">Épisode %1$d : %2$s</string>
     <string name="label_season_with_title">Saison %1$d : %2$s</string>
-    <string name="label_season_episode_broadcast_title">Saison %1$d • Ép. %2$d : %3$s</string>
+    <string name="label_season_episode_broadcast_title">Saison %1$d • Épisode. %2$d : %3$s</string>
     <string name="label_episode_season_format">Épisode %1$d - Saison %2$d</string>
     <string name="label_episode_season_with_title">Épisode %1$d - Saison %2$d • %3$s</string>
     <string name="label_format">Format</string>

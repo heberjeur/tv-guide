@@ -261,12 +261,11 @@ private fun EpisodeCard(
         Regex("""(?:[ÉéE]pisode|[ÉéE]p\.?)\s*(\d+)""", RegexOption.IGNORE_CASE)
             .find(episode.subTitle ?: "")?.groupValues?.get(1)?.toIntOrNull()
     }
-    val effectiveEpisodeNumber = parsedEp ?: episode.episodeNumber
+    val effectiveEpisodeNumber = episode.episodeNumber ?: parsedEp
 
-    val cleanEpisodeTitle = episode.subTitle?.trim()
-        ?.replace(Regex("""^(?:(?:Saison|Season|S)\s*\d+\s*[-:•]?\s*|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+\s*[-:•]?\s*)+""", RegexOption.IGNORE_CASE), "")
-        ?.replace(Regex("""\s*[-:•(]?\s*(?:(?:Saison|Season|S)\s*\d+|(?:[ÉéE]pisode|[ÉéE]p\.?|E)\s*\d+)\s*\)?$""", RegexOption.IGNORE_CASE), "")
-        ?.trim()
+    val cleanEpisodeTitle = remember(episode.subTitle, episode.title) {
+        com.music4music.tvguide.util.SeriesUtils.cleanSubtitle(episode.subTitle, episode.title)
+    }
 
     Card(
         modifier = Modifier
