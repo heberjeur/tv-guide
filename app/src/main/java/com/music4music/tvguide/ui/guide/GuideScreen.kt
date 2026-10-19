@@ -362,7 +362,8 @@ fun GuideScreen(
                                     program = program,
                                     onClick = { onProgramClick(program.id) },
                                     channelName = channelNameMap[program.channelId],
-                                    onCategoryClick = { tag -> viewModel.filterByTag(tag) }
+                                    onCategoryClick = { tag -> viewModel.filterByTag(tag) },
+                                    onChannelClick = { chId -> viewModel.selectChannel(chId) }
                                 )
                             }
                         }
@@ -375,7 +376,8 @@ fun GuideScreen(
                                 program = program,
                                 onClick = { onProgramClick(program.id) },
                                 channelName = channelNameMap[program.channelId],
-                                onCategoryClick = { tag -> viewModel.filterByTag(tag) }
+                                onCategoryClick = { tag -> viewModel.filterByTag(tag) },
+                                onChannelClick = { chId -> viewModel.selectChannel(chId) }
                             )
                         }
                     }

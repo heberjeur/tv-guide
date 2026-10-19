@@ -62,7 +62,8 @@ fun ProgramCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     channelName: String? = null,
-    onCategoryClick: ((String) -> Unit)? = null
+    onCategoryClick: ((String) -> Unit)? = null,
+    onChannelClick: ((String) -> Unit)? = null
 ) {
     val zone = com.music4music.tvguide.ui.theme.LocalDisplayZone.current
     val startTime = Instant.ofEpochMilli(program.startTimestamp).atZone(zone).format(timeFormatter)
@@ -139,18 +140,20 @@ fun ProgramCard(
                         maxLines = 1,
                         softWrap = false
                     )
-                    if (!channelLogoUrl.isNullOrBlank()) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            onClick = { onChannelClick?.invoke(program.channelId) },
+                            enabled = onChannelClick != null,
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White.copy(alpha = 0.08f),
+                            modifier = Modifier.size(channelLogoSize)
                         ) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color.White.copy(alpha = 0.08f),
-                                modifier = Modifier.size(channelLogoSize)
-                            ) {
+                            if (!channelLogoUrl.isNullOrBlank()) {
                                 AsyncImage(
                                     model = channelLogoUrl,
                                     contentDescription = channelLabel,
@@ -159,6 +162,18 @@ fun ProgramCard(
                                         .padding(4.dp),
                                     contentScale = ContentScale.Fit
                                 )
+                            } else {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = channelLabel.take(3).uppercase(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                }
                             }
                         }
                     }
@@ -251,7 +266,7 @@ fun ProgramCard(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            program.categories.forEach { category ->
+                            program.categories.distinctBy { it.trim().lowercase() }.forEach { category ->
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
                                     color = DarkSurfaceVariant,

@@ -117,6 +117,15 @@ fun TvGuideAppNavigation() {
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
+        val navigateToChannelGuide: (String) -> Unit = { channelId ->
+            navController.navigate("guide?channelId=$channelId") {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+            }
+        }
+
         NavHost(
             navController = navController,
             startDestination = Screen.Now.route,
@@ -127,6 +136,7 @@ fun TvGuideAppNavigation() {
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
                     },
+                    onChannelClick = navigateToChannelGuide,
                     onSettingsClick = {
                         navController.navigate(Screen.Settings.route)
                     }
@@ -158,6 +168,7 @@ fun TvGuideAppNavigation() {
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
                     },
+                    onChannelClick = navigateToChannelGuide,
                     onSettingsClick = {
                         navController.navigate(Screen.Settings.route)
                     }
@@ -168,6 +179,7 @@ fun TvGuideAppNavigation() {
                     onProgramClick = { programId ->
                         navController.navigate("program/$programId")
                     },
+                    onChannelClick = navigateToChannelGuide,
                     onSettingsClick = {
                         navController.navigate(Screen.Settings.route)
                     }
@@ -175,14 +187,7 @@ fun TvGuideAppNavigation() {
             }
             composable(Screen.Channels.route) {
                 ChannelListScreen(
-                    onChannelClick = { channelId ->
-                        navController.navigate("guide?channelId=$channelId") {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                        }
-                    },
+                    onChannelClick = navigateToChannelGuide,
                     onSettingsClick = {
                         navController.navigate(Screen.Settings.route)
                     }
@@ -200,7 +205,8 @@ fun TvGuideAppNavigation() {
                 )
             ) {
                 ProgramDetailScreen(
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    onChannelClick = navigateToChannelGuide
                 )
             }
         }

@@ -79,6 +79,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.music4music.tvguide.R
+import com.music4music.tvguide.data.local.ChannelCatalog
 import com.music4music.tvguide.util.ProgramDescriptionUtils
 import com.music4music.tvguide.ui.theme.AccentRed
 import com.music4music.tvguide.ui.theme.DarkBackground
@@ -99,6 +100,7 @@ private val dateFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ge
 @Composable
 fun ProgramDetailScreen(
     onBackClick: () -> Unit,
+    onChannelClick: (String) -> Unit = {},
     viewModel: ProgramDetailViewModel = hiltViewModel()
 ) {
     val program by viewModel.program.collectAsStateWithLifecycle()
@@ -207,12 +209,59 @@ fun ProgramDetailScreen(
                     currentProgram.categories.any { it.equals("Série", ignoreCase = true) }
 
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "${currentProgram.channelId}  •  ${broadcastDate.replaceFirstChar { it.uppercase() }}  •  $startTime - $stopTime  •  ${currentProgram.formattedDuration}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = AccentRed,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onChannelClick(currentProgram.channelId) }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        val channelLogoUrl = ChannelCatalog.getLogoUrl(currentProgram.channelId)
+                        val channelDisplayName = ChannelCatalog.getDisplayName(currentProgram.channelId)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White.copy(alpha = 0.08f),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            if (!channelLogoUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = channelLogoUrl,
+                                    contentDescription = channelDisplayName,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(4.dp),
+                                    contentScale = ContentScale.Fit
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = channelDisplayName.take(3).uppercase(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                }
+                            }
+                        }
+
+                        Column {
+                            Text(
+                                text = channelDisplayName,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentRed
+                            )
+                            Text(
+                                text = "${broadcastDate.replaceFirstChar { it.uppercase() }}  •  $startTime - $stopTime  •  ${currentProgram.formattedDuration}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = TextSecondary
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(4.dp))
 

@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -55,7 +56,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.music4music.tvguide.R
+import com.music4music.tvguide.data.local.ChannelCatalog
 import com.music4music.tvguide.domain.model.Reminder
 import com.music4music.tvguide.ui.theme.AccentRed
 import com.music4music.tvguide.ui.theme.DarkBackground
@@ -82,6 +87,7 @@ private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 fun CalendarScreen(
     onProgramClick: (Long) -> Unit,
     onSettingsClick: () -> Unit = {},
+    onChannelClick: (String) -> Unit = {},
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
@@ -381,7 +387,8 @@ fun CalendarScreen(
                         CalendarReminderItem(
                             reminder = reminder,
                             onClick = { onProgramClick(reminder.programId) },
-                            onDelete = { viewModel.removeReminder(reminder.programId) }
+                            onDelete = { viewModel.removeReminder(reminder.programId) },
+                            onChannelClick = onChannelClick
                         )
                     }
                 }
@@ -394,10 +401,13 @@ fun CalendarScreen(
 private fun CalendarReminderItem(
     reminder: Reminder,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onChannelClick: (String) -> Unit = {}
 ) {
     val zone = com.music4music.tvguide.ui.theme.LocalDisplayZone.current
     val startTime = Instant.ofEpochMilli(reminder.startTimestamp).atZone(zone).format(timeFormatter)
+    val channelLogoUrl = ChannelCatalog.getLogoUrl(reminder.channelId)
+    val channelDisplayName = ChannelCatalog.getDisplayName(reminder.channelId)
 
     Card(
         modifier = Modifier
@@ -412,13 +422,46 @@ private fun CalendarReminderItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Surface(
+                onClick = { onChannelClick(reminder.channelId) },
+                shape = RoundedCornerShape(8.dp),
+                color = Color.White.copy(alpha = 0.08f),
+                modifier = Modifier.size(44.dp)
+            ) {
+                if (!channelLogoUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = channelLogoUrl,
+                        contentDescription = channelDisplayName,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = channelDisplayName.take(3).uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = reminder.channelId.removeSuffix(".fr"),
+                        text = channelDisplayName,
                         style = MaterialTheme.typography.labelSmall,
                         color = AccentRed,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onChannelClick(reminder.channelId) }
                     )
                     Text(
                         text = "  •  $startTime",

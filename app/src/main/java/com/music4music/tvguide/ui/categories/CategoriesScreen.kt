@@ -1,7 +1,5 @@
 package com.music4music.tvguide.ui.categories
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,11 +30,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Celebration
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -43,23 +41,29 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -74,7 +78,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music4music.tvguide.R
-import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.domain.model.TvCategory
 import com.music4music.tvguide.ui.components.ProgramCard
 import com.music4music.tvguide.ui.theme.AccentRed
@@ -88,6 +91,7 @@ fun CategoriesScreen(
     onProgramClick: (Long) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onChannelClick: (String) -> Unit = {},
     viewModel: CategoriesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -176,7 +180,8 @@ fun CategoriesScreen(
                     uiState = uiState,
                     onBackClick = { viewModel.selectCategory(null) },
                     onSubCategoryClick = { viewModel.selectSubCategory(it) },
-                    onProgramClick = onProgramClick
+                    onProgramClick = onProgramClick,
+                    onChannelClick = onChannelClick
                 )
             } else {
                 CategoryGridHubView(
@@ -329,19 +334,20 @@ private fun CategoryGridHubView(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CategoryDetailSubView(
     uiState: CategoriesUiState,
     onBackClick: () -> Unit,
     onSubCategoryClick: (String?) -> Unit,
-    onProgramClick: (Long) -> Unit
+    onProgramClick: (Long) -> Unit,
+    onChannelClick: (String) -> Unit
 ) {
     val category = uiState.selectedCategory ?: return
     val categoryTitle = stringResource(category.nameRes)
     val icon = getCategoryIcon(category)
 
-    var isSubCategoriesExpanded by rememberSaveable { mutableStateOf(false) }
+    var showSubCategoriesSheet by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -420,13 +426,12 @@ private fun CategoryDetailSubView(
 
         if (uiState.subCategories.isNotEmpty()) {
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .animateContentSize()
-                ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showSubCategoriesSheet = true }
+                            .padding(vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -461,85 +466,55 @@ private fun CategoryDetailSubView(
                         }
 
                         TextButton(
-                            onClick = { isSubCategoriesExpanded = !isSubCategoriesExpanded },
+                            onClick = { showSubCategoriesSheet = true },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = stringResource(
-                                    if (isSubCategoriesExpanded) R.string.subcategories_collapse else R.string.subcategories_show_all
-                                ),
+                                text = stringResource(R.string.subcategories_show_all),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = AccentRed
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
-                                imageVector = if (isSubCategoriesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                                 contentDescription = null,
                                 tint = AccentRed,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(12.dp)
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    if (!isSubCategoriesExpanded) {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            item {
-                                SubCategoryPill(
-                                    name = stringResource(R.string.filter_all_channels_short),
-                                    count = uiState.totalProgramsCount,
-                                    isSelected = uiState.selectedSubCategory == null,
-                                    onClick = { onSubCategoryClick(null) }
-                                )
-                            }
-
-                            items(uiState.subCategories, key = { it.name }) { subItem ->
-                                SubCategoryPill(
-                                    name = subItem.name,
-                                    count = subItem.count,
-                                    isSelected = uiState.selectedSubCategory == subItem.name,
-                                    onClick = {
-                                        if (uiState.selectedSubCategory == subItem.name) {
-                                            onSubCategoryClick(null)
-                                        } else {
-                                            onSubCategoryClick(subItem.name)
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    } else {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item {
                             SubCategoryPill(
                                 name = stringResource(R.string.filter_all_channels_short),
                                 count = uiState.totalProgramsCount,
                                 isSelected = uiState.selectedSubCategory == null,
+                                isClearable = false,
                                 onClick = { onSubCategoryClick(null) }
                             )
+                        }
 
-                            uiState.subCategories.forEach { subItem ->
-                                SubCategoryPill(
-                                    name = subItem.name,
-                                    count = subItem.count,
-                                    isSelected = uiState.selectedSubCategory == subItem.name,
-                                    onClick = {
-                                        if (uiState.selectedSubCategory == subItem.name) {
-                                            onSubCategoryClick(null)
-                                        } else {
-                                            onSubCategoryClick(subItem.name)
-                                        }
+                        items(uiState.subCategories, key = { it.name }) { subItem ->
+                            SubCategoryPill(
+                                name = subItem.name,
+                                count = subItem.count,
+                                isSelected = uiState.selectedSubCategory == subItem.name,
+                                isClearable = true,
+                                onClick = {
+                                    if (uiState.selectedSubCategory == subItem.name) {
+                                        onSubCategoryClick(null)
+                                    } else {
+                                        onSubCategoryClick(subItem.name)
                                     }
-                                )
-                            }
+                                }
+                            )
                         }
                     }
                 }
@@ -639,8 +614,239 @@ private fun CategoryDetailSubView(
                     onClick = { onProgramClick(program.id) },
                     onCategoryClick = { clickedCat ->
                         onSubCategoryClick(clickedCat)
-                    }
+                    },
+                    onChannelClick = onChannelClick
                 )
+            }
+        }
+    }
+
+    if (showSubCategoriesSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showSubCategoriesSheet = false },
+            sheetState = sheetState,
+            containerColor = DarkSurface,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 28.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = null,
+                            tint = AccentRed,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.subcategories_title),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Box(
+                            modifier = Modifier
+                                .background(DarkSurfaceVariant, CircleShape)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = uiState.subCategories.size.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = { showSubCategoriesSheet = false }) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = null,
+                            tint = TextSecondary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                var sheetQuery by remember { mutableStateOf("") }
+                if (uiState.subCategories.size > 8) {
+                    OutlinedTextField(
+                        value = sheetQuery,
+                        onValueChange = { sheetQuery = it },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.search_categories_hint),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        trailingIcon = {
+                            if (sheetQuery.isNotEmpty()) {
+                                IconButton(onClick = { sheetQuery = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentRed,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                val filteredSheetItems = remember(uiState.subCategories, sheetQuery) {
+                    if (sheetQuery.isBlank()) {
+                        uiState.subCategories
+                    } else {
+                        uiState.subCategories.filter { it.name.contains(sheetQuery, ignoreCase = true) }
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (sheetQuery.isBlank()) {
+                        item {
+                            val isAllSelected = uiState.selectedSubCategory == null
+                            Surface(
+                                onClick = {
+                                    onSubCategoryClick(null)
+                                    showSubCategoriesSheet = false
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isAllSelected) AccentRed.copy(alpha = 0.15f) else Color.Transparent,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isAllSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                            contentDescription = null,
+                                            tint = if (isAllSelected) AccentRed else TextSecondary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.filter_all_channels_short),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isAllSelected) TextPrimary else TextSecondary
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .background(DarkSurfaceVariant, CircleShape)
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(
+                                            text = uiState.totalProgramsCount.toString(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    items(filteredSheetItems, key = { it.name }) { subItem ->
+                        val isSelected = uiState.selectedSubCategory == subItem.name
+                        Surface(
+                            onClick = {
+                                if (isSelected) {
+                                    onSubCategoryClick(null)
+                                } else {
+                                    onSubCategoryClick(subItem.name)
+                                }
+                                showSubCategoriesSheet = false
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) AccentRed.copy(alpha = 0.15f) else Color.Transparent,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                        contentDescription = null,
+                                        tint = if (isSelected) AccentRed else TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = subItem.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) TextPrimary else TextSecondary
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .background(DarkSurfaceVariant, CircleShape)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = subItem.count.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) AccentRed else TextSecondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -651,6 +857,7 @@ private fun SubCategoryPill(
     name: String,
     count: Int,
     isSelected: Boolean,
+    isClearable: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -690,7 +897,7 @@ private fun SubCategoryPill(
                     color = if (isSelected) Color.White else TextSecondary
                 )
             }
-            if (isSelected) {
+            if (isSelected && isClearable) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = null,
