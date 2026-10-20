@@ -1,5 +1,6 @@
 package com.music4music.tvguide.ui.guide
 
+import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -81,6 +82,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -339,35 +341,54 @@ fun GuideScreen(
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (selectedDate == null) {
-                        val grouped = programs.groupBy { prog ->
-                            Instant.ofEpochMilli(prog.startTimestamp).atZone(zone).toLocalDate()
-                        }
-                        grouped.forEach { (date, datePrograms) ->
-                            item(key = "header_$date") {
-                                val formattedDate = date.format(fullDayFormatter).replaceFirstChar { it.uppercase() }
-                                val headerTitle = when (date) {
-                                    today -> stringResource(R.string.filter_today_prefix, formattedDate)
-                                    tomorrow -> stringResource(R.string.filter_tomorrow_prefix, formattedDate)
-                                    else -> formattedDate
-                                }
-                                Text(
-                                    text = headerTitle,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AccentRed,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 16.dp, bottom = 4.dp)
-                                )
+                val configuration = LocalConfiguration.current
+                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                if (isLandscape) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (selectedDate == null) {
+                            val grouped = programs.groupBy { prog ->
+                                Instant.ofEpochMilli(prog.startTimestamp).atZone(zone).toLocalDate()
                             }
+                            grouped.forEach { (date, datePrograms) ->
+                                item(key = "header_$date", span = { GridItemSpan(maxLineSpan) }) {
+                                    val formattedDate = date.format(fullDayFormatter).replaceFirstChar { it.uppercase() }
+                                    val headerTitle = when (date) {
+                                        today -> stringResource(R.string.filter_today_prefix, formattedDate)
+                                        tomorrow -> stringResource(R.string.filter_tomorrow_prefix, formattedDate)
+                                        else -> formattedDate
+                                    }
+                                    Text(
+                                        text = headerTitle,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AccentRed,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 16.dp, bottom = 4.dp)
+                                    )
+                                }
+                                items(
+                                    items = datePrograms,
+                                    key = { it.id }
+                                ) { program ->
+                                    ProgramCard(
+                                        program = program,
+                                        onClick = { onProgramClick(program.id) },
+                                        channelName = channelNameMap[program.channelId],
+                                        onCategoryClick = { tag -> viewModel.filterByTag(tag) },
+                                        onChannelClick = { chId -> viewModel.selectChannel(chId) }
+                                    )
+                                }
+                            }
+                        } else {
                             items(
-                                items = datePrograms,
+                                items = programs,
                                 key = { it.id }
                             ) { program ->
                                 ProgramCard(
@@ -379,18 +400,61 @@ fun GuideScreen(
                                 )
                             }
                         }
-                    } else {
-                        items(
-                            items = programs,
-                            key = { it.id }
-                        ) { program ->
-                            ProgramCard(
-                                program = program,
-                                onClick = { onProgramClick(program.id) },
-                                channelName = channelNameMap[program.channelId],
-                                onCategoryClick = { tag -> viewModel.filterByTag(tag) },
-                                onChannelClick = { chId -> viewModel.selectChannel(chId) }
-                            )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (selectedDate == null) {
+                            val grouped = programs.groupBy { prog ->
+                                Instant.ofEpochMilli(prog.startTimestamp).atZone(zone).toLocalDate()
+                            }
+                            grouped.forEach { (date, datePrograms) ->
+                                item(key = "header_$date") {
+                                    val formattedDate = date.format(fullDayFormatter).replaceFirstChar { it.uppercase() }
+                                    val headerTitle = when (date) {
+                                        today -> stringResource(R.string.filter_today_prefix, formattedDate)
+                                        tomorrow -> stringResource(R.string.filter_tomorrow_prefix, formattedDate)
+                                        else -> formattedDate
+                                    }
+                                    Text(
+                                        text = headerTitle,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AccentRed,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 16.dp, bottom = 4.dp)
+                                    )
+                                }
+                                items(
+                                    items = datePrograms,
+                                    key = { it.id }
+                                ) { program ->
+                                    ProgramCard(
+                                        program = program,
+                                        onClick = { onProgramClick(program.id) },
+                                        channelName = channelNameMap[program.channelId],
+                                        onCategoryClick = { tag -> viewModel.filterByTag(tag) },
+                                        onChannelClick = { chId -> viewModel.selectChannel(chId) }
+                                    )
+                                }
+                            }
+                        } else {
+                            items(
+                                items = programs,
+                                key = { it.id }
+                            ) { program ->
+                                ProgramCard(
+                                    program = program,
+                                    onClick = { onProgramClick(program.id) },
+                                    channelName = channelNameMap[program.channelId],
+                                    onCategoryClick = { tag -> viewModel.filterByTag(tag) },
+                                    onChannelClick = { chId -> viewModel.selectChannel(chId) }
+                                )
+                            }
                         }
                     }
                 }

@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import android.content.res.Configuration
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -475,22 +480,47 @@ fun NowPlayingScreen(
                         }
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(
-                            items = pagePrograms,
-                            key = { it.id }
-                        ) { program ->
-                            ProgramCard(
-                                program = program,
-                                onClick = { onProgramClick(program.id) },
-                                channelName = ChannelCatalog.getDisplayName(program.channelId),
-                                onCategoryClick = { tag -> viewModel.filterByTag(tag) },
-                                onChannelClick = onChannelClick
-                            )
+                    val configuration = LocalConfiguration.current
+                    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                    if (isLandscape) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(
+                                items = pagePrograms,
+                                key = { it.id }
+                            ) { program ->
+                                ProgramCard(
+                                    program = program,
+                                    onClick = { onProgramClick(program.id) },
+                                    channelName = ChannelCatalog.getDisplayName(program.channelId),
+                                    onCategoryClick = { tag -> viewModel.filterByTag(tag) },
+                                    onChannelClick = onChannelClick
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(
+                                items = pagePrograms,
+                                key = { it.id }
+                            ) { program ->
+                                ProgramCard(
+                                    program = program,
+                                    onClick = { onProgramClick(program.id) },
+                                    channelName = ChannelCatalog.getDisplayName(program.channelId),
+                                    onCategoryClick = { tag -> viewModel.filterByTag(tag) },
+                                    onChannelClick = onChannelClick
+                                )
+                            }
                         }
                     }
                 }

@@ -2,6 +2,7 @@ package com.music4music.tvguide.ui.categories
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.music4music.tvguide.data.local.prefs.UserPreferences
 import com.music4music.tvguide.domain.model.ChannelPackage
 import com.music4music.tvguide.domain.model.Program
 import com.music4music.tvguide.domain.model.TvCategory
@@ -42,7 +43,8 @@ data class CategoriesUiState(
 @HiltViewModel
 class CategoriesViewModel @Inject constructor(
     epgRepository: EpgRepository,
-    private val syncEpgUseCase: SyncEpgUseCase
+    private val syncEpgUseCase: SyncEpgUseCase,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -77,10 +79,17 @@ class CategoriesViewModel @Inject constructor(
         allActivePrograms,
         _selectedCategory,
         _selectedSubCategory,
-        _searchQuery
-    ) { programs, selectedCat, selectedSub, query ->
-        if (programs.isEmpty()) {
+        _searchQuery,
+        userPreferences.hideReruns
+    ) { rawPrograms, selectedCat, selectedSub, query, hideReruns ->
+        if (rawPrograms.isEmpty()) {
             return@combine CategoriesUiState(isLoading = true)
+        }
+
+        val programs = if (hideReruns) {
+            rawPrograms.filter { !it.isRerun }
+        } else {
+            rawPrograms
         }
 
         val programParentMap = programs.associateWith { resolveParentCategory(it) }

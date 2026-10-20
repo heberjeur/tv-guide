@@ -17,8 +17,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import android.content.res.Configuration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -116,6 +119,8 @@ fun CalendarScreen(
         allReminders.map { Instant.ofEpochMilli(it.startTimestamp).atZone(zone).toLocalDate() }.toSet()
     }
 
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -186,223 +191,316 @@ fun CalendarScreen(
         },
         containerColor = DarkBackground
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { currentYearMonth = currentYearMonth.minusMonths(1) }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                contentDescription = null,
-                                tint = TextPrimary
-                            )
-                        }
-
-                        Text(
-                            text = currentYearMonth.format(monthYearFormatter)
-                                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(currentLocale) else it.toString() },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-
-                        IconButton(onClick = { currentYearMonth = currentYearMonth.plusMonths(1) }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = null,
-                                tint = TextPrimary
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        listOf(
-                            DayOfWeek.MONDAY,
-                            DayOfWeek.TUESDAY,
-                            DayOfWeek.WEDNESDAY,
-                            DayOfWeek.THURSDAY,
-                            DayOfWeek.FRIDAY,
-                            DayOfWeek.SATURDAY,
-                            DayOfWeek.SUNDAY
-                        ).forEach { dayOfWeek ->
-                            val label = dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale).take(3)
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = TextSecondary,
-                                modifier = Modifier.weight(1f),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    val firstDay = currentYearMonth.atDay(1)
-                    val daysInMonth = currentYearMonth.lengthOfMonth()
-                    val leadingEmptySlots = (firstDay.dayOfWeek.value - 1)
-                    val totalSlots = leadingEmptySlots + daysInMonth
-                    val rowsCount = (totalSlots + 6) / 7
-
-                    for (rowIndex in 0 until rowsCount) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 2.dp),
-                            horizontalArrangement = Arrangement.SpaceAround
-                        ) {
-                            for (colIndex in 0 until 7) {
-                                val slotIndex = rowIndex * 7 + colIndex
-                                val dayNumber = slotIndex - leadingEmptySlots + 1
-
-                                if (dayNumber in 1..daysInMonth) {
-                                    val date = currentYearMonth.atDay(dayNumber)
-                                    val isSelected = date == selectedDate
-                                    val isToday = date == today
-                                    val hasReminders = reminderDates.contains(date)
-
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(38.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(
-                                                when {
-                                                    isSelected -> AccentRed
-                                                    else -> DarkSurfaceVariant.copy(alpha = 0.3f)
-                                                }
-                                            )
-                                            .then(
-                                                if (isToday && !isSelected) {
-                                                    Modifier.border(1.dp, AccentRed.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
-                                                } else Modifier
-                                            )
-                                            .clickable { viewModel.selectDate(date) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center
-                                        ) {
-                                            Text(
-                                                text = dayNumber.toString(),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isSelected) TextPrimary else if (isToday) AccentRed else TextPrimary
-                                            )
-                                            if (hasReminders) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(4.dp)
-                                                        .clip(CircleShape)
-                                                        .background(if (isSelected) TextPrimary else AccentRed)
-                                                )
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
+        if (isLandscape) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(0.48f)
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    CalendarMonthCard(
+                        currentYearMonth = currentYearMonth,
+                        onPrevMonth = { currentYearMonth = currentYearMonth.minusMonths(1) },
+                        onNextMonth = { currentYearMonth = currentYearMonth.plusMonths(1) },
+                        monthYearFormatter = monthYearFormatter,
+                        currentLocale = currentLocale,
+                        selectedDate = selectedDate,
+                        today = today,
+                        reminderDates = reminderDates,
+                        onSelectDate = viewModel::selectDate
+                    )
+                }
+
+                CalendarRemindersSection(
+                    selectedDate = selectedDate,
+                    selectedDateHeaderFormatter = selectedDateHeaderFormatter,
+                    currentLocale = currentLocale,
+                    filteredReminders = filteredReminders,
+                    searchQuery = searchQuery,
+                    onProgramClick = onProgramClick,
+                    onDeleteReminder = viewModel::removeReminder,
+                    onChannelClick = onChannelClick,
+                    modifier = Modifier
+                        .weight(0.52f)
+                        .fillMaxSize()
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                CalendarMonthCard(
+                    currentYearMonth = currentYearMonth,
+                    onPrevMonth = { currentYearMonth = currentYearMonth.minusMonths(1) },
+                    onNextMonth = { currentYearMonth = currentYearMonth.plusMonths(1) },
+                    monthYearFormatter = monthYearFormatter,
+                    currentLocale = currentLocale,
+                    selectedDate = selectedDate,
+                    today = today,
+                    reminderDates = reminderDates,
+                    onSelectDate = viewModel::selectDate
+                )
+
+                CalendarRemindersSection(
+                    selectedDate = selectedDate,
+                    selectedDateHeaderFormatter = selectedDateHeaderFormatter,
+                    currentLocale = currentLocale,
+                    filteredReminders = filteredReminders,
+                    searchQuery = searchQuery,
+                    onProgramClick = onProgramClick,
+                    onDeleteReminder = viewModel::removeReminder,
+                    onChannelClick = onChannelClick,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarMonthCard(
+    currentYearMonth: YearMonth,
+    onPrevMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    monthYearFormatter: DateTimeFormatter,
+    currentLocale: Locale,
+    selectedDate: LocalDate,
+    today: LocalDate,
+    reminderDates: Set<LocalDate>,
+    onSelectDate: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(onClick = onPrevMonth) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = null,
+                        tint = TextPrimary
+                    )
+                }
+
                 Text(
-                    text = selectedDate.format(selectedDateHeaderFormatter)
+                    text = currentYearMonth.format(monthYearFormatter)
                         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(currentLocale) else it.toString() },
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
-                Text(
-                    text = stringResource(R.string.calendar_reminders_count, filteredReminders.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
-                )
+
+                IconButton(onClick = onNextMonth) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = TextPrimary
+                    )
+                }
             }
 
-            if (filteredReminders.isEmpty()) {
-                Box(
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                listOf(
+                    DayOfWeek.MONDAY,
+                    DayOfWeek.TUESDAY,
+                    DayOfWeek.WEDNESDAY,
+                    DayOfWeek.THURSDAY,
+                    DayOfWeek.FRIDAY,
+                    DayOfWeek.SATURDAY,
+                    DayOfWeek.SUNDAY
+                ).forEach { dayOfWeek ->
+                    val label = dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale).take(3)
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextSecondary,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val firstDay = currentYearMonth.atDay(1)
+            val daysInMonth = currentYearMonth.lengthOfMonth()
+            val leadingEmptySlots = (firstDay.dayOfWeek.value - 1)
+            val totalSlots = leadingEmptySlots + daysInMonth
+            val rowsCount = (totalSlots + 6) / 7
+
+            for (rowIndex in 0 until rowsCount) {
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = null,
-                            tint = TextSecondary.copy(alpha = 0.5f),
-                            modifier = Modifier.size(56.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = if (searchQuery.isNotEmpty()) {
-                                stringResource(R.string.search_empty)
-                            } else {
-                                stringResource(R.string.calendar_no_reminders_day)
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary,
-                            textAlign = TextAlign.Center
-                        )
+                    for (colIndex in 0 until 7) {
+                        val slotIndex = rowIndex * 7 + colIndex
+                        val dayNumber = slotIndex - leadingEmptySlots + 1
+
+                        if (dayNumber in 1..daysInMonth) {
+                            val date = currentYearMonth.atDay(dayNumber)
+                            val isSelected = date == selectedDate
+                            val isToday = date == today
+                            val hasReminders = reminderDates.contains(date)
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        when {
+                                            isSelected -> AccentRed
+                                            else -> DarkSurfaceVariant.copy(alpha = 0.3f)
+                                        }
+                                    )
+                                    .then(
+                                        if (isToday && !isSelected) {
+                                            Modifier.border(1.dp, AccentRed.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                                        } else Modifier
+                                    )
+                                    .clickable { onSelectDate(date) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = dayNumber.toString(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) TextPrimary else if (isToday) AccentRed else TextPrimary
+                                    )
+                                    if (hasReminders) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(4.dp)
+                                                .clip(CircleShape)
+                                                .background(if (isSelected) TextPrimary else AccentRed)
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarRemindersSection(
+    selectedDate: LocalDate,
+    selectedDateHeaderFormatter: DateTimeFormatter,
+    currentLocale: Locale,
+    filteredReminders: List<Reminder>,
+    searchQuery: String,
+    onProgramClick: (Long) -> Unit,
+    onDeleteReminder: (Long) -> Unit,
+    onChannelClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = selectedDate.format(selectedDateHeaderFormatter)
+                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(currentLocale) else it.toString() },
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text(
+                text = stringResource(R.string.calendar_reminders_count, filteredReminders.size),
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+
+        if (filteredReminders.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    items(
-                        items = filteredReminders,
-                        key = { it.programId }
-                    ) { reminder ->
-                        CalendarReminderItem(
-                            reminder = reminder,
-                            onClick = { onProgramClick(reminder.programId) },
-                            onDelete = { viewModel.removeReminder(reminder.programId) },
-                            onChannelClick = onChannelClick
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        tint = TextSecondary.copy(alpha = 0.5f),
+                        modifier = Modifier.size(56.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = if (searchQuery.isNotEmpty()) {
+                            stringResource(R.string.search_empty)
+                        } else {
+                            stringResource(R.string.calendar_no_reminders_day)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    items = filteredReminders,
+                    key = { it.programId }
+                ) { reminder ->
+                    CalendarReminderItem(
+                        reminder = reminder,
+                        onClick = { onProgramClick(reminder.programId) },
+                        onDelete = { onDeleteReminder(reminder.programId) },
+                        onChannelClick = onChannelClick
+                    )
                 }
             }
         }

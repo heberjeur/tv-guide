@@ -82,6 +82,9 @@ fun ChannelListScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     var isSearchActive by remember { mutableStateOf(false) }
 
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
     BackHandler(enabled = isSearchActive) {
         isSearchActive = false
         viewModel.updateSearchQuery("")
@@ -198,7 +201,7 @@ fun ChannelListScreen(
 
             if (isGridMode) {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Fixed(if (isLandscape) 5 else 3),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -216,20 +219,41 @@ fun ChannelListScreen(
                     }
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(
-                        items = channels,
-                        key = { it.id }
-                    ) { channel ->
-                        ChannelListCard(
-                            channel = channel,
-                            onClick = { onChannelClick(channel.id) },
-                            onFavoriteClick = { viewModel.toggleFavorite(channel.id, channel.isFavorite) }
-                        )
+                if (isLandscape) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(
+                            items = channels,
+                            key = { it.id }
+                        ) { channel ->
+                            ChannelListCard(
+                                channel = channel,
+                                onClick = { onChannelClick(channel.id) },
+                                onFavoriteClick = { viewModel.toggleFavorite(channel.id, channel.isFavorite) }
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(
+                            items = channels,
+                            key = { it.id }
+                        ) { channel ->
+                            ChannelListCard(
+                                channel = channel,
+                                onClick = { onChannelClick(channel.id) },
+                                onFavoriteClick = { viewModel.toggleFavorite(channel.id, channel.isFavorite) }
+                            )
+                        }
                     }
                 }
             }

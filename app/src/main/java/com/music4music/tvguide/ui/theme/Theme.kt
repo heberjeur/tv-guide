@@ -102,6 +102,23 @@ fun TvGuideTheme(
 
     val scale = if (fontSizeScale == "large") 1.15f else 1.0f
 
+    val view = androidx.compose.ui.platform.LocalView.current
+    if (!view.isInEditMode) {
+        androidx.compose.runtime.SideEffect {
+            val window = (view.context as? android.app.Activity)?.window
+            if (window != null) {
+                val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, view)
+                val isDark = when (themeMode) {
+                    "light" -> false
+                    "oled", "dark" -> true
+                    else -> isSystemDark
+                }
+                insetsController.isAppearanceLightStatusBars = !isDark
+                insetsController.isAppearanceLightNavigationBars = !isDark
+            }
+        }
+    }
+
     MaterialTheme(
         colorScheme = colorScheme,
         typography = scaledTypography(scale),

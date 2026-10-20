@@ -1,5 +1,10 @@
 package com.music4music.tvguide.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -67,17 +72,24 @@ fun TvGuideAppNavigation() {
             (screen == Screen.Categories && currentRoute?.startsWith("categories") == true)
     }
 
-    Scaffold(
-        bottomBar = {
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+    if (isLandscape) {
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.fillMaxSize()
+        ) {
             if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface
+                androidx.compose.material3.NavigationRail(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxHeight()
                 ) {
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
                     bottomNavItems.forEach { screen ->
                         val isSelected = currentRoute == screen.route ||
                             (screen == Screen.Guide && currentRoute?.startsWith("guide") == true) ||
                             (screen == Screen.Categories && currentRoute?.startsWith("categories") == true)
-                        NavigationBarItem(
+                        androidx.compose.material3.NavigationRailItem(
                             selected = isSelected,
                             onClick = {
                                 navController.navigate(screen.route) {
@@ -103,8 +115,8 @@ fun TvGuideAppNavigation() {
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             },
-                            alwaysShowLabel = true,
-                            colors = NavigationBarItemDefaults.colors(
+                            alwaysShowLabel = false,
+                            colors = androidx.compose.material3.NavigationRailItemDefaults.colors(
                                 selectedIconColor = AccentRed,
                                 selectedTextColor = AccentRed,
                                 indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -113,25 +125,93 @@ fun TvGuideAppNavigation() {
                             )
                         )
                     }
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.weight(1f))
                 }
             }
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        val navigateToChannelGuide: (String) -> Unit = { channelId ->
-            navController.navigate("guide?channelId=$channelId") {
-                popUpTo(navController.graph.findStartDestination().id) {
-                    saveState = true
-                }
-                launchSingleTop = true
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                AppNavHost(navController = navController, modifier = Modifier.fillMaxSize())
             }
         }
+    } else {
+        Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ) {
+                        bottomNavItems.forEach { screen ->
+                            val isSelected = currentRoute == screen.route ||
+                                (screen == Screen.Guide && currentRoute?.startsWith("guide") == true) ||
+                                (screen == Screen.Categories && currentRoute?.startsWith("categories") == true)
+                            NavigationBarItem(
+                                selected = isSelected,
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = screen.icon,
+                                        contentDescription = stringResource(screen.titleRes)
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = stringResource(screen.titleRes),
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                },
+                                alwaysShowLabel = true,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = AccentRed,
+                                    selectedTextColor = AccentRed,
+                                    indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { padding ->
+            AppNavHost(navController = navController, modifier = Modifier.padding(padding))
+        }
+    }
+}
 
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Now.route,
-            modifier = Modifier.padding(padding)
-        ) {
+@Composable
+private fun AppNavHost(
+    navController: androidx.navigation.NavHostController,
+    modifier: Modifier = Modifier
+) {
+    val navigateToChannelGuide: (String) -> Unit = { channelId ->
+        navController.navigate("guide?channelId=$channelId") {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+        }
+    }
+
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Now.route,
+        modifier = modifier
+    ) {
             composable(Screen.Now.route) {
                 NowPlayingScreen(
                     onProgramClick = { programId ->
@@ -231,4 +311,4 @@ fun TvGuideAppNavigation() {
             }
         }
     }
-}
+

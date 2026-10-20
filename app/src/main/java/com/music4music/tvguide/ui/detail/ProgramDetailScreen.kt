@@ -118,6 +118,7 @@ fun ProgramDetailScreen(
     val context = LocalContext.current
 
     val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val currentLocale = remember(configuration) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !configuration.locales.isEmpty) {
             configuration.locales[0]
@@ -183,7 +184,7 @@ fun ProgramDetailScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(240.dp)
+                            .height(if (isLandscape) 160.dp else 240.dp)
                             .clickable { isImageEnlarged = true }
                     ) {
                         AsyncImage(

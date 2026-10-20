@@ -189,8 +189,9 @@ fun ProgramCard(
                         "-18", "18" -> "-18"
                         else -> null
                     }
+                    val hasAccessibility = highlightAccessibility && (program.hasSubtitlesResolved || program.hasAudioDescription)
                     val hasSignaletique = program.isLiveBroadcast || program.isUnreleasedResolved || program.isRerun ||
-                        program.isHd || program.hasSubtitlesResolved || program.hasAudioDescription || csaBadge != null
+                        program.isHd || hasAccessibility || csaBadge != null
                     val hasMeta = program.durationMinutes > 0 || hasSignaletique
 
                     if (hasMeta) {
@@ -244,21 +245,33 @@ fun ProgramCard(
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-                                if (program.hasSubtitlesResolved) {
-                                    Text(
-                                        text = stringResource(R.string.badge_subtitles),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = TextSecondary,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                if (highlightAccessibility && program.hasSubtitlesResolved) {
+                                    Surface(
+                                        shape = RoundedCornerShape(3.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.badge_subtitles),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
                                 }
-                                if (program.hasAudioDescription) {
-                                    Text(
-                                        text = stringResource(R.string.badge_audio_description),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = TextSecondary,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                if (highlightAccessibility && program.hasAudioDescription) {
+                                    Surface(
+                                        shape = RoundedCornerShape(3.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.badge_audio_description),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                        )
+                                    }
                                 }
                                 if (csaBadge != null) {
                                     Text(

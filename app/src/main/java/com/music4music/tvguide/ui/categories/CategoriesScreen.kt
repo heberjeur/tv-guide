@@ -270,8 +270,10 @@ private fun CategoryGridHubView(
     onCategoryClick: (TvCategory) -> Unit,
     onSubCategoryClick: (TvCategory, String) -> Unit
 ) {
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(if (isLandscape) 3 else 2),
         contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
