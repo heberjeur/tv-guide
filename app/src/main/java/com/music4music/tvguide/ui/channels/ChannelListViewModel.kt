@@ -52,15 +52,17 @@ class ChannelListViewModel @Inject constructor(
     private data class ChannelPreferences(
         val hiddenChannels: Set<String>,
         val favoriteChannels: Set<String>,
+        val favoriteChannelsOrder: List<String>,
         val channelSortOrder: String
     )
 
     private val channelPrefsFlow = combine(
         userPreferences.hiddenChannels,
         userPreferences.favoriteChannels,
+        userPreferences.favoriteChannelsOrder,
         userPreferences.channelSortOrder
-    ) { hidden, favorites, sortOrder ->
-        ChannelPreferences(hidden, favorites, sortOrder)
+    ) { hidden, favorites, favOrder, sortOrder ->
+        ChannelPreferences(hidden, favorites, favOrder, sortOrder)
     }
 
     val filteredChannels: StateFlow<List<Channel>> = combine(
@@ -87,10 +89,14 @@ class ChannelListViewModel @Inject constructor(
                     .thenBy { it.displayName }
             )
             "favorites", "favorites_first" -> filtered.sortedWith(
-                compareByDescending<Channel> { it.isFavorite }
-                    .thenBy { if (it.channelNumber > 0) 0 else 1 }
-                    .thenBy { it.channelNumber }
-                    .thenBy { it.displayName }
+                compareBy<Channel> {
+                    val idx = prefs.favoriteChannelsOrder.indexOfFirst { favId ->
+                        com.music4music.tvguide.data.local.ChannelCatalog.normalizeId(favId) == com.music4music.tvguide.data.local.ChannelCatalog.normalizeId(it.id)
+                    }
+                    if (idx >= 0) idx else Int.MAX_VALUE
+                }.thenBy { if (it.channelNumber > 0) 0 else 1 }
+                .thenBy { it.channelNumber }
+                .thenBy { it.displayName }
             )
             "name" -> filtered.sortedWith(compareBy { it.displayName })
             else -> filtered.sortedWith(

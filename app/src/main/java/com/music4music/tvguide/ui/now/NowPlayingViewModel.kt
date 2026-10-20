@@ -45,6 +45,7 @@ enum class EveningPart {
 private data class FilterPrefs(
     val hiddenChannels: Set<String>,
     val favoriteChannels: Set<String>,
+    val favoriteChannelsOrder: List<String>,
     val sortOrder: String,
     val hideReruns: Boolean
 )
@@ -109,10 +110,11 @@ class NowPlayingViewModel @Inject constructor(
     private val filterPrefsFlow = combine(
         userPreferences.hiddenChannels,
         userPreferences.favoriteChannels,
+        userPreferences.favoriteChannelsOrder,
         userPreferences.channelSortOrder,
         userPreferences.hideReruns
-    ) { hidden, favs, sort, reruns ->
-        FilterPrefs(hidden, favs, sort, reruns)
+    ) { hidden, favs, favOrder, sort, reruns ->
+        FilterPrefs(hidden, favs, favOrder, sort, reruns)
     }
 
     private val currentTimeFlow: Flow<Long> = flow {
@@ -253,9 +255,13 @@ class NowPlayingViewModel @Inject constructor(
                         .thenBy { it.startTimestamp }
                 )
                 "favorites", "favorites_first" -> filtered.sortedWith(
-                    compareByDescending<Program> { ChannelCatalog.isFavorite(it.channelId, prefs.favoriteChannels) }
-                        .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
-                        .thenBy { it.startTimestamp }
+                    compareBy<Program> {
+                        val idx = prefs.favoriteChannelsOrder.indexOfFirst { favId ->
+                            ChannelCatalog.normalizeId(favId) == ChannelCatalog.normalizeId(it.channelId)
+                        }
+                        if (idx >= 0) idx else Int.MAX_VALUE
+                    }.thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                    .thenBy { it.startTimestamp }
                 )
                 "name" -> filtered.sortedWith(
                     compareBy<Program> { ChannelCatalog.getDisplayName(it.channelId) }

@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,7 +37,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Notifications
@@ -47,6 +51,8 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Widgets
+import com.music4music.tvguide.data.local.ChannelCatalog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -124,6 +130,9 @@ fun SettingsScreen(
     val hideReruns by viewModel.hideReruns.collectAsStateWithLifecycle()
     val channelSortOrder by viewModel.channelSortOrder.collectAsStateWithLifecycle()
     val favoriteChannels by viewModel.favoriteChannels.collectAsStateWithLifecycle()
+    val favoriteChannelsOrder by viewModel.favoriteChannelsOrder.collectAsStateWithLifecycle()
+    val widgetTheme by viewModel.widgetTheme.collectAsStateWithLifecycle()
+    val widgetShowProgress by viewModel.widgetShowProgress.collectAsStateWithLifecycle()
     val hiddenChannels by viewModel.hiddenChannels.collectAsStateWithLifecycle()
     val retentionDays by viewModel.retentionDays.collectAsStateWithLifecycle()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
@@ -138,6 +147,7 @@ fun SettingsScreen(
     var showHiddenDialog by remember { mutableStateOf(false) }
     var showTimezoneDialog by remember { mutableStateOf(false) }
     var showCustomColorDialog by remember { mutableStateOf(false) }
+    var favoriteSearchQuery by remember { mutableStateOf("") }
 
     val soundDisplayName = remember(notificationSound) {
         if (notificationSound != null) {
@@ -169,7 +179,10 @@ fun SettingsScreen(
 
     if (showFavoritesDialog) {
         AlertDialog(
-            onDismissRequest = { showFavoritesDialog = false },
+            onDismissRequest = {
+                showFavoritesDialog = false
+                favoriteSearchQuery = ""
+            },
             title = {
                 Text(
                     text = stringResource(R.string.dialog_select_favorites_title),
@@ -178,41 +191,175 @@ fun SettingsScreen(
                 )
             },
             text = {
-                LazyColumn(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(300.dp)
+                        .height(480.dp)
                 ) {
-                    items(allChannels, key = { it.id }) { channel ->
-                        val isFav = favoriteChannels.contains(channel.id)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { viewModel.toggleFavoriteChannel(channel.id) }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = isFav,
-                                onCheckedChange = { viewModel.toggleFavoriteChannel(channel.id) },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = AccentRed,
-                                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    checkmarkColor = Color.White
-                                )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedTextField(
+                        value = favoriteSearchQuery,
+                        onValueChange = { favoriteSearchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        placeholder = { Text(stringResource(R.string.search_channels_hint)) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentRed,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        )
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        if (favoriteChannelsOrder.isNotEmpty()) {
+                            item {
+                                Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.favorites_order_title),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AccentRed
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.favorites_order_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            itemsIndexed(favoriteChannelsOrder, key = { _, chId -> "fav_$chId" }) { index, chId ->
+                                val channel = allChannels.firstOrNull { it.id == chId }
+                                val name = channel?.displayName ?: ChannelCatalog.getDisplayName(chId)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .background(AccentRed, RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "#${index + 1}",
+                                            color = Color.White,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = name,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    IconButton(
+                                        onClick = { viewModel.moveFavoriteChannel(chId, true) },
+                                        enabled = index > 0,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowUp,
+                                            contentDescription = null,
+                                            tint = if (index > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { viewModel.moveFavoriteChannel(chId, false) },
+                                        enabled = index < favoriteChannelsOrder.size - 1,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.KeyboardArrowDown,
+                                            contentDescription = null,
+                                            tint = if (index < favoriteChannelsOrder.size - 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { viewModel.toggleFavoriteChannel(chId) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                        }
+
+                        item {
                             Text(
-                                text = channel.displayName,
+                                text = stringResource(R.string.all_channels_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyMedium
+                                modifier = Modifier.padding(vertical = 6.dp)
                             )
+                        }
+
+                        val filteredChannels = allChannels.filter {
+                            favoriteSearchQuery.isBlank() ||
+                                it.displayName.contains(favoriteSearchQuery, ignoreCase = true) ||
+                                it.channelNumber.toString().contains(favoriteSearchQuery.trim())
+                        }
+
+                        items(filteredChannels, key = { "all_${it.id}" }) { channel ->
+                            val isFav = favoriteChannels.contains(channel.id) ||
+                                favoriteChannelsOrder.any { ChannelCatalog.normalizeId(it) == ChannelCatalog.normalizeId(channel.id) }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.toggleFavoriteChannel(channel.id) }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = isFav,
+                                    onCheckedChange = { viewModel.toggleFavoriteChannel(channel.id) },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = AccentRed,
+                                        uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        checkmarkColor = Color.White
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = channel.displayName,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showFavoritesDialog = false }) {
+                TextButton(onClick = {
+                    showFavoritesDialog = false
+                    favoriteSearchQuery = ""
+                }) {
                     Text(text = stringResource(R.string.action_confirm), color = AccentRed)
                 }
             },
@@ -711,6 +858,116 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SettingsCardHeader(
+                        icon = Icons.Default.Widgets,
+                        title = stringResource(R.string.widget_settings_title)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.widget_settings_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = stringResource(R.string.widget_theme_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "dark" to stringResource(R.string.widget_theme_dark),
+                            "light" to stringResource(R.string.widget_theme_light),
+                            "transparent" to stringResource(R.string.widget_theme_transparent)
+                        ).forEach { (themeKey, label) ->
+                            FilterChip(
+                                selected = widgetTheme == themeKey,
+                                onClick = { viewModel.setWidgetTheme(themeKey) },
+                                label = { Text(text = label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AccentRed,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                border = null,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.widget_show_progress),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = stringResource(R.string.widget_show_progress_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = widgetShowProgress,
+                            onCheckedChange = viewModel::setWidgetShowProgress,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = AccentRed,
+                                uncheckedThumbColor = Color(0xFFD6D6D6),
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.updateWidgets()
+                            android.widget.Toast.makeText(
+                                context,
+                                context.getString(R.string.widget_updated_toast),
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.widget_action_update),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }

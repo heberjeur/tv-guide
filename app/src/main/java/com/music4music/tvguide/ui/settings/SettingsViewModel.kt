@@ -100,6 +100,15 @@ class SettingsViewModel @Inject constructor(
     val favoriteChannels: StateFlow<Set<String>> = userPreferences.favoriteChannels
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
+    val favoriteChannelsOrder: StateFlow<List<String>> = userPreferences.favoriteChannelsOrder
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val widgetTheme: StateFlow<String> = userPreferences.widgetTheme
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "dark")
+
+    val widgetShowProgress: StateFlow<Boolean> = userPreferences.widgetShowProgress
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val hiddenChannels: StateFlow<Set<String>> = userPreferences.hiddenChannels
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
@@ -320,7 +329,40 @@ class SettingsViewModel @Inject constructor(
             val currentFavorites = userPreferences.favoriteChannels.first()
             val isNowFavorite = currentFavorites.contains(channelId)
             epgRepository.toggleFavoriteChannel(channelId, isNowFavorite)
+            com.music4music.tvguide.widget.WidgetUpdateHelper.updateAllWidgets(context)
         }
+    }
+
+    fun moveFavoriteChannel(channelId: String, moveUp: Boolean) {
+        viewModelScope.launch {
+            userPreferences.moveFavoriteChannel(channelId, moveUp)
+            com.music4music.tvguide.widget.WidgetUpdateHelper.updateAllWidgets(context)
+        }
+    }
+
+    fun setFavoriteChannelsOrder(order: List<String>) {
+        viewModelScope.launch {
+            userPreferences.setFavoriteChannelsOrder(order)
+            com.music4music.tvguide.widget.WidgetUpdateHelper.updateAllWidgets(context)
+        }
+    }
+
+    fun setWidgetTheme(theme: String) {
+        viewModelScope.launch {
+            userPreferences.setWidgetTheme(theme)
+            com.music4music.tvguide.widget.WidgetUpdateHelper.updateAllWidgets(context)
+        }
+    }
+
+    fun setWidgetShowProgress(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setWidgetShowProgress(enabled)
+            com.music4music.tvguide.widget.WidgetUpdateHelper.updateAllWidgets(context)
+        }
+    }
+
+    fun updateWidgets() {
+        com.music4music.tvguide.widget.WidgetUpdateHelper.updateAllWidgets(context)
     }
 
     fun toggleHiddenChannel(channelId: String) {

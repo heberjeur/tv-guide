@@ -45,6 +45,9 @@ class UserPreferences @Inject constructor(
     private val keyAccentColor = stringPreferencesKey("accent_color")
     private val keyShowCsaRatings = booleanPreferencesKey("show_csa_ratings")
     private val keyShowChannelNumbers = booleanPreferencesKey("show_channel_numbers")
+    private val keyFavoriteChannelsOrder = stringPreferencesKey("favorite_channels_order")
+    private val keyWidgetTheme = stringPreferencesKey("widget_theme")
+    private val keyWidgetShowProgress = booleanPreferencesKey("widget_show_progress")
 
     val showCsaRatings: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[keyShowCsaRatings] ?: true
@@ -126,8 +129,28 @@ class UserPreferences @Inject constructor(
         preferences[keyChannelSortOrder] ?: "number"
     }
 
-    val favoriteChannels: Flow<Set<String>> = context.dataStore.data.map { preferences ->
-        preferences[keyFavoriteChannels] ?: emptySet()
+    val favoriteChannelsOrder: Flow<List<String>> = context.dataStore.data.map { preferences ->
+        val raw = preferences[keyFavoriteChannelsOrder]
+        val legacySet = preferences[keyFavoriteChannels] ?: emptySet()
+        if (!raw.isNullOrBlank()) {
+            val list = raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+            legacySet.forEach { id ->
+                if (!list.contains(id)) list.add(id)
+            }
+            list
+        } else {
+            legacySet.toList()
+        }
+    }
+
+    val favoriteChannels: Flow<Set<String>> = favoriteChannelsOrder.map { it.toSet() }
+
+    val widgetTheme: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyWidgetTheme] ?: "dark"
+    }
+
+    val widgetShowProgress: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keyWidgetShowProgress] ?: true
     }
 
     val hiddenChannels: Flow<Set<String>> = context.dataStore.data.map { preferences ->
@@ -252,15 +275,55 @@ class UserPreferences @Inject constructor(
         }
     }
 
+    suspend fun setFavoriteChannelsOrder(channels: List<String>) {
+        context.dataStore.edit { preferences ->
+            preferences[keyFavoriteChannelsOrder] = channels.joinToString(",")
+            preferences[keyFavoriteChannels] = channels.toSet()
+        }
+    }
+
+    suspend fun moveFavoriteChannel(channelId: String, moveUp: Boolean) {
+        context.dataStore.edit { preferences ->
+            val raw = preferences[keyFavoriteChannelsOrder]
+            val legacySet = preferences[keyFavoriteChannels] ?: emptySet()
+            val list = if (!raw.isNullOrBlank()) {
+                raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+            } else {
+                legacySet.toMutableList()
+            }
+            val index = list.indexOf(channelId)
+            if (index != -1) {
+                if (moveUp && index > 0) {
+                    val temp = list[index - 1]
+                    list[index - 1] = list[index]
+                    list[index] = temp
+                } else if (!moveUp && index < list.lastIndex) {
+                    val temp = list[index + 1]
+                    list[index + 1] = list[index]
+                    list[index] = temp
+                }
+                preferences[keyFavoriteChannelsOrder] = list.joinToString(",")
+                preferences[keyFavoriteChannels] = list.toSet()
+            }
+        }
+    }
+
     suspend fun toggleFavoriteChannel(channelId: String) {
         context.dataStore.edit { preferences ->
-            val current = preferences[keyFavoriteChannels]?.toMutableSet() ?: mutableSetOf()
-            if (current.contains(channelId)) {
-                current.remove(channelId)
+            val raw = preferences[keyFavoriteChannelsOrder]
+            val legacySet = preferences[keyFavoriteChannels] ?: emptySet()
+            val list = if (!raw.isNullOrBlank()) {
+                raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
             } else {
-                current.add(channelId)
+                legacySet.toMutableList()
             }
-            preferences[keyFavoriteChannels] = current
+            if (list.contains(channelId)) {
+                list.remove(channelId)
+            } else {
+                list.add(channelId)
+            }
+            preferences[keyFavoriteChannelsOrder] = list.joinToString(",")
+            preferences[keyFavoriteChannels] = list.toSet()
         }
     }
 
@@ -316,6 +379,18 @@ class UserPreferences @Inject constructor(
     suspend fun setShowChannelNumbers(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[keyShowChannelNumbers] = enabled
+        }
+    }
+
+    suspend fun setWidgetTheme(theme: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyWidgetTheme] = theme
+        }
+    }
+
+    suspend fun setWidgetShowProgress(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keyWidgetShowProgress] = enabled
         }
     }
 }

@@ -95,8 +95,9 @@ class GuideViewModel @Inject constructor(
         rawChannels,
         userPreferences.hiddenChannels,
         userPreferences.favoriteChannels,
+        userPreferences.favoriteChannelsOrder,
         userPreferences.channelSortOrder
-    ) { list, hidden, favorites, sortOrder ->
+    ) { list, hidden, favorites, favoriteOrder, sortOrder ->
         val filtered = list.filter { channel ->
             !hidden.contains(channel.id)
         }.map { channel ->
@@ -111,10 +112,14 @@ class GuideViewModel @Inject constructor(
                     .thenBy { it.displayName }
             )
             "favorites", "favorites_first" -> filtered.sortedWith(
-                compareByDescending<Channel> { it.isFavorite }
-                    .thenBy { if (it.channelNumber > 0) 0 else 1 }
-                    .thenBy { it.channelNumber }
-                    .thenBy { it.displayName }
+                compareBy<Channel> {
+                    val idx = favoriteOrder.indexOfFirst { favId ->
+                        ChannelCatalog.normalizeId(favId) == ChannelCatalog.normalizeId(it.id)
+                    }
+                    if (idx >= 0) idx else Int.MAX_VALUE
+                }.thenBy { if (it.channelNumber > 0) 0 else 1 }
+                .thenBy { it.channelNumber }
+                .thenBy { it.displayName }
             )
             "name" -> filtered.sortedWith(compareBy { it.displayName })
             else -> filtered.sortedWith(
@@ -128,6 +133,7 @@ class GuideViewModel @Inject constructor(
     private data class FilterPreferences(
         val hiddenChannels: Set<String>,
         val favoriteChannels: Set<String>,
+        val favoriteChannelsOrder: List<String>,
         val channelSortOrder: String,
         val hideReruns: Boolean
     )
@@ -135,10 +141,11 @@ class GuideViewModel @Inject constructor(
     private val filterPrefsFlow = combine(
         userPreferences.hiddenChannels,
         userPreferences.favoriteChannels,
+        userPreferences.favoriteChannelsOrder,
         userPreferences.channelSortOrder,
         userPreferences.hideReruns
-    ) { hidden, favorites, sortOrder, hideReruns ->
-        FilterPreferences(hidden, favorites, sortOrder, hideReruns)
+    ) { hidden, favorites, favoriteOrder, sortOrder, hideReruns ->
+        FilterPreferences(hidden, favorites, favoriteOrder, sortOrder, hideReruns)
     }
 
     private data class GuideFilter(
@@ -215,9 +222,13 @@ class GuideViewModel @Inject constructor(
                     .thenBy { it.startTimestamp }
             )
             "favorites", "favorites_first" -> filtered.sortedWith(
-                compareByDescending<Program> { ChannelCatalog.isFavorite(it.channelId, prefs.favoriteChannels) }
-                    .thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
-                    .thenBy { it.startTimestamp }
+                compareBy<Program> {
+                    val idx = prefs.favoriteChannelsOrder.indexOfFirst { favId ->
+                        ChannelCatalog.normalizeId(favId) == ChannelCatalog.normalizeId(it.channelId)
+                    }
+                    if (idx >= 0) idx else Int.MAX_VALUE
+                }.thenBy { ChannelCatalog.getChannelNumber(it.channelId).let { num -> if (num > 0) num else 999 } }
+                .thenBy { it.startTimestamp }
             )
             "name" -> filtered.sortedWith(
                 compareBy<Program> { ChannelCatalog.getDisplayName(it.channelId) }

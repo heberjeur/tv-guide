@@ -19,6 +19,7 @@ class EpgSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val syncResult = epgRepository.syncEpg(ChannelPackage.COMMUNITY_ENRICHED, forceRefresh = false)
         return if (syncResult.isSuccess) {
+            com.music4music.tvguide.widget.WidgetUpdateHelper.updateAllWidgets(applicationContext)
             Result.success()
         } else {
             Result.retry()

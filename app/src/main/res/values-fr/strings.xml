@@ -281,7 +281,35 @@
     <string name="settings_show_csa_ratings_desc">Afficher [-10], [-12], [-16], [-18] sur les programmes</string>
     <string name="settings_show_channel_numbers">Numéros de chaînes</string>
     <string name="settings_show_channel_numbers_desc">Afficher le numéro officiel devant le nom ou logo</string>
-    <string name="label_actors">Acteurs</string>
     <string name="label_actor">Acteur</string>
+    <string name="label_actors">Acteurs</string>
     <string name="person_programs_empty">Aucune diffusion trouvée pour cette personne cette semaine.</string>
+
+    <string name="label_trailer">Bande-annonce</string>
+    <string name="label_trailers">Bandes-annonces</string>
+    <string name="trailer_loading">Recherche de la bande-annonce...</string>
+    <string name="trailer_empty">Aucune bande-annonce trouvée pour cette émission.</string>
+    <string name="action_open_youtube">Regarder sur YouTube</string>
+    <string name="action_close_trailer">Fermer la bande-annonce</string>
+
+    <string name="favorites_order_title">Ordre des chaînes favorites</string>
+    <string name="favorites_order_desc">Utilisez les flèches pour organiser l\'ordre de vos favoris</string>
+    <string name="all_channels_title">Toutes les chaînes</string>
+    <string name="search_channels_hint">Rechercher une chaîne...</string>
+
+    <string name="widget_settings_title">Widgets écran d\'accueil</string>
+    <string name="widget_settings_desc">Personnalisez le thème et l\'affichage des widgets</string>
+    <string name="widget_theme_title">Thème des widgets</string>
+    <string name="widget_theme_dark">Sombre</string>
+    <string name="widget_theme_light">Clair</string>
+    <string name="widget_theme_transparent">Transparent</string>
+    <string name="widget_show_progress">Barre de progression des diffusions</string>
+    <string name="widget_show_progress_desc">Afficher l\'avancement temporel sur les programmes</string>
+    <string name="widget_action_update">Actualiser les widgets maintenant</string>
+    <string name="widget_updated_toast">Widgets actualisés</string>
+    <string name="widget_now_title">TV Guide - En ce moment</string>
+    <string name="widget_favorites_title">TV Guide - Chaînes favorites</string>
+    <string name="widget_today_title">TV Guide - Ce soir à la TV</string>
+    <string name="widget_no_programs">Aucun programme disponible</string>
+    <string name="widget_no_favorites">Aucune chaîne favorite configurée</string>
 </resources>

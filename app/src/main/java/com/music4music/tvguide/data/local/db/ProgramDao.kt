@@ -12,6 +12,9 @@ interface ProgramDao {
     @Query("SELECT * FROM programs WHERE :currentTimestamp >= startTimestamp AND :currentTimestamp < stopTimestamp ORDER BY channelId ASC")
     fun getNowPlaying(currentTimestamp: Long): Flow<List<ProgramEntity>>
 
+    @Query("SELECT * FROM programs WHERE :currentTimestamp >= startTimestamp AND :currentTimestamp < stopTimestamp ORDER BY channelId ASC")
+    suspend fun getNowPlayingDirect(currentTimestamp: Long): List<ProgramEntity>
+
     @Query("SELECT * FROM programs WHERE channelId = :channelId AND stopTimestamp > :dayStart AND startTimestamp < :dayEnd ORDER BY startTimestamp ASC")
     fun getProgramsForChannel(channelId: String, dayStart: Long, dayEnd: Long): Flow<List<ProgramEntity>>
 
@@ -44,6 +47,9 @@ interface ProgramDao {
 
     @Query("SELECT * FROM programs WHERE stopTimestamp > :startTime AND startTimestamp < :endTime ORDER BY channelId ASC, startTimestamp ASC")
     fun getProgramsByTimeRange(startTime: Long, endTime: Long): Flow<List<ProgramEntity>>
+
+    @Query("SELECT * FROM programs WHERE stopTimestamp > :startTime AND startTimestamp < :endTime ORDER BY channelId ASC, startTimestamp ASC")
+    suspend fun getProgramsByTimeRangeDirect(startTime: Long, endTime: Long): List<ProgramEntity>
 
     @Query("SELECT * FROM programs WHERE stopTimestamp > :fromTime ORDER BY startTimestamp ASC")
     fun getAllActivePrograms(fromTime: Long): Flow<List<ProgramEntity>>

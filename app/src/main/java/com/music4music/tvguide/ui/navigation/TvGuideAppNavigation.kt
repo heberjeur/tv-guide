@@ -54,10 +54,20 @@ sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector)
 }
 
 @Composable
-fun TvGuideAppNavigation() {
+fun TvGuideAppNavigation(
+    deepLinkProgramId: Long? = null,
+    onDeepLinkConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    androidx.compose.runtime.LaunchedEffect(deepLinkProgramId) {
+        if (deepLinkProgramId != null && deepLinkProgramId > 0) {
+            navController.navigate("program/$deepLinkProgramId")
+            onDeepLinkConsumed()
+        }
+    }
 
     val bottomNavItems = listOf(
         Screen.Now,

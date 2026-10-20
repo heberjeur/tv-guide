@@ -281,7 +281,35 @@
     <string name="settings_show_csa_ratings_desc">Display [-10], [-12], [-16], [-18] on programs</string>
     <string name="settings_show_channel_numbers">Channel numbers</string>
     <string name="settings_show_channel_numbers_desc">Display channel number next to name or logo</string>
-    <string name="label_actors">Actors</string>
     <string name="label_actor">Actor</string>
+    <string name="label_actors">Actors</string>
     <string name="person_programs_empty">No broadcasts found for this person this week.</string>
+
+    <string name="label_trailer">Trailer</string>
+    <string name="label_trailers">Trailers</string>
+    <string name="trailer_loading">Searching for trailer...</string>
+    <string name="trailer_empty">No trailer found for this program.</string>
+    <string name="action_open_youtube">Watch on YouTube</string>
+    <string name="action_close_trailer">Close trailer</string>
+
+    <string name="favorites_order_title">Favorite Channels Order</string>
+    <string name="favorites_order_desc">Use arrows to organize your favorites</string>
+    <string name="all_channels_title">All Channels</string>
+    <string name="search_channels_hint">Search a channel...</string>
+
+    <string name="widget_settings_title">Home Screen Widgets</string>
+    <string name="widget_settings_desc">Customize theme and display of home widgets</string>
+    <string name="widget_theme_title">Widget Theme</string>
+    <string name="widget_theme_dark">Dark</string>
+    <string name="widget_theme_light">Light</string>
+    <string name="widget_theme_transparent">Transparent</string>
+    <string name="widget_show_progress">Broadcast progress bar</string>
+    <string name="widget_show_progress_desc">Show time elapsed on running programs</string>
+    <string name="widget_action_update">Refresh widgets now</string>
+    <string name="widget_updated_toast">Widgets refreshed</string>
+    <string name="widget_now_title">TV Guide - On TV now</string>
+    <string name="widget_favorites_title">TV Guide - Favorite channels</string>
+    <string name="widget_today_title">TV Guide - Tonight on TV</string>
+    <string name="widget_no_programs">No program available</string>
+    <string name="widget_no_favorites">No favorite channels configured</string>
 </resources>

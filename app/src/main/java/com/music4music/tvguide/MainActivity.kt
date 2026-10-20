@@ -21,7 +21,10 @@ import kotlinx.coroutines.runBlocking
 import java.util.Locale
 import javax.inject.Inject
 
+import android.content.Intent
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -36,8 +39,11 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var userPreferences: UserPreferences
 
+    private var pendingProgramId by mutableStateOf<Long?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
         applySavedLocale()
         enableEdgeToEdge()
         setContent {
@@ -77,10 +83,26 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        TvGuideAppNavigation()
+                        TvGuideAppNavigation(
+                            deepLinkProgramId = pendingProgramId,
+                            onDeepLinkConsumed = { pendingProgramId = null }
+                        )
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val id = intent?.getLongExtra("program_id", -1L) ?: -1L
+        if (id > 0) {
+            pendingProgramId = id
         }
     }
 

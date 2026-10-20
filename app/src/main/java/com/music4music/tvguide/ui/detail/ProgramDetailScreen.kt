@@ -35,8 +35,10 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Tv
+import com.music4music.tvguide.ui.components.YouTubeTrailerPlayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -116,6 +118,10 @@ fun ProgramDetailScreen(
     val upcomingBroadcasts by viewModel.upcomingBroadcasts.collectAsStateWithLifecycle()
     val defaultLeadTime by viewModel.defaultLeadTimeMinutes.collectAsStateWithLifecycle()
     val defaultRecurrence by viewModel.defaultReminderRecurrence.collectAsStateWithLifecycle()
+    val trailers by viewModel.trailers.collectAsStateWithLifecycle()
+    val selectedTrailer by viewModel.selectedTrailer.collectAsStateWithLifecycle()
+    val isTrailerLoading by viewModel.isTrailerLoading.collectAsStateWithLifecycle()
+    val isTrailerPlayerVisible by viewModel.isTrailerPlayerVisible.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val configuration = LocalConfiguration.current
@@ -585,6 +591,59 @@ fun ProgramDetailScreen(
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = {
+                            viewModel.loadTrailers(
+                                onEmpty = {
+                                    Toast.makeText(context, context.getString(R.string.trailer_empty), Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFCC181E)
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        if (isTrailerLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (trailers.isNotEmpty()) {
+                                stringResource(R.string.label_trailers) + " (${trailers.size})"
+                            } else {
+                                stringResource(R.string.label_trailer)
+                            },
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    if (isTrailerPlayerVisible && selectedTrailer != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        YouTubeTrailerPlayer(
+                            trailers = trailers,
+                            selectedTrailer = selectedTrailer,
+                            onSelectTrailer = { viewModel.selectTrailer(it) },
+                            onClose = { viewModel.closeTrailerPlayer() },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
