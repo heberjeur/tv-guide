@@ -1,10 +1,10 @@
 package com.music4music.tvguide.data.remote
 
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.IOException
 import java.net.URLEncoder
 import java.util.regex.Pattern
 import javax.inject.Inject
@@ -53,8 +53,7 @@ class YouTubeTrailerService @Inject constructor(
             if (!response.isSuccessful) return emptyList()
             val body = response.body?.string() ?: return emptyList()
             parseVideoResults(body)
-        } catch (e: Exception) {
-            Log.e("YouTubeTrailerService", "Failed to fetch trailers for query: $cleanTitle", e)
+        } catch (e: IOException) {
             emptyList()
         }
     }

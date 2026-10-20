@@ -7,24 +7,18 @@ import com.music4music.tvguide.R
 object WidgetThemeHelper {
 
     fun applyTheme(views: RemoteViews, theme: String) {
-        val bgRes = when (theme) {
-            "light" -> R.drawable.widget_bg_light
-            "transparent" -> R.drawable.widget_bg_transparent
-            else -> R.drawable.widget_bg_dark
+        when (theme) {
+            "light" -> {
+                views.setInt(R.id.widget_container, "setBackgroundColor", Color.parseColor("#F8F9FA"))
+                views.setTextColor(R.id.widget_header_title, Color.parseColor("#111827"))
+                views.setInt(R.id.widget_divider, "setBackgroundColor", Color.parseColor("#E5E7EB"))
+            }
+            "transparent" -> {
+                views.setInt(R.id.widget_container, "setBackgroundColor", Color.parseColor("#B3121212"))
+                views.setTextColor(R.id.widget_header_title, Color.parseColor("#FFFFFF"))
+                views.setInt(R.id.widget_divider, "setBackgroundColor", Color.parseColor("#33FFFFFF"))
+            }
         }
-        val titleColor = when (theme) {
-            "light" -> Color.parseColor("#111827")
-            else -> Color.parseColor("#FFFFFF")
-        }
-        val dividerColor = when (theme) {
-            "light" -> Color.parseColor("#E5E7EB")
-            "transparent" -> Color.parseColor("#33FFFFFF")
-            else -> Color.parseColor("#2E333D")
-        }
-
-        views.setInt(R.id.widget_container, "setBackgroundResource", bgRes)
-        views.setTextColor(R.id.widget_header_title, titleColor)
-        views.setInt(R.id.widget_divider, "setBackgroundColor", dividerColor)
     }
 
     fun applyItemTheme(views: RemoteViews, theme: String) {

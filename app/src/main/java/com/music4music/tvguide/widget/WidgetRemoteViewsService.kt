@@ -44,68 +44,64 @@ private class WidgetItemFactory(
     override fun onCreate() {}
 
     override fun onDataSetChanged() {
-        try {
-            val entryPoint = EntryPointAccessors.fromApplication(
-                context,
-                WidgetEntryPoint::class.java
-            )
-            val dao = entryPoint.programDao()
-            val prefs = entryPoint.userPreferences()
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context,
+            WidgetEntryPoint::class.java
+        )
+        val dao = entryPoint.programDao()
+        val prefs = entryPoint.userPreferences()
 
-            runBlocking {
-                widgetTheme = prefs.widgetTheme.first()
-                showProgress = prefs.widgetShowProgress.first()
-                val now = System.currentTimeMillis()
+        runBlocking {
+            widgetTheme = prefs.widgetTheme.first()
+            showProgress = prefs.widgetShowProgress.first()
+            val now = System.currentTimeMillis()
 
-                when (widgetType) {
-                    WidgetRemoteViewsService.TYPE_FAVORITES -> {
-                        val favoriteOrder = prefs.favoriteChannelsOrder.first()
-                        val allNow = dao.getNowPlayingDirect(now)
-                        programs = if (favoriteOrder.isEmpty()) {
-                            emptyList()
-                        } else {
-                            allNow.filter { p ->
-                                ChannelCatalog.isFavorite(p.channelId, favoriteOrder.toSet())
-                            }.sortedBy { p ->
-                                val idx = favoriteOrder.indexOfFirst {
-                                    ChannelCatalog.normalizeId(it) == ChannelCatalog.normalizeId(p.channelId)
-                                }
-                                if (idx >= 0) idx else Int.MAX_VALUE
+            when (widgetType) {
+                WidgetRemoteViewsService.TYPE_FAVORITES -> {
+                    val favoriteOrder = prefs.favoriteChannelsOrder.first()
+                    val allNow = dao.getNowPlayingDirect(now)
+                    programs = if (favoriteOrder.isEmpty()) {
+                        emptyList()
+                    } else {
+                        allNow.filter { p ->
+                            ChannelCatalog.isFavorite(p.channelId, favoriteOrder.toSet())
+                        }.sortedBy { p ->
+                            val idx = favoriteOrder.indexOfFirst {
+                                ChannelCatalog.normalizeId(it) == ChannelCatalog.normalizeId(p.channelId)
                             }
-                        }
-                    }
-                    WidgetRemoteViewsService.TYPE_TODAY -> {
-                        val zone = ZoneId.systemDefault()
-                        val today = LocalDate.now(zone)
-                        val primeStart = today.atTime(20, 30).atZone(zone).toInstant().toEpochMilli()
-                        val primeEnd = today.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
-                        val queryStart = if (now > primeEnd) {
-                            now
-                        } else {
-                            primeStart
-                        }
-                        val queryEnd = if (now > primeEnd) {
-                            today.plusDays(1).atTime(6, 0).atZone(zone).toInstant().toEpochMilli()
-                        } else {
-                            primeEnd
-                        }
-                        val list = dao.getProgramsByTimeRangeDirect(queryStart, queryEnd)
-                        programs = list.sortedBy { p ->
-                            val num = ChannelCatalog.getChannelNumber(p.channelId)
-                            if (num > 0) num else 999
-                        }
-                    }
-                    else -> {
-                        val list = dao.getNowPlayingDirect(now)
-                        programs = list.sortedBy { p ->
-                            val num = ChannelCatalog.getChannelNumber(p.channelId)
-                            if (num > 0) num else 999
+                            if (idx >= 0) idx else Int.MAX_VALUE
                         }
                     }
                 }
+                WidgetRemoteViewsService.TYPE_TODAY -> {
+                    val zone = ZoneId.systemDefault()
+                    val today = LocalDate.now(zone)
+                    val primeStart = today.atTime(20, 30).atZone(zone).toInstant().toEpochMilli()
+                    val primeEnd = today.atTime(23, 45).atZone(zone).toInstant().toEpochMilli()
+                    val queryStart = if (now > primeEnd) {
+                        now
+                    } else {
+                        primeStart
+                    }
+                    val queryEnd = if (now > primeEnd) {
+                        today.plusDays(1).atTime(6, 0).atZone(zone).toInstant().toEpochMilli()
+                    } else {
+                        primeEnd
+                    }
+                    val list = dao.getProgramsByTimeRangeDirect(queryStart, queryEnd)
+                    programs = list.sortedBy { p ->
+                        val num = ChannelCatalog.getChannelNumber(p.channelId)
+                        if (num > 0) num else 999
+                    }
+                }
+                else -> {
+                    val list = dao.getNowPlayingDirect(now)
+                    programs = list.sortedBy { p ->
+                        val num = ChannelCatalog.getChannelNumber(p.channelId)
+                        if (num > 0) num else 999
+                    }
+                }
             }
-        } catch (e: Exception) {
-            programs = emptyList()
         }
     }
 

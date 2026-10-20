@@ -12,8 +12,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
         <TextView
             android:id="@+id/widget_item_channel"
@@ -32,6 +32,7 @@
             android:id="@+id/widget_item_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
             android:layout_marginStart="8dp"
             android:textColor="#9E9E9E"
             android:textSize="11sp" />
@@ -63,9 +64,9 @@
         android:id="@+id/widget_item_progress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="3dp"
+        android:layout_height="4dp"
         android:layout_marginTop="5dp"
+        android:indeterminateOnly="false"
         android:max="100"
-        android:progress="0"
-        android:progressTint="#2196F3" />
+        android:progress="0" />
 </LinearLayout>
