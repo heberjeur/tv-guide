@@ -52,7 +52,7 @@
     <string name="reminder_active">Rappel actif</string>
     <string name="reminder_set">Rappel</string>
     <string name="reminder_dialog_lead_time">Notifier combien de temps avant ?</string>
-    <string name="action_external_calendar">Mon agenda</string>
+    <string name="action_external_calendar">Agenda</string>
     <string name="no_calendar_app_installed">Aucune application d\'agenda disponible</string>
 
     <string name="section_information">Informations</string>

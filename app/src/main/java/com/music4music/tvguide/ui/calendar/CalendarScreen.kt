@@ -69,6 +69,8 @@ import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
 import com.music4music.tvguide.ui.theme.SurfaceBorder
 import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
+import android.os.Build
+import androidx.compose.ui.platform.LocalConfiguration
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -78,8 +80,6 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val monthYearFormatter = DateTimeFormatter.ofPattern("MMMM yyyy")
-private val selectedDateHeaderFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM")
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +99,18 @@ fun CalendarScreen(
     val zone = com.music4music.tvguide.ui.theme.LocalDisplayZone.current
     val today = remember(zone) { LocalDate.now(zone) }
     var currentYearMonth by remember { mutableStateOf(YearMonth.from(selectedDate)) }
+
+    val configuration = LocalConfiguration.current
+    val currentLocale = remember(configuration) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !configuration.locales.isEmpty) {
+            configuration.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            configuration.locale ?: Locale.getDefault()
+        }
+    }
+    val monthYearFormatter = remember(currentLocale) { DateTimeFormatter.ofPattern("MMMM yyyy", currentLocale) }
+    val selectedDateHeaderFormatter = remember(currentLocale) { DateTimeFormatter.ofPattern("EEEE d MMMM", currentLocale) }
 
     val reminderDates = remember(allReminders, zone) {
         allReminders.map { Instant.ofEpochMilli(it.startTimestamp).atZone(zone).toLocalDate() }.toSet()
@@ -206,7 +218,7 @@ fun CalendarScreen(
 
                         Text(
                             text = currentYearMonth.format(monthYearFormatter)
-                                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+                                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(currentLocale) else it.toString() },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
@@ -236,7 +248,7 @@ fun CalendarScreen(
                             DayOfWeek.SATURDAY,
                             DayOfWeek.SUNDAY
                         ).forEach { dayOfWeek ->
-                            val label = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(3)
+                            val label = dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale).take(3)
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelSmall,
@@ -332,7 +344,7 @@ fun CalendarScreen(
             ) {
                 Text(
                     text = selectedDate.format(selectedDateHeaderFormatter)
-                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(currentLocale) else it.toString() },
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary

@@ -82,6 +82,8 @@ class MainActivity : ComponentActivity() {
     private fun applySavedLocale() {
         try {
             val lang = runBlocking { userPreferences.appLanguage.first() }
+            val locale = Locale.forLanguageTag(lang)
+            Locale.setDefault(locale)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val localeManager = getSystemService(LocaleManager::class.java)
                 val currentTags = localeManager?.applicationLocales?.toLanguageTags() ?: ""
@@ -89,8 +91,6 @@ class MainActivity : ComponentActivity() {
                     localeManager?.applicationLocales = LocaleList.forLanguageTags(lang)
                 }
             } else {
-                val locale = Locale(lang)
-                Locale.setDefault(locale)
                 val config = resources.configuration
                 config.setLocale(locale)
                 resources.updateConfiguration(config, resources.displayMetrics)

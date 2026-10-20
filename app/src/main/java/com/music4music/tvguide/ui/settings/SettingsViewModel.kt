@@ -128,12 +128,12 @@ class SettingsViewModel @Inject constructor(
     fun setLanguage(langCode: String, activity: Activity?) {
         viewModelScope.launch {
             userPreferences.setAppLanguage(langCode)
+            val locale = Locale.forLanguageTag(langCode)
+            Locale.setDefault(locale)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val localeManager = context.getSystemService(LocaleManager::class.java)
                 localeManager?.applicationLocales = LocaleList.forLanguageTags(langCode)
             } else {
-                val locale = Locale(langCode)
-                Locale.setDefault(locale)
                 val config = context.resources.configuration
                 config.setLocale(locale)
                 context.resources.updateConfiguration(config, context.resources.displayMetrics)

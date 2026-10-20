@@ -52,7 +52,7 @@
     <string name="reminder_active">Reminder set</string>
     <string name="reminder_set">Reminder</string>
     <string name="reminder_dialog_lead_time">Notify before broadcast</string>
-    <string name="action_external_calendar">External Calendar</string>
+    <string name="action_external_calendar">Calendar</string>
     <string name="no_calendar_app_installed">No calendar app available</string>
 
     <string name="section_information">Information</string>

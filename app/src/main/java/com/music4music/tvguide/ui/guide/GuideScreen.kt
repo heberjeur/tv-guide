@@ -95,14 +95,13 @@ import com.music4music.tvguide.domain.model.TvCategory
 import com.music4music.tvguide.ui.components.ProgramCard
 import com.music4music.tvguide.ui.theme.AccentRed
 import kotlinx.coroutines.launch
+import android.os.Build
+import androidx.compose.ui.platform.LocalConfiguration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
-private val dayChipFormatter = DateTimeFormatter.ofPattern("EEE d MMM")
-private val fullDayFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,6 +120,18 @@ fun GuideScreen(
     val programs by viewModel.programs.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+
+    val configuration = LocalConfiguration.current
+    val currentLocale = remember(configuration) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !configuration.locales.isEmpty) {
+            configuration.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            configuration.locale ?: Locale.getDefault()
+        }
+    }
+    val dayChipFormatter = remember(currentLocale) { DateTimeFormatter.ofPattern("EEE d MMM", currentLocale) }
+    val fullDayFormatter = remember(currentLocale) { DateTimeFormatter.ofPattern("EEEE d MMMM", currentLocale) }
 
     var isSearchActive by remember { mutableStateOf(false) }
     var showCategorySheet by remember { mutableStateOf(false) }
@@ -412,6 +423,7 @@ fun GuideScreen(
             selectedDate = selectedDate,
             today = today,
             tomorrow = tomorrow,
+            fullDayFormatter = fullDayFormatter,
             onDateSelect = viewModel::selectDate,
             onDismiss = { showDateSheet = false }
         )
@@ -999,6 +1011,7 @@ private fun DateFilterBottomSheet(
     selectedDate: LocalDate?,
     today: LocalDate,
     tomorrow: LocalDate,
+    fullDayFormatter: DateTimeFormatter,
     onDateSelect: (LocalDate?) -> Unit,
     onDismiss: () -> Unit
 ) {

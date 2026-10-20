@@ -58,13 +58,14 @@ import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
 import com.music4music.tvguide.ui.theme.IndicatorGreen
 import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
+import android.os.Build
+import androidx.compose.ui.platform.LocalConfiguration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val dateFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -250,6 +251,17 @@ private fun EpisodeCard(
     episode: Program,
     onClick: () -> Unit
 ) {
+    val configuration = LocalConfiguration.current
+    val currentLocale = remember(configuration) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !configuration.locales.isEmpty) {
+            configuration.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            configuration.locale ?: Locale.getDefault()
+        }
+    }
+    val dateFormatter = remember(currentLocale) { DateTimeFormatter.ofPattern("EEEE d MMMM", currentLocale) }
+
     val zone = ZoneId.systemDefault()
     val startTime = Instant.ofEpochMilli(episode.startTimestamp).atZone(zone).format(timeFormatter)
     val stopTime = Instant.ofEpochMilli(episode.stopTimestamp).atZone(zone).format(timeFormatter)

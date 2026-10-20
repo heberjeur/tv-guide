@@ -87,16 +87,18 @@ import com.music4music.tvguide.ui.theme.AccentRed
 import com.music4music.tvguide.ui.theme.DarkBackground
 import com.music4music.tvguide.ui.theme.DarkSurface
 import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
+import android.os.Build
+import androidx.compose.ui.platform.LocalConfiguration
 import com.music4music.tvguide.ui.theme.IndicatorGreen
 import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
+import com.music4music.tvguide.util.CountryUtils
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private val dateFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -113,6 +115,17 @@ fun ProgramDetailScreen(
     val defaultLeadTime by viewModel.defaultLeadTimeMinutes.collectAsStateWithLifecycle()
     val defaultRecurrence by viewModel.defaultReminderRecurrence.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    val configuration = LocalConfiguration.current
+    val currentLocale = remember(configuration) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !configuration.locales.isEmpty) {
+            configuration.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            configuration.locale ?: Locale.getDefault()
+        }
+    }
+    val dateFormatter = remember(currentLocale) { DateTimeFormatter.ofPattern("EEEE d MMMM", currentLocale) }
 
     var selectedLeadTime by remember(defaultLeadTime) { mutableIntStateOf(defaultLeadTime) }
     var selectedRecurrence by remember(defaultRecurrence) { mutableStateOf(defaultRecurrence) }
@@ -485,10 +498,13 @@ fun ProgramDetailScreen(
                                 )
                             }
 
-                            val countryText = currentProgram.country
+                            val rawCountry = currentProgram.country
                                 ?: if (currentProgram.channelId.endsWith(".fr")) {
                                     stringResource(R.string.default_country)
                                 } else null
+                            val countryText = remember(rawCountry, currentLocale) {
+                                CountryUtils.formatCountry(rawCountry, currentLocale)
+                            }
 
                             if (!countryText.isNullOrBlank()) {
                                 InfoRow(

@@ -412,7 +412,10 @@ fun SettingsScreen(
                             onCheckedChange = viewModel::setHideReruns,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = AccentRed
+                                checkedTrackColor = AccentRed,
+                                uncheckedThumbColor = Color(0xFFD6D6D6),
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline
                             )
                         )
                     }
@@ -442,7 +445,10 @@ fun SettingsScreen(
                             onCheckedChange = viewModel::setHighlightAccessibility,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = AccentRed
+                                checkedTrackColor = AccentRed,
+                                uncheckedThumbColor = Color(0xFFD6D6D6),
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline
                             )
                         )
                     }
@@ -632,7 +638,10 @@ fun SettingsScreen(
                             onCheckedChange = viewModel::toggleNotifications,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = AccentRed
+                                checkedTrackColor = AccentRed,
+                                uncheckedThumbColor = Color(0xFFD6D6D6),
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline
                             )
                         )
                     }
@@ -697,7 +706,10 @@ fun SettingsScreen(
                                 onCheckedChange = viewModel::setVibrationEnabled,
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
-                                    checkedTrackColor = AccentRed
+                                    checkedTrackColor = AccentRed,
+                                    uncheckedThumbColor = Color(0xFFD6D6D6),
+                                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    uncheckedBorderColor = MaterialTheme.colorScheme.outline
                                 )
                             )
                         }
@@ -839,7 +851,10 @@ fun SettingsScreen(
                             onCheckedChange = viewModel::setAutoSync,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = AccentRed
+                                checkedTrackColor = AccentRed,
+                                uncheckedThumbColor = Color(0xFFD6D6D6),
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline
                             )
                         )
                     }
@@ -861,7 +876,10 @@ fun SettingsScreen(
                             onCheckedChange = viewModel::setSyncWifiOnly,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = AccentRed
+                                checkedTrackColor = AccentRed,
+                                uncheckedThumbColor = Color(0xFFD6D6D6),
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline
                             )
                         )
                     }
@@ -883,7 +901,10 @@ fun SettingsScreen(
                             onCheckedChange = viewModel::setSyncChargingOnly,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = AccentRed
+                                checkedTrackColor = AccentRed,
+                                uncheckedThumbColor = Color(0xFFD6D6D6),
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                uncheckedBorderColor = MaterialTheme.colorScheme.outline
                             )
                         )
                     }
