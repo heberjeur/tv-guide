@@ -37,6 +37,7 @@ import com.music4music.tvguide.ui.calendar.CalendarScreen
 import com.music4music.tvguide.ui.categories.CategoriesScreen
 import com.music4music.tvguide.ui.channels.ChannelListScreen
 import com.music4music.tvguide.ui.detail.ProgramDetailScreen
+import com.music4music.tvguide.ui.person.PersonProgramsScreen
 import com.music4music.tvguide.ui.series.SeriesEpisodesScreen
 import com.music4music.tvguide.ui.guide.GuideScreen
 import com.music4music.tvguide.ui.now.NowPlayingScreen
@@ -291,6 +292,10 @@ private fun AppNavHost(
                     onProgramClick = { id -> navController.navigate("program/$id") },
                     onSeasonClick = { id, season ->
                         navController.navigate("series_episodes/$id?season=$season")
+                    },
+                    onPersonClick = { personName ->
+                        val encoded = java.net.URLEncoder.encode(personName, "UTF-8")
+                        navController.navigate("person/$encoded")
                     }
                 )
             }
@@ -307,6 +312,18 @@ private fun AppNavHost(
                 SeriesEpisodesScreen(
                     onBackClick = { navController.popBackStack() },
                     onProgramClick = { id -> navController.navigate("program/$id") }
+                )
+            }
+            composable(
+                route = "person/{personName}",
+                arguments = listOf(
+                    navArgument("personName") { type = NavType.StringType }
+                )
+            ) {
+                PersonProgramsScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onProgramClick = { id -> navController.navigate("program/$id") },
+                    onChannelClick = navigateToChannelGuide
                 )
             }
         }

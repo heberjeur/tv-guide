@@ -195,6 +195,11 @@ class GuideViewModel @Inject constructor(
             val matchesQuery = query.isBlank() ||
                     program.title.contains(query, ignoreCase = true) ||
                     program.description.contains(query, ignoreCase = true) ||
+                    program.credit.directors.any { it.contains(query, ignoreCase = true) } ||
+                    program.credit.actors.any { it.contains(query, ignoreCase = true) } ||
+                    program.credit.presenters.any { it.contains(query, ignoreCase = true) } ||
+                    program.credit.guests.any { it.contains(query, ignoreCase = true) } ||
+                    program.categories.any { cat -> cat.contains(query, ignoreCase = true) } ||
                     ChannelCatalog.getDisplayName(program.channelId).contains(query, ignoreCase = true)
             val isCurrentOrUpcoming = if (selectedDate == null) {
                 program.stopTimestamp > currentTime - 5 * 60 * 1000L

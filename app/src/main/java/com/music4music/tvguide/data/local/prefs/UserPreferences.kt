@@ -43,6 +43,16 @@ class UserPreferences @Inject constructor(
     private val keyCustomNotificationDateTime = androidx.datastore.preferences.core.longPreferencesKey("custom_notification_datetime")
     private val keyDisplayTimezone = stringPreferencesKey("display_timezone")
     private val keyAccentColor = stringPreferencesKey("accent_color")
+    private val keyShowCsaRatings = booleanPreferencesKey("show_csa_ratings")
+    private val keyShowChannelNumbers = booleanPreferencesKey("show_channel_numbers")
+
+    val showCsaRatings: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keyShowCsaRatings] ?: true
+    }
+
+    val showChannelNumbers: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[keyShowChannelNumbers] ?: true
+    }
 
     val accentColor: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[keyAccentColor] ?: "#E50914"
@@ -294,6 +304,18 @@ class UserPreferences @Inject constructor(
     suspend fun setAccentColor(colorHex: String) {
         context.dataStore.edit { preferences ->
             preferences[keyAccentColor] = colorHex
+        }
+    }
+
+    suspend fun setShowCsaRatings(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keyShowCsaRatings] = enabled
+        }
+    }
+
+    suspend fun setShowChannelNumbers(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[keyShowChannelNumbers] = enabled
         }
     }
 }

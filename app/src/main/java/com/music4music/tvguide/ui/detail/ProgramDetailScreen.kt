@@ -108,6 +108,7 @@ fun ProgramDetailScreen(
     onChannelClick: (String) -> Unit = {},
     onProgramClick: (Long) -> Unit = {},
     onSeasonClick: (Long, Int) -> Unit = { _, _ -> },
+    onPersonClick: (String) -> Unit = {},
     viewModel: ProgramDetailViewModel = hiltViewModel()
 ) {
     val program by viewModel.program.collectAsStateWithLifecycle()
@@ -516,28 +517,55 @@ fun ProgramDetailScreen(
                             }
 
                             if (currentProgram.credit.directors.isNotEmpty()) {
-                                InfoRow(
-                                    label = if (currentProgram.credit.directors.size > 1) {
-                                        stringResource(R.string.label_directors)
-                                    } else {
-                                        stringResource(R.string.label_director)
-                                    },
-                                    value = currentProgram.credit.directors.map { it.trim() }.distinct().joinToString("\n")
-                                )
+                                val validDirectors = currentProgram.credit.directors.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+                                if (validDirectors.isNotEmpty()) {
+                                    PeopleInfoRow(
+                                        label = if (validDirectors.size > 1) {
+                                            stringResource(R.string.label_directors)
+                                        } else {
+                                            stringResource(R.string.label_director)
+                                        },
+                                        people = validDirectors,
+                                        onPersonClick = onPersonClick
+                                    )
+                                }
                             }
 
                             if (currentProgram.credit.presenters.isNotEmpty()) {
-                                InfoRow(
-                                    label = stringResource(R.string.label_presented_by),
-                                    value = currentProgram.credit.presenters.map { it.trim() }.distinct().joinToString("\n")
-                                )
+                                val validPresenters = currentProgram.credit.presenters.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+                                if (validPresenters.isNotEmpty()) {
+                                    PeopleInfoRow(
+                                        label = stringResource(R.string.label_presented_by),
+                                        people = validPresenters,
+                                        onPersonClick = onPersonClick
+                                    )
+                                }
+                            }
+
+                            if (currentProgram.credit.actors.isNotEmpty()) {
+                                val validActors = currentProgram.credit.actors.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+                                if (validActors.isNotEmpty()) {
+                                    PeopleInfoRow(
+                                        label = if (validActors.size > 1) {
+                                            stringResource(R.string.label_actors)
+                                        } else {
+                                            stringResource(R.string.label_actor)
+                                        },
+                                        people = validActors,
+                                        onPersonClick = onPersonClick
+                                    )
+                                }
                             }
 
                             if (currentProgram.credit.guests.isNotEmpty()) {
-                                InfoRow(
-                                    label = stringResource(R.string.label_guests),
-                                    value = currentProgram.credit.guests.map { it.trim() }.distinct().joinToString("\n")
-                                )
+                                val validGuests = currentProgram.credit.guests.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+                                if (validGuests.isNotEmpty()) {
+                                    PeopleInfoRow(
+                                        label = stringResource(R.string.label_guests),
+                                        people = validGuests,
+                                        onPersonClick = onPersonClick
+                                    )
+                                }
                             }
 
                             if (currentProgram.isHd) {
@@ -1110,6 +1138,59 @@ private fun InfoRow(label: String, value: String) {
             textAlign = TextAlign.End,
             modifier = Modifier.weight(1f)
         )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PeopleInfoRow(
+    label: String,
+    people: List<String>,
+    onPersonClick: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            people.forEach { person ->
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = DarkSurfaceVariant,
+                    modifier = Modifier.clickable { onPersonClick(person) }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = person,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = AccentRed,
+                            modifier = Modifier.size(10.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -141,6 +141,12 @@ class EpgRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getProgramsByPerson(personName: String): Flow<List<Program>> {
+        return programDao.getProgramsByPerson(personName).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
+
     override suspend fun toggleFavoriteChannel(channelId: String, isFavorite: Boolean) {
         channelDao.updateFavoriteStatus(channelId, isFavorite)
     }

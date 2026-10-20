@@ -69,6 +69,7 @@ fun ProgramCard(
     val startTime = Instant.ofEpochMilli(program.startTimestamp).atZone(zone).format(timeFormatter)
     val stopTime = Instant.ofEpochMilli(program.stopTimestamp).atZone(zone).format(timeFormatter)
     val channelLabel = channelName ?: ChannelCatalog.getDisplayName(program.channelId)
+    val channelNumber = remember(program.channelId) { ChannelCatalog.getChannelNumber(program.channelId) }
     val channelLogoUrl = ChannelCatalog.getLogoUrl(program.channelId)
 
     val episodeLabel = when {
@@ -101,6 +102,8 @@ fun ProgramCard(
 
     val density = com.music4music.tvguide.ui.theme.LocalDisplayDensity.current
     val highlightAccessibility = com.music4music.tvguide.ui.theme.LocalHighlightAccessibility.current
+    val showCsaRatings = com.music4music.tvguide.ui.theme.LocalShowCsaRatings.current
+    val showChannelNumbers = com.music4music.tvguide.ui.theme.LocalShowChannelNumbers.current
     val isCompact = density == "compact"
     val timeColWidth = if (isCompact) 78.dp else 88.dp
     val channelLogoSize = if (isCompact) 46.dp else 52.dp
@@ -168,7 +171,11 @@ fun ProgramCard(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = channelLabel.take(3).uppercase(),
+                                        text = if (showChannelNumbers && channelNumber > 0) {
+                                            channelNumber.toString()
+                                        } else {
+                                            channelLabel.take(3).uppercase()
+                                        },
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = TextPrimary
@@ -182,13 +189,15 @@ fun ProgramCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    val csaBadge = when (program.contentRating?.trim()) {
-                        "-10", "10" -> "-10"
-                        "-12", "12", "13" -> "-12"
-                        "-16", "16" -> "-16"
-                        "-18", "18" -> "-18"
-                        else -> null
-                    }
+                    val csaBadge = if (showCsaRatings) {
+                        when (program.contentRating?.trim()) {
+                            "-10", "10" -> "-10"
+                            "-12", "12", "13" -> "-12"
+                            "-16", "16" -> "-16"
+                            "-18", "18" -> "-18"
+                            else -> null
+                        }
+                    } else null
                     val hasAccessibility = highlightAccessibility && (program.hasSubtitlesResolved || program.hasAudioDescription)
                     val hasSignaletique = program.isLiveBroadcast || program.isUnreleasedResolved || program.isRerun ||
                         program.isHd || hasAccessibility || csaBadge != null

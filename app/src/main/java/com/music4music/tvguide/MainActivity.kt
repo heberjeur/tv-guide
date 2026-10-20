@@ -45,6 +45,8 @@ class MainActivity : ComponentActivity() {
             val fontSizeScale by userPreferences.fontSizeScale.collectAsStateWithLifecycle(initialValue = "normal")
             val displayDensity by userPreferences.displayDensity.collectAsStateWithLifecycle(initialValue = "comfort")
             val highlightAccessibility by userPreferences.highlightAccessibility.collectAsStateWithLifecycle(initialValue = true)
+            val showCsaRatings by userPreferences.showCsaRatings.collectAsStateWithLifecycle(initialValue = true)
+            val showChannelNumbers by userPreferences.showChannelNumbers.collectAsStateWithLifecycle(initialValue = true)
             val displayTimezone by userPreferences.displayTimezone.collectAsStateWithLifecycle(initialValue = "origin")
             val accentColor by userPreferences.accentColor.collectAsStateWithLifecycle(initialValue = "#E50914")
             val currentDisplayZone = androidx.compose.runtime.remember(displayTimezone) {
@@ -66,6 +68,8 @@ class MainActivity : ComponentActivity() {
                     androidx.compose.ui.platform.LocalDensity provides effectiveDensity,
                     LocalDisplayDensity provides displayDensity,
                     LocalHighlightAccessibility provides highlightAccessibility,
+                    com.music4music.tvguide.ui.theme.LocalShowCsaRatings provides showCsaRatings,
+                    com.music4music.tvguide.ui.theme.LocalShowChannelNumbers provides showChannelNumbers,
                     LocalFontSizeScale provides fontSizeScale,
                     com.music4music.tvguide.ui.theme.LocalDisplayZone provides currentDisplayZone
                 ) {

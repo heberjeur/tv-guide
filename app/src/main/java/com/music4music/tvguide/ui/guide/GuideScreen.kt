@@ -177,13 +177,27 @@ fun GuideScreen(
                                 )
                             },
                             singleLine = true,
+                            shape = RoundedCornerShape(24.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = AccentRed,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                                 focusedTextColor = MaterialTheme.colorScheme.onSurface,
                                 unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                             ),
-                            modifier = Modifier.fillMaxWidth()
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = stringResource(R.string.action_clear_search),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 4.dp)
                         )
                     } else {
                         Text(
@@ -208,17 +222,7 @@ fun GuideScreen(
                     }
                 },
                 actions = {
-                    if (isSearchActive) {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.action_clear_search),
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    } else {
+                    if (!isSearchActive) {
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(
                                 imageVector = Icons.Default.Search,

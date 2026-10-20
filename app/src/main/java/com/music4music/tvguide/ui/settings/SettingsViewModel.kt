@@ -113,6 +113,12 @@ class SettingsViewModel @Inject constructor(
     val highlightAccessibility: StateFlow<Boolean> = userPreferences.highlightAccessibility
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val showCsaRatings: StateFlow<Boolean> = userPreferences.showCsaRatings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val showChannelNumbers: StateFlow<Boolean> = userPreferences.showChannelNumbers
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     val allChannels: StateFlow<List<Channel>> = epgRepository.getChannels(ChannelPackage.COMMUNITY_ENRICHED)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -339,6 +345,18 @@ class SettingsViewModel @Inject constructor(
     fun setHighlightAccessibility(enabled: Boolean) {
         viewModelScope.launch {
             userPreferences.setHighlightAccessibility(enabled)
+        }
+    }
+
+    fun setShowCsaRatings(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setShowCsaRatings(enabled)
+        }
+    }
+
+    fun setShowChannelNumbers(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setShowChannelNumbers(enabled)
         }
     }
 

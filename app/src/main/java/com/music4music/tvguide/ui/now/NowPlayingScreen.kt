@@ -149,7 +149,10 @@ fun NowPlayingScreen(
                             onValueChange = viewModel::setSearchQuery,
                             placeholder = { Text(stringResource(R.string.search_programs_placeholder)) },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 4.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = TextPrimary,
                                 unfocusedTextColor = TextPrimary,

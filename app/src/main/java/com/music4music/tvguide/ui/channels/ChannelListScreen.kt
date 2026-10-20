@@ -105,13 +105,27 @@ fun ChannelListScreen(
                                 )
                             },
                             singleLine = true,
+                            shape = RoundedCornerShape(24.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = AccentRed,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                                 focusedTextColor = MaterialTheme.colorScheme.onSurface,
                                 unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                             ),
-                            modifier = Modifier.fillMaxWidth()
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.updateSearchQuery("") }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = stringResource(R.string.action_clear_search),
+                                            tint = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 4.dp)
                         )
                     } else {
                         Text(
@@ -136,17 +150,7 @@ fun ChannelListScreen(
                     }
                 },
                 actions = {
-                    if (isSearchActive) {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.action_clear_search),
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    } else {
+                    if (!isSearchActive) {
                         IconButton(onClick = viewModel::toggleGridMode) {
                             Icon(
                                 imageVector = if (isGridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
@@ -267,6 +271,7 @@ private fun ChannelListCard(
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
+    val showChannelNumbers = com.music4music.tvguide.ui.theme.LocalShowChannelNumbers.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -298,7 +303,7 @@ private fun ChannelListCard(
                     )
                 } else {
                     Text(
-                        text = if (channel.channelNumber > 0) channel.channelNumber.toString() else channel.displayName.take(2).uppercase(),
+                        text = if (showChannelNumbers && channel.channelNumber > 0) channel.channelNumber.toString() else channel.displayName.take(2).uppercase(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = AccentRed
@@ -315,7 +320,7 @@ private fun ChannelListCard(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                if (channel.channelNumber > 0) {
+                if (showChannelNumbers && channel.channelNumber > 0) {
                     Text(
                         text = stringResource(R.string.channel_number_format, channel.channelNumber),
                         style = MaterialTheme.typography.bodySmall,
@@ -341,6 +346,7 @@ private fun ChannelGridCard(
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
+    val showChannelNumbers = com.music4music.tvguide.ui.theme.LocalShowChannelNumbers.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -373,7 +379,7 @@ private fun ChannelGridCard(
                     )
                 } else {
                     Text(
-                        text = if (channel.channelNumber > 0) channel.channelNumber.toString() else channel.displayName.take(2).uppercase(),
+                        text = if (showChannelNumbers && channel.channelNumber > 0) channel.channelNumber.toString() else channel.displayName.take(2).uppercase(),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = AccentRed
@@ -393,7 +399,7 @@ private fun ChannelGridCard(
                 textAlign = TextAlign.Center
             )
 
-            if (channel.channelNumber > 0) {
+            if (showChannelNumbers && channel.channelNumber > 0) {
                 Text(
                     text = stringResource(R.string.channel_number_format, channel.channelNumber),
                     style = MaterialTheme.typography.labelSmall,

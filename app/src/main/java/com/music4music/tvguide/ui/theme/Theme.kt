@@ -53,6 +53,8 @@ private fun buildLightColorScheme(accent: Color, variant: Color) = lightColorSch
 
 val LocalDisplayDensity = compositionLocalOf { "comfort" }
 val LocalHighlightAccessibility = compositionLocalOf { true }
+val LocalShowCsaRatings = compositionLocalOf { true }
+val LocalShowChannelNumbers = compositionLocalOf { true }
 val LocalFontSizeScale = compositionLocalOf { "normal" }
 val LocalDisplayZone = compositionLocalOf { java.time.ZoneId.of("Europe/Paris") }
 

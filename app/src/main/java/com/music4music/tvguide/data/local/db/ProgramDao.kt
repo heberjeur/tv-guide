@@ -24,8 +24,11 @@ interface ProgramDao {
     @Query("SELECT * FROM programs WHERE channelId = :channelId AND startTimestamp = :startTimestamp LIMIT 1")
     suspend fun getProgramByChannelAndStart(channelId: String, startTimestamp: Long): ProgramEntity?
 
-    @Query("SELECT * FROM programs WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' ORDER BY startTimestamp ASC LIMIT 100")
+    @Query("SELECT * FROM programs WHERE title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%' OR directors LIKE '%' || :query || '%' OR actors LIKE '%' || :query || '%' OR presenters LIKE '%' || :query || '%' OR guests LIKE '%' || :query || '%' ORDER BY startTimestamp ASC LIMIT 100")
     fun searchPrograms(query: String): Flow<List<ProgramEntity>>
+
+    @Query("SELECT * FROM programs WHERE directors LIKE '%' || :personName || '%' OR actors LIKE '%' || :personName || '%' OR presenters LIKE '%' || :personName || '%' OR guests LIKE '%' || :personName || '%' ORDER BY startTimestamp ASC")
+    fun getProgramsByPerson(personName: String): Flow<List<ProgramEntity>>
 
     @Query("SELECT * FROM programs WHERE title = :title AND startTimestamp > :fromTime ORDER BY startTimestamp ASC LIMIT 10")
     fun getUpcomingBroadcasts(title: String, fromTime: Long): Flow<List<ProgramEntity>>

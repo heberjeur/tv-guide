@@ -276,4 +276,12 @@
     <string name="subcategories_collapse">Réduire</string>
     <string name="subcategories_filter_active">Filtre : %1$s</string>
     <string name="more_subcategories_count">+%1$d autres</string>
+    <string name="settings_display_badges_title">Affichage et badges</string>
+    <string name="settings_show_csa_ratings">Signalétique d\'âge (CSA)</string>
+    <string name="settings_show_csa_ratings_desc">Afficher [-10], [-12], [-16], [-18] sur les programmes</string>
+    <string name="settings_show_channel_numbers">Numéros de chaînes</string>
+    <string name="settings_show_channel_numbers_desc">Afficher le numéro officiel devant le nom ou logo</string>
+    <string name="label_actors">Acteurs</string>
+    <string name="label_actor">Acteur</string>
+    <string name="person_programs_empty">Aucune diffusion trouvée pour cette personne cette semaine.</string>
 </resources>
