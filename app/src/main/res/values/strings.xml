@@ -312,4 +312,10 @@
     <string name="widget_today_title">TV Guide - Tonight on TV</string>
     <string name="widget_no_programs">No program available</string>
     <string name="widget_no_favorites">No favorite channels configured</string>
+    <string name="widget_now_label">On TV Now</string>
+    <string name="widget_now_desc">Displays programs currently airing on TV with timeline progress</string>
+    <string name="widget_favorites_label">Favorite Channels</string>
+    <string name="widget_favorites_desc">Displays current programs for your favorite channels in custom order</string>
+    <string name="widget_today_label">Tonight on TV</string>
+    <string name="widget_today_desc">Displays tonight\'s prime time schedule</string>
 </resources>

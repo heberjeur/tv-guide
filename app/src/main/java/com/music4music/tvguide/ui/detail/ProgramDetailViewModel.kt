@@ -212,24 +212,20 @@ class ProgramDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _isTrailerLoading.value = true
             _trailerLoadError.value = false
-            try {
-                val list = youTubeTrailerService.searchTrailers(current.title, current.productionYear ?: current.seriesYear)
-                _trailers.value = list
-                if (list.isNotEmpty()) {
-                    _selectedTrailer.value = list.first()
-                    _isTrailerPlayerVisible.value = true
-                } else {
-                    _isTrailerPlayerVisible.value = false
-                    onEmpty()
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("ProgramDetailViewModel", "Error fetching trailers", e)
-                _trailerLoadError.value = true
+            val list = youTubeTrailerService.searchTrailers(
+                title = current.title,
+                subTitle = current.subTitle,
+                year = current.productionYear ?: current.seriesYear
+            )
+            _trailers.value = list
+            if (list.isNotEmpty()) {
+                _selectedTrailer.value = list.first()
+                _isTrailerPlayerVisible.value = true
+            } else {
                 _isTrailerPlayerVisible.value = false
                 onEmpty()
-            } finally {
-                _isTrailerLoading.value = false
             }
+            _isTrailerLoading.value = false
         }
     }
 

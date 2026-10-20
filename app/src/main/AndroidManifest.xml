@@ -41,6 +41,7 @@
 
         <receiver
             android:name=".widget.NowPlayingWidgetProvider"
+            android:label="@string/widget_now_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -52,6 +53,7 @@
 
         <receiver
             android:name=".widget.FavoritesWidgetProvider"
+            android:label="@string/widget_favorites_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -63,6 +65,7 @@
 
         <receiver
             android:name=".widget.TodayScheduleWidgetProvider"
+            android:label="@string/widget_today_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

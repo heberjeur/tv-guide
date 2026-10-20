@@ -6,6 +6,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 import java.net.URLEncoder
+import java.util.Locale
 import java.util.regex.Pattern
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,19 +22,30 @@ class YouTubeTrailerService @Inject constructor(
     private val okHttpClient: OkHttpClient
 ) {
 
-    suspend fun searchTrailers(title: String, year: Int? = null): List<TrailerVideo> = withContext(Dispatchers.IO) {
+    suspend fun searchTrailers(title: String, subTitle: String? = null, year: Int? = null): List<TrailerVideo> = withContext(Dispatchers.IO) {
         val cleanTitle = cleanSearchTitle(title)
         if (cleanTitle.isBlank()) return@withContext emptyList()
 
-        val results = queryYouTube(cleanTitle, year, "bande annonce")
+        val cleanSub = subTitle?.let { cleanSearchTitle(it) }?.takeIf { it.isNotBlank() }
+        val baseQuery = if (cleanSub != null && !cleanTitle.contains(cleanSub, ignoreCase = true)) {
+            "$cleanTitle $cleanSub"
+        } else {
+            cleanTitle
+        }
+
+        val results = queryYouTube(baseQuery, cleanTitle, year, "bande annonce")
         if (results.isNotEmpty()) {
             return@withContext results
         }
-        return@withContext queryYouTube(cleanTitle, year, "trailer")
+        val fallbackResults = queryYouTube(baseQuery, cleanTitle, year, "trailer")
+        if (fallbackResults.isNotEmpty()) {
+            return@withContext fallbackResults
+        }
+        return@withContext queryYouTube(cleanTitle, cleanTitle, null, "extrait")
     }
 
-    private fun queryYouTube(cleanTitle: String, year: Int?, suffix: String): List<TrailerVideo> {
-        val queryBuilder = StringBuilder(cleanTitle)
+    private fun queryYouTube(query: String, matchTitle: String, year: Int?, suffix: String): List<TrailerVideo> {
+        val queryBuilder = StringBuilder(query)
         if (year != null && year > 1900) {
             queryBuilder.append(" ").append(year)
         }
@@ -52,38 +64,41 @@ class YouTubeTrailerService @Inject constructor(
             val response = okHttpClient.newCall(request).execute()
             if (!response.isSuccessful) return emptyList()
             val body = response.body?.string() ?: return emptyList()
-            parseVideoResults(body)
+            parseVideoResults(body, matchTitle)
         } catch (e: IOException) {
             emptyList()
         }
     }
 
-    private fun parseVideoResults(html: String): List<TrailerVideo> {
+    private fun parseVideoResults(html: String, matchTitle: String): List<TrailerVideo> {
         val results = mutableListOf<TrailerVideo>()
         val seenIds = mutableSetOf<String>()
 
         val pattern = Pattern.compile(
-            "\"videoId\"\\s*:\\s*\"([a-zA-Z0-9_-]{11})\"[\\s\\S]*?\"title\"\\s*:\\s*\\{[\\s\\S]*?\"text\"\\s*:\\s*\"([^\"]+)\"",
-            Pattern.MULTILINE
+            "\"videoRenderer\":\\{\"videoId\":\"([a-zA-Z0-9_-]{11})\".*?\"title\":\\{\"runs\":\\[\\{\"text\":\"([^\"]+)\"\\}",
+            Pattern.DOTALL
         )
         val matcher = pattern.matcher(html)
 
+        val keywords = matchTitle
+            .lowercase(Locale.ROOT)
+            .split(Regex("[^\\p{L}\\p{Nd}]+"))
+            .filter { it.length > 2 && it !in commonWords }
+
         while (matcher.find() && results.size < 5) {
             val videoId = matcher.group(1) ?: continue
-            val title = matcher.group(2) ?: ""
-            if (seenIds.add(videoId)) {
-                results.add(TrailerVideo(videoId = videoId, title = unescapeJson(title)))
-            }
-        }
+            val rawTitle = matcher.group(2) ?: ""
+            val title = unescapeJson(rawTitle)
+            val lowerTitle = title.lowercase(Locale.ROOT)
 
-        if (results.isEmpty()) {
-            val fallbackPattern = Pattern.compile("\"videoId\"\\s*:\\s*\"([a-zA-Z0-9_-]{11})\"")
-            val fallbackMatcher = fallbackPattern.matcher(html)
-            while (fallbackMatcher.find() && results.size < 3) {
-                val videoId = fallbackMatcher.group(1) ?: continue
-                if (seenIds.add(videoId)) {
-                    results.add(TrailerVideo(videoId = videoId, title = ""))
-                }
+            val isRelevant = if (keywords.isEmpty()) {
+                true
+            } else {
+                keywords.any { keyword -> lowerTitle.contains(keyword) }
+            }
+
+            if (isRelevant && seenIds.add(videoId)) {
+                results.add(TrailerVideo(videoId = videoId, title = title))
             }
         }
 
@@ -94,7 +109,9 @@ class YouTubeTrailerService @Inject constructor(
         return title
             .replace(Regex("\\[-?\\d+\\]"), "")
             .replace(Regex("(?i)\\b(saison|episode|épisode)\\s*\\d+.*"), "")
-            .replace(Regex("(?i)\\b(rediffusion|inédit|direct)\\b"), "")
+            .replace(Regex("(?i)\\b(rediffusion|inédit|direct|inédite)\\b"), "")
+            .replace(Regex("[:\\-–—]"), " ")
+            .replace(Regex("\\s+"), " ")
             .trim()
     }
 
@@ -104,5 +121,9 @@ class YouTubeTrailerService @Inject constructor(
             .replace("\\\"", "\"")
             .replace("\\'", "'")
             .replace("\\\\", "\\")
+    }
+
+    companion object {
+        private val commonWords = setOf("les", "des", "une", "pour", "dans", "avec", "sur", "par", "the", "and")
     }
 }

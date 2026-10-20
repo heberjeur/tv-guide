@@ -312,4 +312,10 @@
     <string name="widget_today_title">TV Guide - Ce soir à la TV</string>
     <string name="widget_no_programs">Aucun programme disponible</string>
     <string name="widget_no_favorites">Aucune chaîne favorite configurée</string>
+    <string name="widget_now_label">En ce moment</string>
+    <string name="widget_now_desc">Affiche les programmes actuellement diffusés sur les chaînes avec progression</string>
+    <string name="widget_favorites_label">Chaînes favorites</string>
+    <string name="widget_favorites_desc">Affiche les programmes en cours de vos chaînes favorites selon votre ordre</string>
+    <string name="widget_today_label">Ce soir à la TV</string>
+    <string name="widget_today_desc">Affiche la grille des programmes en première partie de soirée</string>
 </resources>
