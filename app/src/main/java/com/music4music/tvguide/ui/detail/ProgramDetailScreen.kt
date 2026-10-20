@@ -92,6 +92,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import com.music4music.tvguide.ui.theme.IndicatorGreen
 import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
+import com.music4music.tvguide.util.CategoryUtils
 import com.music4music.tvguide.util.CountryUtils
 import java.time.Instant
 import java.time.ZoneId
@@ -417,13 +418,13 @@ fun ProgramDetailScreen(
                             if (!formatValue.isNullOrBlank()) {
                                 InfoRow(
                                     label = stringResource(R.string.label_format),
-                                    value = formatValue
+                                    value = CategoryUtils.formatCategory(formatValue, currentLocale)
                                 )
                             }
-                            if (!genreValue.isNullOrBlank()) {
+                            if (specificGenres.isNotEmpty()) {
                                 InfoRow(
                                     label = stringResource(R.string.label_genre),
-                                    value = genreValue
+                                    value = CategoryUtils.formatGenreList(specificGenres, currentLocale)
                                 )
                             }
 

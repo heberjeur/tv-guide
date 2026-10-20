@@ -20,6 +20,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
+import com.music4music.tvguide.util.CategoryUtils
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -98,6 +99,15 @@ fun NowPlayingScreen(
     var isSearchActive by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val currentLocale = remember(configuration) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && !configuration.locales.isEmpty) {
+            configuration.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            configuration.locale ?: java.util.Locale.getDefault()
+        }
+    }
     val pagerState = rememberPagerState(initialPage = selectedPeriod.ordinal) {
         BroadcastPeriod.entries.size
     }
@@ -391,7 +401,7 @@ fun NowPlayingScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = selectedTag!!,
+                                text = CategoryUtils.formatCategory(selectedTag, currentLocale),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = AccentRed,
                                 fontWeight = FontWeight.Bold

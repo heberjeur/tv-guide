@@ -90,6 +90,10 @@ import com.music4music.tvguide.ui.theme.DarkSurface
 import com.music4music.tvguide.ui.theme.DarkSurfaceVariant
 import com.music4music.tvguide.ui.theme.TextPrimary
 import com.music4music.tvguide.ui.theme.TextSecondary
+import android.os.Build
+import androidx.compose.ui.platform.LocalConfiguration
+import java.util.Locale
+import com.music4music.tvguide.util.CategoryUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +107,16 @@ fun CategoriesScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     var isSearchActive by remember { mutableStateOf(false) }
+
+    val configuration = LocalConfiguration.current
+    val currentLocale = remember(configuration) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !configuration.locales.isEmpty) {
+            configuration.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            configuration.locale ?: Locale.getDefault()
+        }
+    }
 
     BackHandler(enabled = isSearchActive || uiState.selectedCategory != null) {
         if (isSearchActive) {
@@ -226,6 +240,7 @@ fun CategoriesScreen(
                 if (uiState.selectedCategory != null) {
                     CategoryDetailSubView(
                         uiState = uiState,
+                        currentLocale = currentLocale,
                         onBackClick = { viewModel.selectCategory(null) },
                         onSubCategoryClick = { viewModel.selectSubCategory(it) },
                         onProgramClick = onProgramClick,
@@ -234,6 +249,7 @@ fun CategoriesScreen(
                 } else {
                     CategoryGridHubView(
                         categories = uiState.categories,
+                        currentLocale = currentLocale,
                         onCategoryClick = { viewModel.selectCategory(it) },
                         onSubCategoryClick = { cat, sub ->
                             viewModel.selectCategory(cat)
@@ -250,6 +266,7 @@ fun CategoriesScreen(
 @Composable
 private fun CategoryGridHubView(
     categories: List<CategoryCardData>,
+    currentLocale: Locale,
     onCategoryClick: (TvCategory) -> Unit,
     onSubCategoryClick: (TvCategory, String) -> Unit
 ) {
@@ -352,7 +369,7 @@ private fun CategoryGridHubView(
                                     color = DarkSurfaceVariant
                                 ) {
                                     Text(
-                                        text = sub.name,
+                                        text = CategoryUtils.formatCategory(sub.name, currentLocale),
                                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                         color = TextSecondary,
                                         maxLines = 1,
@@ -387,6 +404,7 @@ private fun CategoryGridHubView(
 @Composable
 private fun CategoryDetailSubView(
     uiState: CategoriesUiState,
+    currentLocale: Locale,
     onBackClick: () -> Unit,
     onSubCategoryClick: (String?) -> Unit,
     onProgramClick: (Long) -> Unit,
@@ -552,7 +570,7 @@ private fun CategoryDetailSubView(
 
                         items(uiState.subCategories, key = { it.name }) { subItem ->
                             SubCategoryPill(
-                                name = subItem.name,
+                                name = CategoryUtils.formatCategory(subItem.name, currentLocale),
                                 count = subItem.count,
                                 isSelected = uiState.selectedSubCategory == subItem.name,
                                 isClearable = true,
@@ -596,7 +614,10 @@ private fun CategoryDetailSubView(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = stringResource(R.string.subcategories_filter_active, uiState.selectedSubCategory ?: ""),
+                                text = stringResource(
+                                    R.string.subcategories_filter_active,
+                                    CategoryUtils.formatCategory(uiState.selectedSubCategory, currentLocale)
+                                ),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = TextPrimary
@@ -774,11 +795,14 @@ private fun CategoryDetailSubView(
                     Spacer(modifier = Modifier.height(10.dp))
                 }
 
-                val filteredSheetItems = remember(uiState.subCategories, sheetQuery) {
+                val filteredSheetItems = remember(uiState.subCategories, sheetQuery, currentLocale) {
                     if (sheetQuery.isBlank()) {
                         uiState.subCategories
                     } else {
-                        uiState.subCategories.filter { it.name.contains(sheetQuery, ignoreCase = true) }
+                        uiState.subCategories.filter {
+                            it.name.contains(sheetQuery, ignoreCase = true) ||
+                            CategoryUtils.formatCategory(it.name, currentLocale).contains(sheetQuery, ignoreCase = true)
+                        }
                     }
                 }
 
@@ -874,7 +898,7 @@ private fun CategoryDetailSubView(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = subItem.name,
+                                        text = CategoryUtils.formatCategory(subItem.name, currentLocale),
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         color = if (isSelected) TextPrimary else TextSecondary

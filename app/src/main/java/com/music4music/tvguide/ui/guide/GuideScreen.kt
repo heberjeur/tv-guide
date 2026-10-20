@@ -102,6 +102,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.music4music.tvguide.util.CategoryUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -269,8 +270,8 @@ fun GuideScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val categoryLabel = when {
-                    selectedCategory != null && selectedSubCategory != null -> "${stringResource(selectedCategory!!.nameRes)}: $selectedSubCategory"
-                    selectedSubCategory != null -> selectedSubCategory!!
+                    selectedCategory != null && selectedSubCategory != null -> "${stringResource(selectedCategory!!.nameRes)}: ${CategoryUtils.formatCategory(selectedSubCategory, currentLocale)}"
+                    selectedSubCategory != null -> CategoryUtils.formatCategory(selectedSubCategory, currentLocale)
                     selectedCategory != null -> stringResource(selectedCategory!!.nameRes)
                     else -> stringResource(R.string.filter_categories_title)
                 }
@@ -402,6 +403,7 @@ fun GuideScreen(
             selectedCategory = selectedCategory,
             selectedSubCategory = selectedSubCategory,
             availableSubCategories = availableSubCategories,
+            currentLocale = currentLocale,
             onCategorySelect = viewModel::selectCategory,
             onSubCategorySelect = viewModel::selectSubCategory,
             onDismiss = { showCategorySheet = false }
@@ -517,6 +519,7 @@ private fun CategoryFilterBottomSheet(
     selectedCategory: TvCategory?,
     selectedSubCategory: String?,
     availableSubCategories: List<String>,
+    currentLocale: Locale,
     onCategorySelect: (TvCategory?) -> Unit,
     onSubCategorySelect: (String?) -> Unit,
     onDismiss: () -> Unit
@@ -706,7 +709,7 @@ private fun CategoryFilterBottomSheet(
                             )
                         ) {
                             Text(
-                                text = subCat,
+                                text = CategoryUtils.formatCategory(subCat, currentLocale),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (isSubSelected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (isSubSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
