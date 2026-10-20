@@ -357,10 +357,11 @@ class SettingsViewModel @Inject constructor(
 
     fun updateCacheSize() {
         viewModelScope.launch(Dispatchers.IO) {
-            var totalBytes = context.imageLoader.diskCache?.size ?: 0L
             val cacheDir = context.cacheDir
-            if (cacheDir != null && cacheDir.exists()) {
-                totalBytes += getDirSize(cacheDir)
+            val totalBytes = if (cacheDir != null && cacheDir.exists()) {
+                getDirSize(cacheDir)
+            } else {
+                0L
             }
             val formatted = android.text.format.Formatter.formatFileSize(context, totalBytes)
             withContext(Dispatchers.Main) {

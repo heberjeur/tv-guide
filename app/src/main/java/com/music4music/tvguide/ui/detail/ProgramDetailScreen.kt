@@ -282,7 +282,7 @@ fun ProgramDetailScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     val episodeTitle = remember(currentProgram.subTitle, currentProgram.title) {
                         val clean = currentProgram.subTitle?.trim()
@@ -320,7 +320,7 @@ fun ProgramDetailScreen(
                             )
 
                             if (!episodeTitle.isNullOrEmpty()) {
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = episodeTitle,
                                     style = MaterialTheme.typography.titleMedium,
@@ -334,7 +334,7 @@ fun ProgramDetailScreen(
                     val hasSeasonButton = effectiveSeasonNumber != null
 
                     if (hasEpisodeButton || hasSeasonButton) {
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -358,7 +358,7 @@ fun ProgramDetailScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -372,7 +372,7 @@ fun ProgramDetailScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = AccentRed
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
                             if (effectiveSeasonNumber != null) {
                                 val epText = if (effectiveEpisodeNumber != null) {
@@ -556,7 +556,7 @@ fun ProgramDetailScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -797,7 +797,7 @@ fun ProgramDetailScreen(
                     }
 
                     if (!cleanedDescription.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -815,7 +815,7 @@ fun ProgramDetailScreen(
                                 color = TextPrimary
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         SelectionContainer {
                             Text(
                                 text = cleanedDescription,
@@ -827,7 +827,7 @@ fun ProgramDetailScreen(
                     }
 
                     if (!cleanedSecondaryDescription.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -845,7 +845,7 @@ fun ProgramDetailScreen(
                                 color = TextPrimary
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         SelectionContainer {
                             Text(
                                 text = cleanedSecondaryDescription,
@@ -857,7 +857,7 @@ fun ProgramDetailScreen(
                     }
 
                     if (upcomingBroadcasts.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -875,7 +875,7 @@ fun ProgramDetailScreen(
                                 color = TextPrimary
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         upcomingBroadcasts.take(5).forEach { upcoming ->
                             val upStart = Instant.ofEpochMilli(upcoming.startTimestamp).atZone(zone).format(timeFormatter)
@@ -1092,7 +1092,7 @@ private fun InfoRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp),
+            .padding(vertical = 5.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top
     ) {
