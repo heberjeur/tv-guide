@@ -42,6 +42,11 @@ class UserPreferences @Inject constructor(
     private val keyHighlightAccessibility = booleanPreferencesKey("highlight_accessibility")
     private val keyCustomNotificationDateTime = androidx.datastore.preferences.core.longPreferencesKey("custom_notification_datetime")
     private val keyDisplayTimezone = stringPreferencesKey("display_timezone")
+    private val keyAccentColor = stringPreferencesKey("accent_color")
+
+    val accentColor: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[keyAccentColor] ?: "#E50914"
+    }
 
     val displayTimezone: Flow<String> = context.dataStore.data.map { preferences ->
         preferences[keyDisplayTimezone] ?: "system"
@@ -283,6 +288,12 @@ class UserPreferences @Inject constructor(
     suspend fun setDisplayTimezone(timezone: String) {
         context.dataStore.edit { preferences ->
             preferences[keyDisplayTimezone] = timezone
+        }
+    }
+
+    suspend fun setAccentColor(colorHex: String) {
+        context.dataStore.edit { preferences ->
+            preferences[keyAccentColor] = colorHex
         }
     }
 }

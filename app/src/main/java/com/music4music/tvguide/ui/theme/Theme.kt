@@ -9,9 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = AccentRed,
-    secondary = AccentRedVariant,
+private fun buildDarkColorScheme(accent: Color, variant: Color) = darkColorScheme(
+    primary = accent,
+    secondary = variant,
     background = RawDarkBackground,
     surface = RawDarkSurface,
     surfaceVariant = RawDarkSurfaceVariant,
@@ -23,9 +23,9 @@ private val DarkColorScheme = darkColorScheme(
     outline = RawSurfaceBorder
 )
 
-private val OledColorScheme = darkColorScheme(
-    primary = AccentRed,
-    secondary = AccentRedVariant,
+private fun buildOledColorScheme(accent: Color, variant: Color) = darkColorScheme(
+    primary = accent,
+    secondary = variant,
     background = Color.Black,
     surface = Color(0xFF0F0F0F),
     surfaceVariant = Color(0xFF1E1E1E),
@@ -37,9 +37,9 @@ private val OledColorScheme = darkColorScheme(
     outline = Color(0xFF2E2E2E)
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = AccentRed,
-    secondary = AccentRedVariant,
+private fun buildLightColorScheme(accent: Color, variant: Color) = lightColorScheme(
+    primary = accent,
+    secondary = variant,
     background = LightBackground,
     surface = LightSurface,
     surfaceVariant = LightSurfaceVariant,
@@ -82,14 +82,22 @@ private fun scaledTypography(scale: Float): Typography {
 fun TvGuideTheme(
     themeMode: String = "dark",
     fontSizeScale: String = "normal",
+    accentColorHex: String = "#E50914",
     content: @Composable () -> Unit
 ) {
     val isSystemDark = isSystemInDarkTheme()
+    val accent = androidx.compose.runtime.remember(accentColorHex) {
+        com.music4music.tvguide.util.ColorUtils.parseHexColor(accentColorHex)
+    }
+    val variant = androidx.compose.runtime.remember(accent) {
+        com.music4music.tvguide.util.ColorUtils.computeVariant(accent)
+    }
+
     val colorScheme = when (themeMode) {
-        "oled" -> OledColorScheme
-        "light" -> LightColorScheme
-        "system" -> if (isSystemDark) OledColorScheme else LightColorScheme
-        else -> DarkColorScheme
+        "oled" -> buildOledColorScheme(accent, variant)
+        "light" -> buildLightColorScheme(accent, variant)
+        "system" -> if (isSystemDark) buildOledColorScheme(accent, variant) else buildLightColorScheme(accent, variant)
+        else -> buildDarkColorScheme(accent, variant)
     }
 
     val scale = if (fontSizeScale == "large") 1.15f else 1.0f

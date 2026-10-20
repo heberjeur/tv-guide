@@ -46,11 +46,12 @@ class MainActivity : ComponentActivity() {
             val displayDensity by userPreferences.displayDensity.collectAsStateWithLifecycle(initialValue = "comfort")
             val highlightAccessibility by userPreferences.highlightAccessibility.collectAsStateWithLifecycle(initialValue = true)
             val displayTimezone by userPreferences.displayTimezone.collectAsStateWithLifecycle(initialValue = "origin")
+            val accentColor by userPreferences.accentColor.collectAsStateWithLifecycle(initialValue = "#E50914")
             val currentDisplayZone = androidx.compose.runtime.remember(displayTimezone) {
                 com.music4music.tvguide.util.TimezoneUtils.resolveZoneId(displayTimezone)
             }
 
-            TvGuideTheme(themeMode = themeMode, fontSizeScale = fontSizeScale) {
+            TvGuideTheme(themeMode = themeMode, fontSizeScale = fontSizeScale, accentColorHex = accentColor) {
                 val currentDensity = androidx.compose.ui.platform.LocalDensity.current
                 val effectiveDensity = if (displayDensity == "compact") {
                     androidx.compose.ui.unit.Density(

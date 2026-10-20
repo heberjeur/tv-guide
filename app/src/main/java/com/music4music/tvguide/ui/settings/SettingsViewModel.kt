@@ -49,6 +49,9 @@ class SettingsViewModel @Inject constructor(
     val appLanguage: StateFlow<String> = userPreferences.appLanguage
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "fr")
 
+    val accentColor: StateFlow<String> = userPreferences.accentColor
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "#E50914")
+
     val isNotificationsEnabled: StateFlow<Boolean> = userPreferences.isNotificationsEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
@@ -169,6 +172,12 @@ class SettingsViewModel @Inject constructor(
     fun setCustomNotificationDateTime(timestamp: Long?) {
         viewModelScope.launch {
             userPreferences.setCustomNotificationDateTime(timestamp)
+        }
+    }
+
+    fun setAccentColor(colorHex: String) {
+        viewModelScope.launch {
+            userPreferences.setAccentColor(colorHex)
         }
     }
 
