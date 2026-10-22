@@ -289,7 +289,8 @@
     <string name="label_trailers">Trailers</string>
     <string name="trailer_loading">Searching for trailer...</string>
     <string name="trailer_empty">No trailer found for this program.</string>
-    <string name="action_open_youtube">Watch on YouTube</string>
+    <string name="action_open_youtube">Play Trailer</string>
+    <string name="no_video_player_found">No compatible video player found on device</string>
     <string name="action_close_trailer">Close trailer</string>
 
     <string name="favorites_order_title">Favorite Channels Order</string>

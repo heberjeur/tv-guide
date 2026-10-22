@@ -208,19 +208,43 @@ fun YouTubeTrailerPlayer(
 }
 
 fun launchTrailer(context: Context, videoId: String) {
-    val youtubeIntent = Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
-        setPackage("com.google.android.youtube")
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    }
-    try {
-        context.startActivity(youtubeIntent)
-    } catch (e: ActivityNotFoundException) {
-        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId")).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+    val intentCandidates = listOf(
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            setPackage("com.google.android.youtube.tv")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            setPackage("com.teamsmart.videomanager.tv")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            setPackage("com.liskovsoft.videomanager")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            setPackage("com.google.android.youtube")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+    )
+
+    for (intent in intentCandidates) {
         try {
-            context.startActivity(webIntent)
-        } catch (e2: ActivityNotFoundException) {
+            context.startActivity(intent)
+            return
+        } catch (_: ActivityNotFoundException) {
+        } catch (_: SecurityException) {
         }
     }
+
+    android.widget.Toast.makeText(
+        context,
+        context.getString(R.string.no_video_player_found),
+        android.widget.Toast.LENGTH_SHORT
+    ).show()
 }

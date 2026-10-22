@@ -289,7 +289,8 @@
     <string name="label_trailers">Bandes-annonces</string>
     <string name="trailer_loading">Recherche de la bande-annonce...</string>
     <string name="trailer_empty">Aucune bande-annonce trouvée pour cette émission.</string>
-    <string name="action_open_youtube">Regarder sur YouTube</string>
+    <string name="action_open_youtube">Lancer la bande-annonce</string>
+    <string name="no_video_player_found">Aucun lecteur vidéo compatible trouvé sur cet appareil</string>
     <string name="action_close_trailer">Fermer la bande-annonce</string>
 
     <string name="favorites_order_title">Ordre des chaînes favorites</string>
