@@ -1,9 +1,18 @@
 package com.music4music.tvguide.ui.components
 
+import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,6 +40,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,10 +57,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import com.music4music.tvguide.R
 import com.music4music.tvguide.data.remote.TrailerVideo
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun YouTubeTrailerPlayer(
     trailers: List<TrailerVideo>,
@@ -57,6 +73,20 @@ fun YouTubeTrailerPlayer(
 ) {
     if (selectedTrailer == null) return
     val context = LocalContext.current
+    var isWebViewAvailable by remember { mutableStateOf(true) }
+    var playerViewRef by remember { mutableStateOf<WebView?>(null) }
+
+    DisposableEffect(selectedTrailer.videoId) {
+        onDispose {
+            try {
+                playerViewRef?.loadUrl("about:blank")
+                playerViewRef?.stopLoading()
+                playerViewRef?.destroy()
+                playerViewRef = null
+            } catch (_: Throwable) {
+            }
+        }
+    }
 
     Surface(
         modifier = modifier
@@ -96,7 +126,14 @@ fun YouTubeTrailerPlayer(
                 }
 
                 IconButton(
-                    onClick = onClose,
+                    onClick = {
+                        try {
+                            playerViewRef?.loadUrl("about:blank")
+                            playerViewRef?.stopLoading()
+                        } catch (_: Throwable) {
+                        }
+                        onClose()
+                    },
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
@@ -113,63 +150,113 @@ fun YouTubeTrailerPlayer(
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
                     .background(Color.Black)
-                    .clickable { launchTrailer(context, selectedTrailer.videoId) }
             ) {
-                AsyncImage(
-                    model = selectedTrailer.thumbnailUrl,
-                    contentDescription = selectedTrailer.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (isWebViewAvailable) {
+                    AndroidView(
+                        factory = { ctx ->
+                            try {
+                                WebView(ctx).apply {
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+                                    settings.javaScriptEnabled = true
+                                    settings.domStorageEnabled = true
+                                    settings.mediaPlaybackRequiresUserGesture = false
+                                    settings.loadWithOverviewMode = true
+                                    settings.useWideViewPort = true
+                                    settings.cacheMode = WebSettings.LOAD_DEFAULT
+                                    webChromeClient = WebChromeClient()
+                                    webViewClient = object : WebViewClient() {
+                                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                            return false
+                                        }
+                                    }
+                                    tag = selectedTrailer.videoId
+                                    playerViewRef = this
+                                    val html = buildPlayerHtml(selectedTrailer.videoId)
+                                    loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)
+                                }
+                            } catch (_: Throwable) {
+                                isWebViewAvailable = false
+                                View(ctx)
+                            }
+                        },
+                        update = { webView ->
+                            if (webView is WebView) {
+                                val currentTag = webView.tag as? String
+                                if (currentTag != selectedTrailer.videoId) {
+                                    webView.tag = selectedTrailer.videoId
+                                    val html = buildPlayerHtml(selectedTrailer.videoId)
+                                    webView.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable { launchTrailer(context, selectedTrailer.videoId) }
+                    ) {
+                        AsyncImage(
+                            model = selectedTrailer.thumbnailUrl,
+                            contentDescription = selectedTrailer.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)),
-                                startY = 80f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)),
+                                        startY = 80f
+                                    )
+                                )
+                        )
+
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFE50914),
+                            shadowElevation = 8.dp,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .align(Alignment.Center)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = stringResource(R.string.action_open_youtube),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier.size(14.dp)
                             )
-                        )
-                )
-
-                Surface(
-                    shape = CircleShape,
-                    color = Color(0xFFE50914),
-                    shadowElevation = 8.dp,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .align(Alignment.Center)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = stringResource(R.string.action_open_youtube),
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(R.string.action_open_youtube),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
-                }
-
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.action_open_youtube),
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
                 }
             }
 
@@ -207,6 +294,32 @@ fun YouTubeTrailerPlayer(
     }
 }
 
+private fun buildPlayerHtml(videoId: String): String {
+    return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <style>
+                * { margin:0; padding:0; box-sizing:border-box; background:#000; overflow:hidden; }
+                html, body { width:100%; height:100%; background:#000; }
+                .player-frame { position:relative; width:100%; height:100%; }
+                iframe { width:100%; height:100%; border:none; }
+            </style>
+        </head>
+        <body>
+            <div class="player-frame">
+                <iframe src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1&controls=1&fs=1"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                        allowfullscreen>
+                </iframe>
+            </div>
+        </body>
+        </html>
+    """.trimIndent()
+}
+
 fun launchTrailer(context: Context, videoId: String) {
     val intentCandidates = listOf(
         Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
@@ -242,9 +355,9 @@ fun launchTrailer(context: Context, videoId: String) {
         }
     }
 
-    android.widget.Toast.makeText(
+    Toast.makeText(
         context,
         context.getString(R.string.no_video_player_found),
-        android.widget.Toast.LENGTH_SHORT
+        Toast.LENGTH_SHORT
     ).show()
 }

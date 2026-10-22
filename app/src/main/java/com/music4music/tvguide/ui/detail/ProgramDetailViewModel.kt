@@ -66,6 +66,30 @@ class ProgramDetailViewModel @Inject constructor(
     val program: StateFlow<Program?> = getProgramDetailUseCase(programId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    init {
+        viewModelScope.launch {
+            program.collect { current ->
+                if (current != null && current.title.isNotBlank() && _trailers.value.isEmpty() && !_isTrailerLoading.value) {
+                    _isTrailerLoading.value = true
+                    _trailerLoadError.value = false
+                    val list = youTubeTrailerService.searchTrailers(
+                        title = current.title,
+                        subTitle = current.subTitle,
+                        year = current.productionYear ?: current.seriesYear
+                    )
+                    _trailers.value = list
+                    if (list.isNotEmpty()) {
+                        _selectedTrailer.value = list.first()
+                        _isTrailerPlayerVisible.value = true
+                    } else {
+                        _isTrailerPlayerVisible.value = false
+                    }
+                    _isTrailerLoading.value = false
+                }
+            }
+        }
+    }
+
     val reminder: StateFlow<Reminder?> = reminderRepository.getReminderForProgram(programId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 

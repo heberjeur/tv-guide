@@ -592,48 +592,8 @@ fun ProgramDetailScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    Button(
-                        onClick = {
-                            viewModel.loadTrailers(
-                                onEmpty = {
-                                    Toast.makeText(context, context.getString(R.string.trailer_empty), Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFCC181E)
-                        ),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        if (isTrailerLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = Color.White
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (trailers.isNotEmpty()) {
-                                stringResource(R.string.label_trailers) + " (${trailers.size})"
-                            } else {
-                                stringResource(R.string.label_trailer)
-                            },
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-
                     if (isTrailerPlayerVisible && selectedTrailer != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         YouTubeTrailerPlayer(
                             trailers = trailers,
                             selectedTrailer = selectedTrailer,
