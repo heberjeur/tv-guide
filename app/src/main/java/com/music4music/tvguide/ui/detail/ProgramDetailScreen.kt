@@ -592,7 +592,7 @@ fun ProgramDetailScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    if (isTrailerPlayerVisible && selectedTrailer != null) {
+                    if (isTrailerPlayerVisible && selectedTrailer != null && trailers.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(16.dp))
                         YouTubeTrailerPlayer(
                             trailers = trailers,

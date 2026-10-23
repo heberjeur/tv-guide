@@ -1,6 +1,13 @@
 package com.music4music.tvguide.ui.components
 
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
@@ -8,6 +15,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +23,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,7 +38,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +59,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +70,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import com.music4music.tvguide.R
 import com.music4music.tvguide.data.remote.TrailerVideo
 
 private const val DESKTOP_USER_AGENT =
@@ -69,7 +86,9 @@ fun YouTubeTrailerPlayer(
     modifier: Modifier = Modifier
 ) {
     if (selectedTrailer == null) return
+    val context = LocalContext.current
     var isPlaying by remember(selectedTrailer.videoId) { mutableStateOf(false) }
+    var hasPlaybackError by remember(selectedTrailer.videoId) { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var customFullscreenView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
@@ -88,12 +107,14 @@ fun YouTubeTrailerPlayer(
 
     if (customFullscreenView != null) {
         BackHandler {
+            (customFullscreenView?.parent as? ViewGroup)?.removeView(customFullscreenView)
             customViewCallback?.onCustomViewHidden()
             customFullscreenView = null
             customViewCallback = null
         }
         Dialog(
             onDismissRequest = {
+                (customFullscreenView?.parent as? ViewGroup)?.removeView(customFullscreenView)
                 customViewCallback?.onCustomViewHidden()
                 customFullscreenView = null
                 customViewCallback = null
@@ -109,8 +130,9 @@ fun YouTubeTrailerPlayer(
                     .background(Color.Black)
             ) {
                 AndroidView(
-                    factory = {
-                        customFullscreenView ?: View(it)
+                    factory = { ctx ->
+                        (customFullscreenView?.parent as? ViewGroup)?.removeView(customFullscreenView)
+                        customFullscreenView ?: View(ctx)
                     },
                     modifier = Modifier.fillMaxSize()
                 )
@@ -133,53 +155,71 @@ fun YouTubeTrailerPlayer(
                     .aspectRatio(16f / 9f)
                     .background(Color.Black)
             ) {
-                if (isPlaying) {
+                if (isPlaying && !hasPlaybackError) {
                     AndroidView(
                         factory = { ctx ->
-                            WebView(ctx).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
-                                settings.javaScriptEnabled = true
-                                settings.domStorageEnabled = true
-                                settings.mediaPlaybackRequiresUserGesture = false
-                                settings.loadWithOverviewMode = true
-                                settings.useWideViewPort = true
-                                settings.cacheMode = WebSettings.LOAD_DEFAULT
-                                settings.userAgentString = DESKTOP_USER_AGENT
-                                webChromeClient = object : WebChromeClient() {
-                                    override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
-                                        customFullscreenView = view
-                                        customViewCallback = callback
-                                    }
+                            val targetContext = ctx.findActivity() ?: ctx
+                            try {
+                                if (!isWebViewSupported(targetContext)) {
+                                    hasPlaybackError = true
+                                    View(ctx)
+                                } else {
+                                    WebView(targetContext).apply {
+                                        layoutParams = ViewGroup.LayoutParams(
+                                            ViewGroup.LayoutParams.MATCH_PARENT,
+                                            ViewGroup.LayoutParams.MATCH_PARENT
+                                        )
+                                        settings.javaScriptEnabled = true
+                                        settings.domStorageEnabled = true
+                                        settings.mediaPlaybackRequiresUserGesture = false
+                                        settings.loadWithOverviewMode = true
+                                        settings.useWideViewPort = true
+                                        settings.cacheMode = WebSettings.LOAD_DEFAULT
+                                        settings.userAgentString = DESKTOP_USER_AGENT
+                                        webChromeClient = object : WebChromeClient() {
+                                            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                                                (view?.parent as? ViewGroup)?.removeView(view)
+                                                customFullscreenView = view
+                                                customViewCallback = callback
+                                            }
 
-                                    override fun onHideCustomView() {
-                                        customFullscreenView = null
-                                        customViewCallback = null
-                                    }
-                                }
-                                webViewClient = object : WebViewClient() {
-                                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                                        val url = request?.url?.toString() ?: ""
-                                        if (url.startsWith("vnd.youtube:") || url.startsWith("intent:") || url.contains("youtube.com/watch")) {
-                                            return true
+                                            override fun onHideCustomView() {
+                                                (customFullscreenView?.parent as? ViewGroup)?.removeView(customFullscreenView)
+                                                customViewCallback?.onCustomViewHidden()
+                                                customFullscreenView = null
+                                                customViewCallback = null
+                                            }
                                         }
-                                        return false
+                                        webViewClient = object : WebViewClient() {
+                                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                                val url = request?.url?.toString().orEmpty()
+                                                if (url.startsWith("http://") || url.startsWith("https://")) {
+                                                    if (url.contains("youtube-nocookie.com") || url.contains("youtube.com/embed")) {
+                                                        return false
+                                                    }
+                                                }
+                                                return true
+                                            }
+                                        }
+                                        tag = selectedTrailer.videoId
+                                        webViewRef = this
+                                        val html = buildPlayerHtml(selectedTrailer.videoId)
+                                        loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)
                                     }
                                 }
-                                tag = selectedTrailer.videoId
-                                webViewRef = this
-                                val html = buildPlayerHtml(selectedTrailer.videoId)
-                                loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)
+                            } catch (_: Throwable) {
+                                hasPlaybackError = true
+                                View(ctx)
                             }
                         },
                         update = { webView ->
-                            val currentTag = webView.tag as? String
-                            if (currentTag != selectedTrailer.videoId) {
-                                webView.tag = selectedTrailer.videoId
-                                val html = buildPlayerHtml(selectedTrailer.videoId)
-                                webView.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)
+                            if (webView is WebView) {
+                                val currentTag = webView.tag as? String
+                                if (currentTag != selectedTrailer.videoId) {
+                                    webView.tag = selectedTrailer.videoId
+                                    val html = buildPlayerHtml(selectedTrailer.videoId)
+                                    webView.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxSize()
@@ -207,11 +247,98 @@ fun YouTubeTrailerPlayer(
                             modifier = Modifier.size(20.dp)
                         )
                     }
+                } else if (hasPlaybackError) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        AsyncImage(
+                            model = selectedTrailer.thumbnailUrl,
+                            contentDescription = selectedTrailer.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.78f))
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFFE50914),
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.video_playback_error),
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = { launchExternalVideo(context, selectedTrailer.videoId) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE50914)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.action_open_youtube),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                isPlaying = false
+                                hasPlaybackError = false
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                                .size(32.dp)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 } else {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .clickable { isPlaying = true }
+                            .clickable {
+                                if (isWebViewSupported(context)) {
+                                    isPlaying = true
+                                    hasPlaybackError = false
+                                } else {
+                                    hasPlaybackError = true
+                                }
+                            }
                     ) {
                         AsyncImage(
                             model = selectedTrailer.thumbnailUrl,
@@ -304,6 +431,7 @@ fun YouTubeTrailerPlayer(
                                 )
                                 .clickable {
                                     isPlaying = false
+                                    hasPlaybackError = false
                                     onSelectTrailer(trailer)
                                 }
                         ) {
@@ -334,6 +462,68 @@ fun YouTubeTrailerPlayer(
             }
         }
     }
+}
+
+private fun isWebViewSupported(context: Context): Boolean {
+    return try {
+        if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_WEBVIEW)) {
+            return false
+        }
+        val targetContext = context.findActivity() ?: context
+        val probe = WebView(targetContext)
+        probe.destroy()
+        true
+    } catch (_: Throwable) {
+        false
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+fun launchExternalVideo(context: Context, videoId: String) {
+    val intentCandidates = listOf(
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            setPackage("com.google.android.youtube.tv")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            setPackage("com.teamsmart.videomanager.tv")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            setPackage("com.liskovsoft.videomanager")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            setPackage("com.google.android.youtube")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+        Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$videoId")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    )
+
+    for (intent in intentCandidates) {
+        try {
+            context.startActivity(intent)
+            return
+        } catch (_: ActivityNotFoundException) {
+        } catch (_: SecurityException) {
+        }
+    }
+
+    Toast.makeText(
+        context,
+        context.getString(R.string.no_video_player_found),
+        Toast.LENGTH_SHORT
+    ).show()
 }
 
 private fun buildPlayerHtml(videoId: String): String {

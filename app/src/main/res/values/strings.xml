@@ -290,6 +290,7 @@
     <string name="trailer_loading">Searching for trailer...</string>
     <string name="trailer_empty">No trailer found for this program.</string>
     <string name="action_open_youtube">Play Trailer</string>
+    <string name="video_playback_error">In-app playback unavailable on this device</string>
     <string name="no_video_player_found">No compatible video player found on device</string>
     <string name="action_close_trailer">Close trailer</string>
 
