@@ -285,15 +285,6 @@
     <string name="label_actors">Acteurs</string>
     <string name="person_programs_empty">Aucune diffusion trouvée pour cette personne cette semaine.</string>
 
-    <string name="label_trailer">Bande-annonce</string>
-    <string name="label_trailers">Bandes-annonces</string>
-    <string name="trailer_loading">Recherche de la bande-annonce...</string>
-    <string name="trailer_empty">Aucune bande-annonce trouvée pour cette émission.</string>
-    <string name="action_open_youtube">Lancer la bande-annonce</string>
-    <string name="video_playback_error">Lecture intégrée indisponible sur cet appareil</string>
-    <string name="no_video_player_found">Aucun lecteur vidéo compatible trouvé sur cet appareil</string>
-    <string name="action_close_trailer">Fermer la bande-annonce</string>
-
     <string name="favorites_order_title">Ordre des chaînes favorites</string>
     <string name="favorites_order_desc">Utilisez les flèches pour organiser l\'ordre de vos favoris</string>
     <string name="all_channels_title">Toutes les chaînes</string>

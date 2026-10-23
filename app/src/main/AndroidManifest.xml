@@ -9,21 +9,6 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <queries>
-        <package android:name="com.google.android.youtube.tv" />
-        <package android:name="com.teamsmart.videomanager.tv" />
-        <package android:name="com.liskovsoft.videomanager" />
-        <package android:name="com.google.android.youtube" />
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="https" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="vnd.youtube" />
-        </intent>
-    </queries>
-
     <application
         android:name=".TvGuideApp"
         android:allowBackup="true"

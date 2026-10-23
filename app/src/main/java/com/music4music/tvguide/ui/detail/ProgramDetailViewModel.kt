@@ -16,15 +16,11 @@ import com.music4music.tvguide.domain.repository.ReminderRepository
 import com.music4music.tvguide.domain.usecase.GetProgramDetailUseCase
 import com.music4music.tvguide.domain.usecase.SetReminderUseCase
 import com.music4music.tvguide.receiver.ReminderReceiver
-import com.music4music.tvguide.data.remote.TrailerVideo
-import com.music4music.tvguide.data.remote.YouTubeTrailerService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -42,53 +38,13 @@ class ProgramDetailViewModel @Inject constructor(
     private val reminderRepository: ReminderRepository,
     private val epgRepository: EpgRepository,
     private val userPreferences: UserPreferences,
-    private val youTubeTrailerService: YouTubeTrailerService,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val programId: Long = checkNotNull(savedStateHandle["programId"])
 
-    private val _trailers = MutableStateFlow<List<TrailerVideo>>(emptyList())
-    val trailers: StateFlow<List<TrailerVideo>> = _trailers.asStateFlow()
-
-    private val _selectedTrailer = MutableStateFlow<TrailerVideo?>(null)
-    val selectedTrailer: StateFlow<TrailerVideo?> = _selectedTrailer.asStateFlow()
-
-    private val _isTrailerLoading = MutableStateFlow(false)
-    val isTrailerLoading: StateFlow<Boolean> = _isTrailerLoading.asStateFlow()
-
-    private val _isTrailerPlayerVisible = MutableStateFlow(false)
-    val isTrailerPlayerVisible: StateFlow<Boolean> = _isTrailerPlayerVisible.asStateFlow()
-
-    private val _trailerLoadError = MutableStateFlow(false)
-    val trailerLoadError: StateFlow<Boolean> = _trailerLoadError.asStateFlow()
-
     val program: StateFlow<Program?> = getProgramDetailUseCase(programId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    init {
-        viewModelScope.launch {
-            program.collect { current ->
-                if (current != null && current.title.isNotBlank() && _trailers.value.isEmpty() && !_isTrailerLoading.value) {
-                    _isTrailerLoading.value = true
-                    _trailerLoadError.value = false
-                    val list = youTubeTrailerService.searchTrailers(
-                        title = current.title,
-                        subTitle = current.subTitle,
-                        year = current.productionYear ?: current.seriesYear
-                    )
-                    _trailers.value = list
-                    if (list.isNotEmpty()) {
-                        _selectedTrailer.value = list.first()
-                        _isTrailerPlayerVisible.value = true
-                    } else {
-                        _isTrailerPlayerVisible.value = false
-                    }
-                    _isTrailerLoading.value = false
-                }
-            }
-        }
-    }
 
     val reminder: StateFlow<Reminder?> = reminderRepository.getReminderForProgram(programId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -223,55 +179,6 @@ class ProgramDetailViewModel @Inject constructor(
                 pendingIntent
             )
         }
-    }
-
-    fun loadTrailers(onEmpty: () -> Unit = {}) {
-        val current = program.value ?: return
-        if (_trailers.value.isNotEmpty()) {
-            _isTrailerPlayerVisible.value = true
-            return
-        }
-        if (_isTrailerLoading.value) return
-
-        viewModelScope.launch {
-            _isTrailerLoading.value = true
-            _trailerLoadError.value = false
-            val list = youTubeTrailerService.searchTrailers(
-                title = current.title,
-                subTitle = current.subTitle,
-                year = current.productionYear ?: current.seriesYear
-            )
-            _trailers.value = list
-            if (list.isNotEmpty()) {
-                _selectedTrailer.value = list.first()
-                _isTrailerPlayerVisible.value = true
-            } else {
-                _isTrailerPlayerVisible.value = false
-                onEmpty()
-            }
-            _isTrailerLoading.value = false
-        }
-    }
-
-    fun selectTrailer(trailer: TrailerVideo) {
-        _selectedTrailer.value = trailer
-        _isTrailerPlayerVisible.value = true
-    }
-
-    fun toggleTrailerPlayer() {
-        if (_isTrailerPlayerVisible.value) {
-            _isTrailerPlayerVisible.value = false
-        } else {
-            loadTrailers()
-        }
-    }
-
-    fun closeTrailerPlayer() {
-        _isTrailerPlayerVisible.value = false
-    }
-
-    suspend fun resolveStreamUrl(videoId: String): String? {
-        return youTubeTrailerService.resolveStreamUrl(videoId)
     }
 
     private fun cancelAlarm(reminder: Reminder) {

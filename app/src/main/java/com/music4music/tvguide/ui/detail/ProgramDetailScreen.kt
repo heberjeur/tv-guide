@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Tv
-import com.music4music.tvguide.ui.components.YouTubeTrailerPlayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -118,10 +117,6 @@ fun ProgramDetailScreen(
     val upcomingBroadcasts by viewModel.upcomingBroadcasts.collectAsStateWithLifecycle()
     val defaultLeadTime by viewModel.defaultLeadTimeMinutes.collectAsStateWithLifecycle()
     val defaultRecurrence by viewModel.defaultReminderRecurrence.collectAsStateWithLifecycle()
-    val trailers by viewModel.trailers.collectAsStateWithLifecycle()
-    val selectedTrailer by viewModel.selectedTrailer.collectAsStateWithLifecycle()
-    val isTrailerLoading by viewModel.isTrailerLoading.collectAsStateWithLifecycle()
-    val isTrailerPlayerVisible by viewModel.isTrailerPlayerVisible.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val configuration = LocalConfiguration.current
@@ -591,20 +586,6 @@ fun ProgramDetailScreen(
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
-
-                    if (isTrailerPlayerVisible && selectedTrailer != null && trailers.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        YouTubeTrailerPlayer(
-                            trailers = trailers,
-                            selectedTrailer = selectedTrailer,
-                            onSelectTrailer = { viewModel.selectTrailer(it) },
-                            onClose = { viewModel.closeTrailerPlayer() },
-                            onResolveStreamUrl = { viewModel.resolveStreamUrl(it) },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),

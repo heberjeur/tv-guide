@@ -285,15 +285,6 @@
     <string name="label_actors">Actors</string>
     <string name="person_programs_empty">No broadcasts found for this person this week.</string>
 
-    <string name="label_trailer">Trailer</string>
-    <string name="label_trailers">Trailers</string>
-    <string name="trailer_loading">Searching for trailer...</string>
-    <string name="trailer_empty">No trailer found for this program.</string>
-    <string name="action_open_youtube">Play Trailer</string>
-    <string name="video_playback_error">In-app playback unavailable on this device</string>
-    <string name="no_video_player_found">No compatible video player found on device</string>
-    <string name="action_close_trailer">Close trailer</string>
-
     <string name="favorites_order_title">Favorite Channels Order</string>
     <string name="favorites_order_desc">Use arrows to organize your favorites</string>
     <string name="all_channels_title">All Channels</string>
