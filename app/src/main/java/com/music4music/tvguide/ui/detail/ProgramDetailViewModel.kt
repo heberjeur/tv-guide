@@ -270,6 +270,10 @@ class ProgramDetailViewModel @Inject constructor(
         _isTrailerPlayerVisible.value = false
     }
 
+    suspend fun resolveStreamUrl(videoId: String): String? {
+        return youTubeTrailerService.resolveStreamUrl(videoId)
+    }
+
     private fun cancelAlarm(reminder: Reminder) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, ReminderReceiver::class.java)

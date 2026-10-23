@@ -2,8 +2,11 @@ package com.music4music.tvguide.data.remote
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.io.IOException
 import java.net.URLEncoder
 import java.util.Locale
@@ -21,6 +24,48 @@ data class TrailerVideo(
 class YouTubeTrailerService @Inject constructor(
     private val okHttpClient: OkHttpClient
 ) {
+
+    suspend fun resolveStreamUrl(videoId: String): String? = withContext(Dispatchers.IO) {
+        val payload = """{"context":{"client":{"clientName":"ANDROID_VR","clientVersion":"1.60.19","deviceModel":"Quest 3"}},"videoId":"$videoId"}"""
+        val request = Request.Builder()
+            .url("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
+            .post(payload.toRequestBody("application/json; charset=utf-8".toMediaType()))
+            .header("User-Agent", "Mozilla/5.0")
+            .build()
+
+        try {
+            val response = okHttpClient.newCall(request).execute()
+            if (!response.isSuccessful) return@withContext null
+            val body = response.body?.string() ?: return@withContext null
+            extractStreamUrl(body)
+        } catch (_: IOException) {
+            null
+        }
+    }
+
+    private fun extractStreamUrl(json: String): String? {
+        return try {
+            val root = JSONObject(json)
+            val streamingData = root.optJSONObject("streamingData") ?: return null
+            val formats = streamingData.optJSONArray("formats")
+            if (formats != null && formats.length() > 0) {
+                for (i in 0 until formats.length()) {
+                    val format = formats.getJSONObject(i)
+                    val url = format.optString("url")
+                    if (url.isNotBlank()) {
+                        return url
+                    }
+                }
+            }
+            val hls = streamingData.optString("hlsManifestUrl")
+            if (hls.isNotBlank()) {
+                return hls
+            }
+            null
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     suspend fun searchTrailers(title: String, subTitle: String? = null, year: Int? = null): List<TrailerVideo> = withContext(Dispatchers.IO) {
         val cleanTitle = cleanSearchTitle(title)

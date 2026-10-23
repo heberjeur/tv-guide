@@ -1,22 +1,11 @@
 package com.music4music.tvguide.ui.components
 
-import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,6 +31,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,76 +58,71 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.music4music.tvguide.R
 import com.music4music.tvguide.data.remote.TrailerVideo
 
-private const val DESKTOP_USER_AGENT =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun YouTubeTrailerPlayer(
     trailers: List<TrailerVideo>,
     selectedTrailer: TrailerVideo?,
     onSelectTrailer: (TrailerVideo) -> Unit,
     onClose: () -> Unit,
+    onResolveStreamUrl: suspend (String) -> String?,
     modifier: Modifier = Modifier
 ) {
     if (selectedTrailer == null) return
     val context = LocalContext.current
     var isPlaying by remember(selectedTrailer.videoId) { mutableStateOf(false) }
+    var isLoadingStream by remember(selectedTrailer.videoId) { mutableStateOf(false) }
+    var resolvedStreamUrl by remember(selectedTrailer.videoId) { mutableStateOf<String?>(null) }
     var hasPlaybackError by remember(selectedTrailer.videoId) { mutableStateOf(false) }
-    var webViewRef by remember { mutableStateOf<WebView?>(null) }
-    var customFullscreenView by remember { mutableStateOf<View?>(null) }
-    var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
 
-    DisposableEffect(selectedTrailer.videoId) {
+    val exoPlayer = remember(context) {
+        ExoPlayer.Builder(context).build()
+    }
+
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                hasPlaybackError = true
+            }
+        }
+        exoPlayer.addListener(listener)
         onDispose {
-            try {
-                webViewRef?.loadUrl("about:blank")
-                webViewRef?.stopLoading()
-                webViewRef?.destroy()
-                webViewRef = null
-            } catch (_: Throwable) {
+            exoPlayer.removeListener(listener)
+            exoPlayer.release()
+        }
+    }
+
+    LaunchedEffect(selectedTrailer.videoId, isPlaying) {
+        if (isPlaying && resolvedStreamUrl == null && !hasPlaybackError) {
+            isLoadingStream = true
+            val url = onResolveStreamUrl(selectedTrailer.videoId)
+            isLoadingStream = false
+            if (url != null) {
+                resolvedStreamUrl = url
+            } else {
+                hasPlaybackError = true
             }
         }
     }
 
-    if (customFullscreenView != null) {
-        BackHandler {
-            (customFullscreenView?.parent as? ViewGroup)?.removeView(customFullscreenView)
-            customViewCallback?.onCustomViewHidden()
-            customFullscreenView = null
-            customViewCallback = null
-        }
-        Dialog(
-            onDismissRequest = {
-                (customFullscreenView?.parent as? ViewGroup)?.removeView(customFullscreenView)
-                customViewCallback?.onCustomViewHidden()
-                customFullscreenView = null
-                customViewCallback = null
-            },
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                decorFitsSystemWindows = false
-            )
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            ) {
-                AndroidView(
-                    factory = { ctx ->
-                        (customFullscreenView?.parent as? ViewGroup)?.removeView(customFullscreenView)
-                        customFullscreenView ?: View(ctx)
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+    LaunchedEffect(resolvedStreamUrl) {
+        val url = resolvedStreamUrl
+        if (url != null) {
+            val mediaItem = MediaItem.fromUri(url)
+            exoPlayer.setMediaItem(mediaItem)
+            exoPlayer.prepare()
+            exoPlayer.playWhenReady = true
+        } else {
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
         }
     }
 
@@ -156,96 +142,88 @@ fun YouTubeTrailerPlayer(
                     .background(Color.Black)
             ) {
                 if (isPlaying && !hasPlaybackError) {
-                    AndroidView(
-                        factory = { ctx ->
-                            val targetContext = ctx.findActivity() ?: ctx
-                            try {
-                                if (!isWebViewSupported(targetContext)) {
-                                    hasPlaybackError = true
-                                    View(ctx)
-                                } else {
-                                    WebView(targetContext).apply {
+                    if (isLoadingStream) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AsyncImage(
+                                model = selectedTrailer.thumbnailUrl,
+                                contentDescription = selectedTrailer.title,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.6f))
+                            )
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .align(Alignment.Center),
+                                color = Color(0xFFE50914),
+                                strokeWidth = 3.dp
+                            )
+                            IconButton(
+                                onClick = {
+                                    isPlaying = false
+                                    resolvedStreamUrl = null
+                                    exoPlayer.stop()
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .size(36.dp)
+                                    .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    } else if (resolvedStreamUrl != null) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AndroidView(
+                                factory = { ctx ->
+                                    PlayerView(ctx).apply {
+                                        player = exoPlayer
+                                        useController = true
+                                        setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                                         layoutParams = ViewGroup.LayoutParams(
                                             ViewGroup.LayoutParams.MATCH_PARENT,
                                             ViewGroup.LayoutParams.MATCH_PARENT
                                         )
-                                        settings.javaScriptEnabled = true
-                                        settings.domStorageEnabled = true
-                                        settings.mediaPlaybackRequiresUserGesture = false
-                                        settings.loadWithOverviewMode = true
-                                        settings.useWideViewPort = true
-                                        settings.cacheMode = WebSettings.LOAD_DEFAULT
-                                        settings.userAgentString = DESKTOP_USER_AGENT
-                                        webChromeClient = object : WebChromeClient() {
-                                            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
-                                                (view?.parent as? ViewGroup)?.removeView(view)
-                                                customFullscreenView = view
-                                                customViewCallback = callback
-                                            }
-
-                                            override fun onHideCustomView() {
-                                                (customFullscreenView?.parent as? ViewGroup)?.removeView(customFullscreenView)
-                                                customViewCallback?.onCustomViewHidden()
-                                                customFullscreenView = null
-                                                customViewCallback = null
-                                            }
-                                        }
-                                        webViewClient = object : WebViewClient() {
-                                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                                                val url = request?.url?.toString().orEmpty()
-                                                if (url.startsWith("http://") || url.startsWith("https://")) {
-                                                    if (url.contains("youtube-nocookie.com") || url.contains("youtube.com/embed")) {
-                                                        return false
-                                                    }
-                                                }
-                                                return true
-                                            }
-                                        }
-                                        tag = selectedTrailer.videoId
-                                        webViewRef = this
-                                        val html = buildPlayerHtml(selectedTrailer.videoId)
-                                        loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)
                                     }
-                                }
-                            } catch (_: Throwable) {
-                                hasPlaybackError = true
-                                View(ctx)
-                            }
-                        },
-                        update = { webView ->
-                            if (webView is WebView) {
-                                val currentTag = webView.tag as? String
-                                if (currentTag != selectedTrailer.videoId) {
-                                    webView.tag = selectedTrailer.videoId
-                                    val html = buildPlayerHtml(selectedTrailer.videoId)
-                                    webView.loadDataWithBaseURL("https://www.youtube.com", html, "text/html", "UTF-8", null)
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
+                                },
+                                update = { playerView ->
+                                    if (playerView.player != exoPlayer) {
+                                        playerView.player = exoPlayer
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
 
-                    IconButton(
-                        onClick = {
-                            isPlaying = false
-                            try {
-                                webViewRef?.loadUrl("about:blank")
-                                webViewRef?.stopLoading()
-                            } catch (_: Throwable) {
+                            IconButton(
+                                onClick = {
+                                    isPlaying = false
+                                    resolvedStreamUrl = null
+                                    exoPlayer.stop()
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .size(36.dp)
+                                    .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .size(36.dp)
-                            .background(Color.Black.copy(alpha = 0.6f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        }
                     }
                 } else if (hasPlaybackError) {
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -312,6 +290,8 @@ fun YouTubeTrailerPlayer(
                             onClick = {
                                 isPlaying = false
                                 hasPlaybackError = false
+                                resolvedStreamUrl = null
+                                exoPlayer.stop()
                             },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
@@ -332,12 +312,8 @@ fun YouTubeTrailerPlayer(
                         modifier = Modifier
                             .fillMaxSize()
                             .clickable {
-                                if (isWebViewSupported(context)) {
-                                    isPlaying = true
-                                    hasPlaybackError = false
-                                } else {
-                                    hasPlaybackError = true
-                                }
+                                isPlaying = true
+                                hasPlaybackError = false
                             }
                     ) {
                         AsyncImage(
@@ -432,6 +408,8 @@ fun YouTubeTrailerPlayer(
                                 .clickable {
                                     isPlaying = false
                                     hasPlaybackError = false
+                                    resolvedStreamUrl = null
+                                    exoPlayer.stop()
                                     onSelectTrailer(trailer)
                                 }
                         ) {
@@ -462,26 +440,6 @@ fun YouTubeTrailerPlayer(
             }
         }
     }
-}
-
-private fun isWebViewSupported(context: Context): Boolean {
-    return try {
-        if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_WEBVIEW)) {
-            return false
-        }
-        val targetContext = context.findActivity() ?: context
-        val probe = WebView(targetContext)
-        probe.destroy()
-        true
-    } catch (_: Throwable) {
-        false
-    }
-}
-
-private tailrec fun Context.findActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
 }
 
 fun launchExternalVideo(context: Context, videoId: String) {
@@ -524,30 +482,4 @@ fun launchExternalVideo(context: Context, videoId: String) {
         context.getString(R.string.no_video_player_found),
         Toast.LENGTH_SHORT
     ).show()
-}
-
-private fun buildPlayerHtml(videoId: String): String {
-    return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <style>
-                * { margin:0; padding:0; box-sizing:border-box; background:#000; overflow:hidden; }
-                html, body { width:100%; height:100%; background:#000; }
-                .video-container { position:relative; width:100%; height:100%; }
-                iframe { width:100%; height:100%; border:none; }
-            </style>
-        </head>
-        <body>
-            <div class="video-container">
-                <iframe src="https://www.youtube-nocookie.com/embed/$videoId?autoplay=1&playsinline=1&rel=0&modestbranding=1&controls=1&fs=1"
-                        frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                        allowfullscreen>
-                </iframe>
-            </div>
-        </body>
-        </html>
-    """.trimIndent()
 }

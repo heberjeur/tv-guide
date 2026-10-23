@@ -599,6 +599,7 @@ fun ProgramDetailScreen(
                             selectedTrailer = selectedTrailer,
                             onSelectTrailer = { viewModel.selectTrailer(it) },
                             onClose = { viewModel.closeTrailerPlayer() },
+                            onResolveStreamUrl = { viewModel.resolveStreamUrl(it) },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
